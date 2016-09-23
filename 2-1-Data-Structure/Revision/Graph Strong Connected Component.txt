@@ -1,0 +1,24 @@
+DFS-FIND-STRONG-CONNECTED-COMPONENT (G[1..n])
+Mark[1..n] = 0
+DFS-MARK (G, Mark, 1)
+rG = REVERSE (G)
+DisjSet S<Vertex>				//  use disjSet
+while (max {v | Mark[v]} != 0)
+	V = max {v | Mark[v]}
+	DFS-FIND (rG, Mark, S, V)
+
+count = 0					//  global variable
+
+DFS-MARK (G[1..n], Mark[1..n], V)
+for (p : G[V])
+	if (Mark[p.adjacent] == 0)
+		DFS-MARK (G, Mark, p.adjacent)
+count++
+Mark[V] = count					//  mark
+
+DFS-FIND (G[1..n], Mark[1..n], DisjSet S, V)
+for (p : G[V])
+	if (Mark[p.adjacent] != 0)
+		Mark[p.adjacent] = 0
+		UNION (S, V, p.adjacent)	//  group together
+		DFS-MARK (G, Mark, p.adjacent)

@@ -1,0 +1,31 @@
+KMP (T[1..n], P[1..m], next[1..m])
+j = 1				//  current match in P
+for (i = 1 to n)		//  scan T[1..n]
+	while (T[i] != P[j] && j != 0)
+		j = next[j]
+	j++			//  compare P[j+1] next round
+	if (j == m + 1)		//  if all matched then finish
+		return (i - m)
+return 0
+
+GET-MP-NEXT (P[1..m], next[1..m])
+next[1] = 0
+k = 0
+for (i = 2 to m)
+	while (P[i - 1] != P[k] && k != 0)
+		k = next[k]
+	k++
+	next[i] = k
+
+GET-KMP-NEXT (P[1..m], next[1..m])
+next[1] = 0
+k = 0
+for (i = 2 to m)
+	while (P[i - 1] != P[k] && k != 0)
+		k = next[k]
+	k++
+	if (P[i] == P[k])
+	//  the one to be compare next is same as the mismatched
+		next[i] = next[k]	//  skip it
+	else
+		next[i] = k

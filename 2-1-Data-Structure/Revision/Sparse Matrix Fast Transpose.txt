@@ -1,0 +1,21 @@
+//  M and T are {row, col, list = 3-tuple {row, col, data}}
+
+SPARSE-MATRIX-FAST-TRANSPOSE (M, T)
+T.row = M.col
+T.col = M.row
+T.list[1..M.list.size]
+if (M.list == null)
+	return
+count[1..M.col] = 0		//  count number in each col in M
+for (i = 1 to M.list.size)
+	count[M.list[i].col]++
+cpot[1..T.row] = 0		//  find first postion to insert in T
+cpot[1] = 1			//  insert row 1 in the first place
+for (i = 2 to T.list.size)
+	cpot[i] = copt[i - 1] + count[i - 1]
+for (i = 1 to M.list.size)
+	col = M.list[i].col	//  the col of current elem
+	T.list[copt[col]].row = M.list[i].col
+	T.list[copt[col]].col = M.list[i].row
+	T.list[copt[col]].data = M.list[i].data
+	copt[col]++		//  move to next place to insert

@@ -1,0 +1,49 @@
+//  T = struct {root, left-child, right-child, height}
+//  Note that null.height == -1
+
+AVL-FIND (T, X)
+if (T == null || X == T.root)
+	return T
+else if (X < T.root)
+	return AVL-FIND (T.left-child, X)
+else	//  X > T.root
+	return AVL-FIND (T.right-child, X)
+
+SINGLE-LEFT-ROTATE (T)
+K2 = T
+K1 = K2.left-child		//  K1's left is over-height
+K2.left-child = K1.right-child	//  K2 become the child of K1
+K1.right-child = K2		//  K1's left is same height as K2 now
+T = K1				//  K1 is the new root
+K2.height = max (K2.left-child.height, K2.right-child.height) + 1
+K1.height = max (K1.left-child.height, K2.height) + 1
+
+DOUBLE-LEFT-ROTATE (T)
+SINGLE-RIGHT-ROTATE (K3.left-child)
+SINGLE-LEFT-ROTATE (K3)
+
+//  SINGLE-RIGHT-ROTATE (T)
+//  DOUBLE-RIGHT-ROTATE (T)
+
+AVL-INSERT (T, X)
+if (T == null)
+	T.root = X
+	T.left-child = T.right-child = null
+else if (X < T.root)
+	AVL-INSERT (T.left-child, X)
+	if (T.left-child.height - T.right-child.height == 2)
+		if (X < T.left-child.root)
+			SINGLE-LEFT-ROTATE (T)
+		else
+			DOUBLE-LEFT-ROTATE (T)
+else if (X > T.root)
+	AVL-INSERT (T.right-child, X)
+	if (T.right-child.height - T.left-child.height == 2)
+		if (X > T.left-child.root)
+			SINGLE-RIGHT-ROTATE (T)
+		else
+			DOUBLE-RIGHT-ROTATE (T)
+//  else X is in T
+T.height = max (T.left-child.height, T.right-child.height) + 1
+
+//  AVL-DELETE (T, X)

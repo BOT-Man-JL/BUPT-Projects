@@ -1,0 +1,40 @@
+//  G is an array of list of struct {adjacent, next(, cost)}
+
+TOPOLOGICAL-SORT (G[1..n])
+Queue<Vertex> Q
+List<Vertex> L
+InDegree[1..n] = 0
+for (v = 1 to n)		//  count in-degree
+	for (p : G[v])
+		InDegree[p.adjacent]++
+for (v = 1 to n)		//  find all vertices of degree 0
+	if (InDegree[v] == 0)
+		Q.push (v)
+C = 0
+while (!Q.empty)		//  delete out-arcs of 0-degree vertex
+	v = Q.pop ()
+	L.append (v)
+	C++
+	for (p : G[v])
+		InDegree[p.adjacent]--
+		if (InDegree[p.adjacent] == 0)
+			Q.Push (p.adjacent)
+if (C != n)
+	return Error ("cycle")
+else
+	return L
+
+CRITICAL-PATH (G[1..n], L[1..n])
+rL = L.inverse ()
+EC[1..n] = 0			//  earliest time to finish
+for (v : L)
+	for (p : G[v])
+		if (EC[v] + p.cost > EC[p.adjacent])
+			EC[p.adjacent] = EC[v] + p.cost
+LC[1..n] = EC[n]		//  latest time to finish
+for (v : rL)
+	for (p : G[v])
+		if (LC[p.adjacent] - p.cost < LC[v])
+			LC[v] = LC[p.adjacent] - p.cost
+//  Slack(v, w) = LC[w] - EC[v] - cost(v, w)
+//  Critical path = {e | Slack (e) == 0 && connect L[1] to L[n]}

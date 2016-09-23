@@ -1,0 +1,38 @@
+PRE-ORDER-TRAVERSAL (Tree T, visit (Node))
+Stack<Node> S
+p = T.root
+while (!S.empty || p != null)
+	if (p != null)
+		visit (p)		//  visit before L children
+		S.push (p)
+		p = p.left-child
+	else
+		p = S.pop ()
+		p = p.right-child
+
+IN-ORDER-TRAVERSAL (Tree T, visit (Node))
+Stack<Node> S
+p = T.root
+while (!S.empty || p != null)
+	if (p != null)
+		S.push (p)
+		p = p.left-child
+	else
+		p = S.pop ()
+		visit (p)		//  visit before R children
+		p = p.right-child
+
+POST-ORDER-TRAVERSAL (Tree T, visit (Node))
+Stack<Node> S
+p = T.root
+while (!S.empty || p != null)
+	if (p != null)
+		S.push (p)
+		p = p.left-child	//  to left children
+	else
+		while (!S.empty && p == S.top.right)
+		//  S.top's right-child is just popped or null
+			p = S.pop ()	//  from right children
+			visit (p)
+		if (!S.empty)		//  not root
+			p = S.top.right	//  to right sibling

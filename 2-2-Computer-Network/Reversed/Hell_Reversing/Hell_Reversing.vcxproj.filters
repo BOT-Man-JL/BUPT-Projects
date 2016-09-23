@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="Impl.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="protocol.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Header">
+      <UniqueIdentifier>{faeafef1-bac7-4625-a551-90e2cd7ad064}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source">
+      <UniqueIdentifier>{b41e0c64-66a9-4e0c-a1e4-a0cd2589fc2b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Impl.c">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Init.c">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="event.c">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="log.c">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="timer.c">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="network.c">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="physical.c">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="datalink.c">
+      <Filter>Source</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

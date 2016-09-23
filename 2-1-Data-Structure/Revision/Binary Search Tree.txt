@@ -1,0 +1,53 @@
+BST-FIND (T, X)
+if (T == null || X == T.root)
+	return T
+else if (X < T.root)
+	return BST-FIND (T.left-child, X)
+else	//  X > T.root
+	return BST-FIND (T.right-child, X)
+
+BST-INSERT (T, X)
+if (T == null)
+	T.root = X
+	T.left-child = T.right-child = null
+else if (X < T.root)
+	BST-INSERT (T.left-child, X)
+else if (X > T.root)
+	BST-INSERT (T.right-child, X)
+//  else X is in T
+
+BST-DELETE (T, X)
+parent = null
+while (T != null && T.root != X)
+	parent = T
+	if (X < T.root)
+		T = T.left-child
+	else
+		T = T.right-child
+if (T == null)
+	return Error ("not found")
+//  Suppose parent != null (T is not the root)
+if (T.right-child == null)	//  Case #1: delete itself
+	if (parent.left-child)
+		parent.left-child = T.left-child
+	else
+		parent.right-child = T.left-child
+	delete T
+else				//  Case #2: delete successor
+	successor = T.right-child		//  find min in right
+	parent = T				//  parent of min
+	while (successor.left-child != null)
+		successor = successor.left-child
+		parent = successor
+	T.root = successor.root			//  copy to T
+	if (parent == T)
+		parent.right-child = succesor.right-child
+	else
+		parent.left-child = successor.right-child
+	delete successor
+
+// Another DELETE version:
+// Case #1: if (T.right-child != null and T.left-child != null)
+	// find successor and delete
+// Case #2: One child or no child
+	// replace itself with its child

@@ -1,0 +1,124 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="EggAche">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Main">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Models">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Headers">
+      <UniqueIdentifier>{2d0cf5d8-fa07-458f-bed0-2259b5dbecb2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Input Data">
+      <UniqueIdentifier>{3fb6dcc1-7ea6-4f42-b41e-4161294a766e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Input Data\CityPictureResources">
+      <UniqueIdentifier>{ea2ee5a4-00fb-435e-9368-72e0405a170d}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="EggAche_impl.cpp">
+      <Filter>EggAche</Filter>
+    </ClCompile>
+    <ClCompile Include="EggAche.cpp">
+      <Filter>EggAche</Filter>
+    </ClCompile>
+    <ClCompile Include="DataStructure.cpp">
+      <Filter>Models</Filter>
+    </ClCompile>
+    <ClCompile Include="Driver.cpp">
+      <Filter>Models</Filter>
+    </ClCompile>
+    <ClCompile Include="FileStream.cpp">
+      <Filter>Models</Filter>
+    </ClCompile>
+    <ClCompile Include="Algorithm.cpp">
+      <Filter>Models</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="EggAche_impl.h">
+      <Filter>EggAche</Filter>
+    </ClInclude>
+    <ClInclude Include="EggAche.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="DataStructure.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Driver.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="FileStream.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Algorithm.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="input.txt">
+      <Filter>Input Data</Filter>
+    </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="beijing.bmp">
+      <Filter>Input Data\CityPictureResources</Filter>
+    </Image>
+    <Image Include="Changsha.bmp">
+      <Filter>Input Data\CityPictureResources</Filter>
+    </Image>
+    <Image Include="green.bmp">
+      <Filter>Input Data\CityPictureResources</Filter>
+    </Image>
+    <Image Include="Dalian.bmp">
+      <Filter>Input Data\CityPictureResources</Filter>
+    </Image>
+    <Image Include="green2.bmp">
+      <Filter>Input Data\CityPictureResources</Filter>
+    </Image>
+    <Image Include="Guangzhou.bmp">
+      <Filter>Input Data\CityPictureResources</Filter>
+    </Image>
+    <Image Include="Hangzhou.bmp">
+      <Filter>Input Data\CityPictureResources</Filter>
+    </Image>
+    <Image Include="Shanghai.bmp">
+      <Filter>Input Data\CityPictureResources</Filter>
+    </Image>
+    <Image Include="Nanning.bmp">
+      <Filter>Input Data\CityPictureResources</Filter>
+    </Image>
+    <Image Include="Nanjing.bmp">
+      <Filter>Input Data\CityPictureResources</Filter>
+    </Image>
+    <Image Include="Shenzhen.bmp">
+      <Filter>Input Data\CityPictureResources</Filter>
+    </Image>
+    <Image Include="Wuhan.bmp">
+      <Filter>Input Data\CityPictureResources</Filter>
+    </Image>
+    <Image Include="Xining.bmp">
+      <Filter>Input Data\CityPictureResources</Filter>
+    </Image>
+    <Image Include="Car.bmp">
+      <Filter>Input Data\CityPictureResources</Filter>
+    </Image>
+    <Image Include="Plane.bmp">
+      <Filter>Input Data\CityPictureResources</Filter>
+    </Image>
+    <Image Include="Train.bmp">
+      <Filter>Input Data\CityPictureResources</Filter>
+    </Image>
+  </ItemGroup>
+</Project>

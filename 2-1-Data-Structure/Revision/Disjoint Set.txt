@@ -1,0 +1,47 @@
+//  Init: S[0..(n - 1)] = -1
+
+NAIVE-UNION (DisjSet S, R1, R2)
+S[R2] = R1
+
+UNION-BY-RANK (DisjSet S, R1, R2)
+if (S[R1] < S[R2])		//  deeper to be new root
+	S[R2] = R1
+else
+	if (S[R1] == S[R2])	//  same height
+		S[R2]--
+	S[R1] = R2
+
+UNION-BY-SIZE (DisjSet S, R1, R2)
+if (S[R1] < S[R2])
+	S[R1] = S[R1] + S[R2]
+	S[R2] = R1
+else
+	S[R2] = S[R1] + S[R2]
+	S[R1] = R2
+
+NAIVE-FIND-v1 (DisjSet S, X)	//  recursive
+if (S[X] < 0)
+	return X
+else
+	return FIND (S, S[X])
+
+NAIVE-FIND-v2 (DisjSet S, X)	//  iterative
+while (S[X] > -1)
+	X = S[X]
+return X
+
+COMPRESSION-FIND-v1 (DisjSet S, X)	//  recursive
+if (S[X] < 0)
+	return X
+else
+	return S[X] = FIND (S, S[X])
+
+COMPRESSION-FIND-v2 (DisjSet S, X)	//  iterative
+R = X
+while (S[R] > -1)
+	R = S[R]
+while (S[X] != R)
+	T = S[X]
+	S[X] = R
+	X = T
+return R

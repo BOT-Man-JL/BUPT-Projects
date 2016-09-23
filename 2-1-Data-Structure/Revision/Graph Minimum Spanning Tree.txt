@@ -1,0 +1,45 @@
+//  G is an array of list of struct {adjacent, next, cost}
+
+MST-PRIM (G[1..n])
+Set<Edge> T
+Set<Vertex> S
+Heap<Edge> H
+v = any vertex of G
+S.insert (v)
+for (p : G[v])
+	E = (v, p.adjacent, p.cost)
+	H.insert (E)
+i = 1
+while (i < n)
+	E = DeleteMin (H)
+	if (E.u not in S)
+		T.insert (E)
+		S.insert (E.u)
+		for (p : G[u])
+			E = (u, p.adjacent, p.cost)
+			H.insert (E)
+		i++
+	else if (E.v not in S)
+		T.insert (E)
+		S.insert (E.v)
+		for (p : G[v])
+			E = (v, p.adjacent, p.cost)
+			H.insert (E)
+		i++
+	//  else: the both of them have been in S
+return T
+
+MST-KRUSKAL (G[1..n])
+Set<Edge> T
+DisjSet<Vertex> S = BuildFrom (G)
+Heap<Edge> H = BuildFrom (G)
+i = 1
+while (i < n)
+	E = DeleteMin (H)
+	U = Find (S, E.u)
+	V = Find (S, E.v)
+	if (U != V)
+		T.insert (E)
+		Union (S, U, V)
+		i++
+return T

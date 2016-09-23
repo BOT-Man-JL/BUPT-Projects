@@ -1,0 +1,22 @@
+touch -c Beijing Shanghai Guangzhou Shenzhen Dalian Wuhan Hangzhou Nanjing Xining Changsha Nanning -n
+trp -p 10 Beijing Guangzhou 2 4
+trp -p 5 Beijing Guangzhou 3 2
+trp -c 20 Beijing Shanghai 4 9
+trp -t 20 Guangzhou Shenzhen 10 4
+trp -t 10 Guangzhou Shenzhen 11 2
+trp -c 38 Shanghai Shenzhen 8 12
+trp -c 2 Shenzhen Changsha 3 5
+trp -c 70 Guangzhou Dalian 2 6
+trp -c 60 Changsha Dalian 3 8
+trp -c 12 Dalian Nanjing 3 5
+trp -c 3 Xining Hangzhou 3 2
+trp -c 15 Hangzhou Nanjing 2 3
+trp -c 30 Dalian Wuhan 3 2
+trp -c 11 Nanjing Wuhan 3 5
+trp -p 123 Nanjing Xining 1 2
+trp -c 14 Xining Changsha 3 5
+trp -t 19 Changsha Nanning 2 3
+trp -p 19 Nanning Beijing 2 3
+trp -c 31 Changsha Beijing 3 5
+trp -t 12 Wuhan Beijing 1 4
+

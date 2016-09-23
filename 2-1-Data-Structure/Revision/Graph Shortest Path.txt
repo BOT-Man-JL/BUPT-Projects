@@ -1,0 +1,29 @@
+//  G is an array of list of struct {adjacent, next, cost}
+
+DIJKSTRA (G[1..n], V)
+DIST[1..n] = inf
+PREV[1..n] = 0
+DIST[V] = 0
+Set<Vertex> S
+Heap<Vertex> H
+H.insert ({DIST[V], V})
+S.insert (V)
+while (S.size != n)
+	V = DeleteMin (H)
+	while (V in S)
+		V = DeleteMin (H)	//  find min V not in H
+	S.insert (V)
+	for (p : G[V])
+		if (DIST[V] + p.cost < DIST[p.adjacent])
+			DIST[p.adjacent] = DIST[V] + p.cost
+			PREV[p.adjacent] = V
+			H.insert ({DIST[p.adjacent], p.adjacent})
+
+//  G is an adjacency array of cost
+
+FLOYD-WARSHALL (G[1..n][1..n])
+for (k = 1 to n)			//  statge k
+	for (i = 1 to n)		//  for each row
+	for (j = 1 to n)		//  for each column
+		if (G[i][k] + G[k][j] < G[i][j])
+			G[i][j] = G[i][k] + G[k][j]

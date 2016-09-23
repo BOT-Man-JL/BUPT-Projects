@@ -1,0 +1,27 @@
+SUB-OPTIMAL-BINARY-SEARCH-TREE (K[1..n], W[1..n])
+SW[0..n]				//  sum of weight of W[1..i]
+SW[0] = 0				//  sentinel
+for (i = 1 to n)
+	SW[i] = SW[i - 1] + W[i]
+return FOO (K, SW, 1, n)
+
+BUILD-TREE (K[1..n], SW[0..n], L, R)	//  recursion
+Tree<Key> T
+i = L					//  from left most
+dP = |SW[R] - SW[L]|			//  dP = SR - SL = SR - 0
+for (j = L + 1 to R)
+	SR = SW[R] - SW[j]		//  Hint: S[R]+S[L-1]=const
+	SL = SW[j - 1] - SW[L - 1]
+	if (|SR - SL| < dP)		//  find the min dP
+		i = j
+		dP = |SR - SL|
+T.root = K[i]
+if (i == L)
+	T.left-child = null
+else
+	T.left-child = BUILD-TREE (K, SW, L, i - 1)
+if (i == R)
+	T.right-child = null
+else
+	T.right-child = BUILD-TREE (K, SW, i + 1, R)
+return T

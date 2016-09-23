@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Header">
+      <UniqueIdentifier>{1d91d9cb-6be4-4925-93e8-935f7e988355}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source">
+      <UniqueIdentifier>{a5f02500-24b7-423d-a42c-60dd3e2bbb26}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\Hell_Reversing\Impl.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Hell_Reversing\protocol.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\Hell_Reversing\datalink.c">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Hell_Reversing\event.c">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Hell_Reversing\Impl.c">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Hell_Reversing\Init.c">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Hell_Reversing\log.c">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Hell_Reversing\network.c">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Hell_Reversing\physical.c">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Hell_Reversing\timer.c">
+      <Filter>Source</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

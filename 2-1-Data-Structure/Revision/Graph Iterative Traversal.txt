@@ -1,0 +1,32 @@
+//  G is an array of list of struct {adjacent, next}
+//  If the graph is not connected, there should be a external loop
+
+DEPTH-FIRST-SEARCH (G[1..n], VISIT[1..n])
+Stack<{adjacent, next}> S
+v = any vertex of G
+VISIT[v] = true
+p = G[v]
+S.push (p)
+while (!S.empty || p != null)
+	while (p != null)
+		if (!VISIT[p.adjacent])
+			VISIT[p.adjacent] = ture
+			S.push (p)
+			p = G[p.adjacent]
+		else
+			p = p.next
+	if (!S.empty)
+		p = S.pop ()
+		p = p.next
+
+BREADTH-FIRST-SEARCH (G[1..n], VISIT[1..n])
+Queue<Vertex> Q
+v = any vertex of G
+VISIT[v] = true
+Q.push (v)
+while (!Q.empty)
+	v = Q.pop ()
+	for (p : G[v])
+		if (!VISIT[p.adjacent])
+			VISIT[p.adjacent] = ture
+			Q.push (p.adjacent)
