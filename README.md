@@ -7,7 +7,7 @@ Collection of BUPT Coding Assignments by **BOT Man** :smile:
   - Separated assignments
 - Programming
   - Separated assignments
-  - Project - **Train Sim**
+  - Project - [**Train Sim**](https://github.com/BOT-Man-JL/BUPT-Assignment/tree/master/1-2-Programming/Crazy%20Train%20Sim)
 - Discrete Math
   - Encryption/Decryption
     - Caesar
@@ -26,7 +26,7 @@ Collection of BUPT Coding Assignments by **BOT Man** :smile:
   - Separated assignments
 - Computer Network
   - Datalink Layer Implementation
-  - Revesed the **SHIT CODE**
+  - [Revesed the **SHIT CODE**](https://github.com/BOT-Man-JL/BUPT-Assignment/tree/master/2-2-Computer-Network/Reversed)
 - Digital Logic
   - Counter in *VHDL*
 - Probability
