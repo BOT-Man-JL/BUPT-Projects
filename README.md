@@ -27,6 +27,7 @@ Collection of Codes by **BOT Man** during the College Life in BUPT :smile:
 - Computer Network
   - Datalink Layer Implementation
   - [Revesed the **SHIT CODE**](https://github.com/BOT-Man-JL/BUPT-Projects/tree/master/2-2-Computer-Network/Reversed)
+together with [**buptczq**](https://github.com/buptczq/RE_Bupt_Computer_Network_Expr)
 - Digital Logic
   - Counter in *VHDL*
 - Probability
