@@ -35,3 +35,10 @@ Collection of BUPT Coding Assignments by **BOT Man** :smile:
 ## Year 3
 
 Coming Soon...
+
+## Misc
+
+- Useful Tool: [**Notebook Sleep Manager**](https://github.com/BOT-Man-JL/BUPT-Assignment/tree/master/0-0-Misc/Sleep-Manager)
+- Useful Tool: [**Little Note Pin**](https://github.com/BOT-Man-JL/BUPT-Assignment/tree/master/0-0-Misc/Note-Pin)
+- GDI Monkey
+- Calculator in `C`
