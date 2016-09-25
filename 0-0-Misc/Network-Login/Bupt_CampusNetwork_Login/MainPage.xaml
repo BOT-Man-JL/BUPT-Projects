@@ -1,0 +1,99 @@
+﻿<Page
+    x:Class="Bupt_CampusNetwork_Login.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Bupt_CampusNetwork_Login"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Background="LightSteelBlue">
+        <Image Source="Assets/SplashScreen.scale-200.png" Opacity=".15"/>
+        <ScrollViewer ScrollViewer.VerticalScrollBarVisibility="Hidden">
+            <StackPanel Background="Transparent"
+                        VerticalAlignment="Center"
+                        MaxWidth="640">
+
+                <!--Style-->
+                <StackPanel.Resources>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="FontSize" Value="18"/>
+                        <Setter Property="HorizontalAlignment" Value="Center"/>
+                        <Setter Property="VerticalAlignment" Value="Center"/>
+                    </Style>
+                    <Style TargetType="HyperlinkButton">
+                        <Setter Property="FontSize" Value="18"/>
+                        <Setter Property="HorizontalAlignment" Value="Center"/>
+                        <Setter Property="VerticalAlignment" Value="Center"/>
+                    </Style>
+                </StackPanel.Resources>
+
+                <!--Part 1-->
+                <StackPanel>
+                    <Viewbox MaxWidth="480">
+                        <TextBlock Name="title" Margin="5" FontSize="28"
+                                   Text="Bupt Campus Network Auto Login"/>
+                    </Viewbox>
+                    <StackPanel VerticalAlignment="Center" Margin="0, 5">
+                        <TextBox Name="uid" PlaceholderText="User ID"
+                                 MaxHeight="16" MaxWidth="500" Margin="15, 5"/>
+                        <PasswordBox Name="password" PlaceholderText="Password"
+                                     MaxHeight="16" MaxWidth="500" Margin="15, 5"/>
+                        <TextBox Name="config1"
+                                 PlaceholderText="Login_URL,SSID,SSID..."
+                                 MaxHeight="16" MaxWidth="500" Margin="15, 5"/>
+                        <TextBox Name="config2"
+                                 PlaceholderText="Login_URL,SSID,SSID..."
+                                 MaxHeight="16" MaxWidth="500" Margin="15, 5"/>
+                        <TextBox Name="config3"
+                                 PlaceholderText="Login_URL,SSID,SSID..."
+                                 MaxHeight="16" MaxWidth="500" Margin="15, 5"/>
+                            <Button Name="button" Content="Save Configs"
+                                HorizontalAlignment="Center"
+                                Click="Button_Click" Margin="5, 0"/>
+                        <StackPanel Orientation="Horizontal"
+                                    HorizontalAlignment="Center">
+                            <TextBlock Text="Debug" Margin="5, 0, 0, 0"/>
+                            <ToggleSwitch Name="toggle" Margin="15, 0, 0, 0"
+                                      Toggled="ToggleSwitch_Toggled"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal"
+                                    HorizontalAlignment="Center">
+                            <TextBlock Text="Prompt to Scan" Margin="5, 0, 0, 0"/>
+                            <ToggleSwitch Name="toggle2" Margin="15, 0, 0, 0"
+                                      Toggled="ToggleSwitch2_Toggled"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <TextBlock Name="output" Visibility="Collapsed"/>
+                </StackPanel>
+
+                <!--Part 2-->
+                <TextBlock TextWrapping="WrapWholeWords"
+                           Padding="5">
+                    Hints:<LineBreak/>
+                    If you want to trace Wifi states and auto login when you
+                    change Wifi connnection, please enable
+                    <Hyperlink NavigateUri="ms-settings:privacy-backgroundapps">
+                        Background Task
+                    </Hyperlink>;
+                    And you can also enable it when your device is in
+                    <Hyperlink NavigateUri="ms-settings:batterysaver-usagedetails">
+                        Battery Saving Mode
+                    </Hyperlink>; <LineBreak/>
+                    <!--On the Desktop System, UWP Apps are unable to auto start
+                    when you start your device; so there's a way to walkaround:
+                    Put an shortcut to
+                    <Bold>
+                        C:\Users\{Your Name}\AppData\Roaming\Microsoft
+                        \Windows\Start Menu\Programs\Startup
+                    </Bold>; <LineBreak/>-->
+                    This Project is now Open Source on
+                    <Hyperlink NavigateUri="https://github.com/BOT-Man-JL/Bupt_CampusNetwork_Login">
+                        GitHub
+                    </Hyperlink>
+                    , Enjoy it :-)
+                </TextBlock>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

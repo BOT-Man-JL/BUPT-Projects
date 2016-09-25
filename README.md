@@ -38,6 +38,7 @@ Coming Soon...
 
 ## Misc
 
+- Useful Tool: [**BUPT Campus Network Auto Login**](https://github.com/BOT-Man-JL/BUPT-Assignment/tree/master/0-0-Misc/Network-Login)
 - Useful Tool: [**Notebook Sleep Manager**](https://github.com/BOT-Man-JL/BUPT-Assignment/tree/master/0-0-Misc/Sleep-Manager)
 - Useful Tool: [**Little Note Pin**](https://github.com/BOT-Man-JL/BUPT-Assignment/tree/master/0-0-Misc/Note-Pin)
 - GDI Monkey
