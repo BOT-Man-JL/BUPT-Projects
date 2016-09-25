@@ -40,11 +40,12 @@ without entering Pass every time.
 ## Usage
 
 - Enable *Developer Mode* in *[Setting/Updates and Security](ms-settings:developers)*
-- Download the Latest [Release](https://github.com/BOT-Man-JL/Bupt_CampusNetwork_Login/releases), in *zip*
+- ~~Download the Latest [Release](https://github.com/BOT-Man-JL/Bupt_CampusNetwork_Login/releases), in *zip*~~
+- **Compile** the Project and **Publish** with the key in *zip*
 - Desktop
-  - Unsip
+  - ~~Unsip~~
   - Right-Click the *Add-AppDevPackage.ps1* file and Open with *PowerShell*
 - Mobile
-  - Unzip and Copy the *appxbundle* file to Your Mobile
+  - ~~Unzip and~~ Copy the *appxbundle* file to Your Mobile
   - Open *appxbundle* on Your Mobile
 - And Enjoy it :smile:
