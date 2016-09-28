@@ -18,10 +18,16 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\Pokemon.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\Server.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{EE6232C3-8C1E-40D0-B2C6-239626980283}</ProjectGuid>
+    <ProjectGuid>{B3183380-E046-4411-89FF-C71E0EB67104}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>Pokemon</RootNamespace>
+    <RootNamespace>PokemonServer</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -141,8 +147,6 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

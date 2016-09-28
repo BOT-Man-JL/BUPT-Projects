@@ -15,10 +15,12 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Pokemon.h">
+    <ClInclude Include="..\src\Pokemon.h">
       <Filter>Header Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Test.cpp">
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\Server.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
