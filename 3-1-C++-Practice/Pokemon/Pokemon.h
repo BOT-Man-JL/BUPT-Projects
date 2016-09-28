@@ -57,7 +57,8 @@ namespace PokemonGame
 		// Hurt
 		virtual bool Hurt (HealthPoint damage)
 		{
-			_hp -= damage;
+			if (damage > _def)
+				_hp -= damage - _def / 2;
 			if (_hp <= 0)
 				return true;
 			return false;
