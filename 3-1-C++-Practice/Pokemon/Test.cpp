@@ -8,8 +8,6 @@ int main (int argc, char *argv[])
 	Pikachu pika;
 	Charmander cmd;
 
-	auto tickPika = pika.GetTimeGap ();
-	auto tickCmd = cmd.GetTimeGap ();
 	auto fnAttack = [&] (Pokemon &p1, Pokemon &p2)
 	{
 		std::cout << p1.GetName () << " attacked "
@@ -18,29 +16,47 @@ int main (int argc, char *argv[])
 		{
 			std::cout << p1.GetName () << " defeated "
 				<< p2.GetName () << std::endl;
+			auto preLevel = p1.GetLevel ();
+			p1.Upgrade (p2.GetLevel () * 100);
+			auto curLevel = p1.GetLevel ();
+			if (preLevel != curLevel)
+				std::cout << p1.GetName () << " upgraded from "
+				<< preLevel << " to " << curLevel << std::endl;
 			return true;
 		}
 		return false;
 	};
 
-	while (true)
+	auto fnRound = [&] (Pokemon &p1, Pokemon &p2)
 	{
-		if (!tickPika)
-		{
-			if (fnAttack (pika, cmd))
-				break;
-			tickPika = pika.GetTimeGap ();
-		}
-		tickPika--;
+		std::cout << "\nNew Round:\n\n";
 
-		if (!tickCmd)
+		auto tickP1 = p1.GetTimeGap ();
+		auto tickP2 = p2.GetTimeGap ();
+		while (true)
 		{
-			if (fnAttack (cmd, pika))
-				break;
-			tickCmd = cmd.GetTimeGap ();
+			if (!tickP1)
+			{
+				if (fnAttack (p1, p2))
+					break;
+				tickP1 = p1.GetTimeGap ();
+			}
+			tickP1--;
+
+			if (!tickP2)
+			{
+				if (fnAttack (p2, p1))
+					break;
+				tickP2 = p2.GetTimeGap ();
+			}
+			tickP2--;
 		}
-		tickCmd--;
-	}
+	};
+
+	fnRound (pika, cmd);
+	fnRound (cmd, pika);
+	fnRound (pika, cmd);
+	fnRound (cmd, pika);
 
 	getchar ();
 	return 0;

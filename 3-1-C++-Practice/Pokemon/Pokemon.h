@@ -37,17 +37,21 @@ namespace PokemonGame
 		{}
 
 		// Upgrade
-		virtual void Upgrade (ExpPoint exp)
+		virtual bool Upgrade (ExpPoint exp)
 		{
 			_expPoint += exp;
-			if (_level >= 15) return;
+			if (_level >= 15)
+				return false;
 
 			const auto thresholdPerLV = 100;
-			if (_expPoint >= thresholdPerLV * _level)
+			auto isUpgraded = false;
+			while (_expPoint >= thresholdPerLV * _level)
 			{
 				_expPoint -= thresholdPerLV * _level;
 				_level++;
+				isUpgraded = true;
 			}
+			return isUpgraded;
 		}
 
 		// Hurt
@@ -90,9 +94,9 @@ namespace PokemonGame
 					   70, 50, 1000, 10)
 		{}
 
-		void Upgrade (ExpPoint exp) override
+		bool Upgrade (ExpPoint exp) override
 		{
-			Pokemon::Upgrade (exp);
+			return Pokemon::Upgrade (exp);
 		}
 
 		bool Hurt (HealthPoint damage) override
@@ -120,9 +124,9 @@ namespace PokemonGame
 					   100, 40, 1000, 18)
 		{}
 
-		void Upgrade (ExpPoint exp) override
+		bool Upgrade (ExpPoint exp) override
 		{
-			Pokemon::Upgrade (exp);
+			return Pokemon::Upgrade (exp);
 		}
 
 		bool Hurt (HealthPoint damage) override
