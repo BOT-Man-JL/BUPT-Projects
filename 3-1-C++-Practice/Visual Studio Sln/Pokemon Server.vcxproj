@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\Pokemon.h" />
+    <ClInclude Include="..\src\Socket.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\Server.cpp" />

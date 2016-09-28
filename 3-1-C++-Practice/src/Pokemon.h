@@ -148,4 +148,4 @@ namespace PokemonGame
 	};
 }
 
-#endif // POKEMON_H
+#endif // !POKEMON_H
