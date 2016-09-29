@@ -38,8 +38,8 @@ namespace PokemonGame_Impl
 	{
 	public:
 		Server (unsigned short port,
-					   std::function<void (std::string request,
-										   std::string &response)> callback)
+				std::function<void (const std::string &request,
+									std::string &response)> callback)
 		{
 			const size_t BUF_SIZE = 1024;
 
@@ -144,7 +144,7 @@ namespace PokemonGame_Impl
 
 			// Socket
 			auto sock = socket (AF_INET, SOCK_STREAM,
-							IPPROTO_TCP);
+								IPPROTO_TCP);
 			if (sock == -1)
 				throw std::runtime_error ("Can not create socket");
 

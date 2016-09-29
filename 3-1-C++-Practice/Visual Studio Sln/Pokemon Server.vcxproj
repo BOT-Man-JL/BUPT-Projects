@@ -22,9 +22,13 @@
     <ClInclude Include="..\src\Pokemon.h" />
     <ClInclude Include="..\src\Socket.h" />
     <ClInclude Include="..\src\SQL.h" />
+    <ClInclude Include="..\src\SQLite\sqlite3.h" />
+    <ClInclude Include="..\src\SQLite\sqlite3ext.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\Server.cpp" />
+    <ClCompile Include="..\src\SQLite\shell.c" />
+    <ClCompile Include="..\src\SQLite\sqlite3.c" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{B3183380-E046-4411-89FF-C71E0EB67104}</ProjectGuid>
