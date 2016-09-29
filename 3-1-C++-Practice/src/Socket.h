@@ -135,17 +135,15 @@ namespace PokemonGame_Impl
 	class Client
 	{
 	public:
-		std::string Request (const std::string &ipAddr,
-							 unsigned short port,
-							 const std::string &request)
+		Client (const std::string &ipAddr,
+				unsigned short port)
 		{
-			const size_t BUF_SIZE = 1024;
 			const size_t MAX_TRIAL = 16;
-
+		
 			// Socket
-			auto sock = socket (AF_INET, SOCK_STREAM,
+			_sock = socket (AF_INET, SOCK_STREAM,
 								IPPROTO_TCP);
-			if (sock == -1)
+			if (_sock == -1)
 				throw std::runtime_error ("Can not create socket");
 
 			sockaddr_in sa;
@@ -158,7 +156,7 @@ namespace PokemonGame_Impl
 			auto iTry = 0;
 			for (; iTry < MAX_TRIAL; iTry++)
 			{
-				if (!connect (sock, (sockaddr *) &sa, sizeof (sa)))
+				if (!connect (_sock, (sockaddr *) &sa, sizeof (sa)))
 					break;
 
 				using namespace std::chrono_literals;
@@ -166,15 +164,20 @@ namespace PokemonGame_Impl
 			}
 			if (iTry == MAX_TRIAL)
 			{
-				closesocket (sock);
+				closesocket (_sock);
 				throw std::runtime_error ("Can not connect: " + ipAddr +
 										  ':' + std::to_string (port));
 			}
+		}
+
+		std::string Request (const std::string &request)
+		{
+			const size_t BUF_SIZE = 1024;
 
 			// Send
-			if (-1 == send (sock, request.c_str (), request.size () + 1, 0))
+			if (-1 == send (_sock, request.c_str (), request.size () + 1, 0))
 			{
-				closesocket (sock);
+				closesocket (_sock);
 				throw std::runtime_error ("Failed at send");
 			}
 
@@ -188,27 +191,30 @@ namespace PokemonGame_Impl
 				if (!recvBuf[bytesRead - 1])
 					break;
 
-				auto ret = recv (sock, recvBuf + bytesRead,
+				auto ret = recv (_sock, recvBuf + bytesRead,
 								 BUF_SIZE - bytesRead, 0);
 				if (ret > 0) bytesRead += ret;
 				else break;
 			}
+			return recvBuf;
+		}
 
+		virtual ~Client ()
+		{
 			// Shutdown
 			// SHUT_RDWR (Linux)/ SD_BOTH (Windows) = 2
-			if (shutdown (sock, 2) == -1)
+			if (shutdown (_sock, 2) == -1)
 			{
-				closesocket (sock);
+				closesocket (_sock);
 				throw std::runtime_error ("Failed at shutdown");
 			}
 
 			// Close
-			closesocket (sock);
-
-			return recvBuf;
+			closesocket (_sock);
 		}
 
 	private:
+		SOCKET _sock;
 #ifdef WIN32
 		SocketInit _pokemonSocket;
 #endif // WIN32

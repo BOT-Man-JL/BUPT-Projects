@@ -8,43 +8,62 @@
 
 int main (int argc, char *argv[])
 {
+	// Init
+	{
+		PokemonGame_Impl::SQLConnector connector ("Pokemon.db");
+		try
+		{
+			connector.CreateTable ("UserTbl",
+								   "uid varchar(16) primary key, pwd varchar(16)");
+			connector.InsertValue ("UserTbl", "'Admin', 'admin'");
+			std::cout << "Created UserTbl\n";
+		}
+		catch (const std::exception &e)
+		{
+			std::cerr << e.what () << std::endl;
+		}
+		try
+		{
+			connector.CreateTable ("PokemonTbl",
+								   "id varchar(16) primary key, name varchar(16), master varchar(16)");
+			std::cout << "Created PokemonTbl\n";
+		}
+		catch (const std::exception &e)
+		{
+			std::cerr << e.what () << std::endl;
+		}
+		// Todo: Seed Data
+	}
+
 	std::cout << "Pokemon Server" << std::endl;
 
 	PokemonGame_Impl::Server (5768, [] (const std::string &request,
 										std::string &response)
 	{
-		std::cout << request << std::endl;
+		std::cout << "I got '" << request << "'\n";
 		response = "Echo: " + request;
+		std::cout << "I said '" << response << "'\n";
+		std::cout << std::endl;
 
-		PokemonGame_Impl::SQLConnector connector ("Pokemon.db");
-
-		std::vector<std::string> cmds
-		{
-			"create table tbl1(one varchar(10), two smallint);",
-			"insert into tbl1 values ('hello!',10);",
-			"insert into tbl1 values ('goodbye', 20);",
-			"select * from tbl1;"
-		};
-
-		auto callback = [] (void *, int argc, char **argv, char **azColName)
+		auto QueryCallback = [] (void *, int argc, char **argv, char **azColName)
 		{
 			for (size_t i = 0; i < argc; i++)
-				printf ("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-			printf ("\n");
+				std::cout << azColName[i] << " = "
+				<< (argv[i] ? argv[i] : "NULL") << std::endl;
+			std::cout << std::endl;
 			return 0;
 		};
 
-		for (const auto &cmd : cmds)
+		PokemonGame_Impl::SQLConnector connector ("Pokemon.db");
+		try
 		{
-			try
-			{
-				connector.Excute (cmd, callback);
-			}
-			catch (const std::exception& e)
-			{
-				std::cerr << e.what () << std::endl;
-				//break;
-			}
+			connector.InsertValue ("UserTbl", "'John', 'JohnLee'");
+			connector.QueryValue ("UserTbl", "*", "", QueryCallback);
+			connector.DeleteValue ("UserTbl", "uid = 'John'");
+		}
+		catch (const std::exception &e)
+		{
+			std::cerr << e.what () << std::endl;
 		}
 	});
 
