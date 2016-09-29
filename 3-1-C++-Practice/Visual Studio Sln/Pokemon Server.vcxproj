@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\Pokemon.h" />
+    <ClInclude Include="..\src\Protocol.h" />
     <ClInclude Include="..\src\Socket.h" />
     <ClInclude Include="..\src\SQL.h" />
     <ClInclude Include="..\src\SQLite\sqlite3.h" />
