@@ -20,6 +20,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\Pokemon.h" />
+    <ClInclude Include="..\src\Socket.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\Client.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{EE6232C3-8C1E-40D0-B2C6-239626980283}</ProjectGuid>
@@ -75,6 +79,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)$(Configuration)\Client\</OutDir>
+    <IntDir>$(Configuration)\Client\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
