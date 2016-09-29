@@ -41,8 +41,6 @@ namespace PokemonGame_Impl
 				std::function<void (const std::string &request,
 									std::string &response)> callback)
 		{
-			const size_t BUF_SIZE = 1024;
-
 			// Socket
 			auto sock = socket (AF_INET, SOCK_STREAM,
 								IPPROTO_TCP);
@@ -80,46 +78,51 @@ namespace PokemonGame_Impl
 					throw std::runtime_error ("Failed at accept");
 				}
 
-				// Recv
-				char recvBuf[BUF_SIZE];
-				auto bytesRead = 0;
-				recvBuf[bytesRead] = 1;
-				while (bytesRead < BUF_SIZE)
+				std::thread ([=] ()
 				{
-					// Read '\0'
-					if (!recvBuf[bytesRead - 1])
-						break;
+					const size_t BUF_SIZE = 1024;
 
-					auto ret = recv (connectSock, recvBuf + bytesRead,
-									 BUF_SIZE - bytesRead, 0);
-					if (ret > 0) bytesRead += ret;
-					else break;
-				}
+					// Recv
+					char recvBuf[BUF_SIZE];
+					auto bytesRead = 0;
+					recvBuf[bytesRead] = 1;
+					while (bytesRead < BUF_SIZE)
+					{
+						// Read '\0'
+						if (!recvBuf[bytesRead - 1])
+							break;
 
-				// Callback
-				std::string response;
-				if (callback)
-					callback (recvBuf, response);
+						auto ret = recv (connectSock, recvBuf + bytesRead,
+										 BUF_SIZE - bytesRead, 0);
+						if (ret > 0) bytesRead += ret;
+						else break;
+					}
 
-				// Send
-				if (-1 == send (connectSock, response.c_str (), response.size () + 1, 0))
-				{
+					// Callback
+					std::string response;
+					if (callback)
+						callback (recvBuf, response);
+
+					// Send
+					if (-1 == send (connectSock, response.c_str (), response.size () + 1, 0))
+					{
+						closesocket (connectSock);
+						closesocket (sock);
+						throw std::runtime_error ("Failed at send");
+					}
+
+					// Shutdown Conncetion
+					// SHUT_RDWR (Linux)/ SD_BOTH (Windows) = 2
+					if (shutdown (connectSock, 2) == -1)
+					{
+						closesocket (connectSock);
+						closesocket (sock);
+						throw std::runtime_error ("Failed at shutdown");
+					}
+
+					// Close Connection
 					closesocket (connectSock);
-					closesocket (sock);
-					throw std::runtime_error ("Failed at send");
-				}
-
-				// Shutdown Conncetion
-				// SHUT_RDWR (Linux)/ SD_BOTH (Windows) = 2
-				if (shutdown (connectSock, 2) == -1)
-				{
-					closesocket (connectSock);
-					closesocket (sock);
-					throw std::runtime_error ("Failed at shutdown");
-				}
-
-				// Close Connection
-				closesocket (connectSock);
+				}).detach ();
 			}
 
 			// Close
@@ -138,25 +141,28 @@ namespace PokemonGame_Impl
 		Client (const std::string &ipAddr,
 				unsigned short port)
 		{
-			const size_t MAX_TRIAL = 16;
-		
-			// Socket
-			_sock = socket (AF_INET, SOCK_STREAM,
-								IPPROTO_TCP);
-			if (_sock == -1)
-				throw std::runtime_error ("Can not create socket");
+			memset (&_sa, 0, sizeof (_sa));
+			_sa.sin_family = AF_INET;
+			_sa.sin_port = htons (port);
+			_sa.sin_addr.s_addr = inet_addr (ipAddr.c_str ());
+		}
 
-			sockaddr_in sa;
-			memset (&sa, 0, sizeof (sa));
-			sa.sin_family = AF_INET;
-			sa.sin_port = htons (port);
-			sa.sin_addr.s_addr = inet_addr (ipAddr.c_str ());
+		std::string Request (const std::string &request)
+		{
+			const size_t BUF_SIZE = 1024;
+			const size_t MAX_TRIAL = 16;
+
+			// Socket
+			auto sock = socket (AF_INET, SOCK_STREAM,
+							IPPROTO_TCP);
+			if (sock == -1)
+				throw std::runtime_error ("Can not create socket");
 
 			// Connect
 			auto iTry = 0;
 			for (; iTry < MAX_TRIAL; iTry++)
 			{
-				if (!connect (_sock, (sockaddr *) &sa, sizeof (sa)))
+				if (!connect (sock, (sockaddr *) &_sa, sizeof (_sa)))
 					break;
 
 				using namespace std::chrono_literals;
@@ -164,20 +170,14 @@ namespace PokemonGame_Impl
 			}
 			if (iTry == MAX_TRIAL)
 			{
-				closesocket (_sock);
-				throw std::runtime_error ("Can not connect: " + ipAddr +
-										  ':' + std::to_string (port));
+				closesocket (sock);
+				throw std::runtime_error ("Failed at conncet");
 			}
-		}
-
-		std::string Request (const std::string &request)
-		{
-			const size_t BUF_SIZE = 1024;
 
 			// Send
-			if (-1 == send (_sock, request.c_str (), request.size () + 1, 0))
+			if (-1 == send (sock, request.c_str (), request.size () + 1, 0))
 			{
-				closesocket (_sock);
+				closesocket (sock);
 				throw std::runtime_error ("Failed at send");
 			}
 
@@ -191,30 +191,28 @@ namespace PokemonGame_Impl
 				if (!recvBuf[bytesRead - 1])
 					break;
 
-				auto ret = recv (_sock, recvBuf + bytesRead,
+				auto ret = recv (sock, recvBuf + bytesRead,
 								 BUF_SIZE - bytesRead, 0);
 				if (ret > 0) bytesRead += ret;
 				else break;
 			}
-			return recvBuf;
-		}
 
-		virtual ~Client ()
-		{
 			// Shutdown
 			// SHUT_RDWR (Linux)/ SD_BOTH (Windows) = 2
-			if (shutdown (_sock, 2) == -1)
+			if (shutdown (sock, 2) == -1)
 			{
-				closesocket (_sock);
+				closesocket (sock);
 				throw std::runtime_error ("Failed at shutdown");
 			}
 
 			// Close
-			closesocket (_sock);
+			closesocket (sock);
+
+			return recvBuf;
 		}
 
 	private:
-		SOCKET _sock;
+		sockaddr_in _sa;
 #ifdef WIN32
 		SocketInit _pokemonSocket;
 #endif // WIN32
