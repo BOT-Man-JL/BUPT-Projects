@@ -5,6 +5,7 @@
 #include <functional>
 #include <thread>
 #include <exception>
+#include <strstream>
 #include "SQLite\sqlite3.h"
 
 namespace PokemonGame_Impl
@@ -18,30 +19,37 @@ namespace PokemonGame_Impl
 			if (rc)
 			{
 				sqlite3_close (db);
-				throw std::runtime_error (std::string ("Can't open database: %s\n")
-										  + sqlite3_errmsg (db));
+				throw std::runtime_error (
+					std::string ("Can't open database: %s\n")
+					+ sqlite3_errmsg (db));
 			}
 		}
 
 		// Don't throw in callback
 		void Excute (const std::string &cmd,
-					 std::function<int (int argc, char **argv,
-										char **azColName) noexcept> callback)
+					 std::function<void (int argc, char **argv,
+										 char **azColName) noexcept>
+					 callback)
 		{
 			const size_t MAX_TRIAL = 16;
 			char *zErrMsg = 0;
 			int rc;
 
-			auto callbackWrapper = [] (void *fn, int argc, char **argv, char **azColName)
+			auto callbackWrapper = [] (void *fn, int argc, char **argv,
+									   char **azColName)
 			{
-				return static_cast<std::function<int (int argc, char **argv,
-													  char **azColName) noexcept> *> (fn)
-					->operator()(argc, argv, azColName);
+				static_cast<std::function
+					<void (int argc,
+						   char **argv,
+						   char **azColName) noexcept> *>
+						   (fn)->operator()(argc, argv, azColName);
+				return 0;
 			};
 
 			for (size_t iTry = 0; iTry < MAX_TRIAL; iTry++)
 			{
-				rc = sqlite3_exec (db, cmd.c_str (), callbackWrapper, &callback, &zErrMsg);
+				rc = sqlite3_exec (db, cmd.c_str (), callbackWrapper,
+								   &callback, &zErrMsg);
 				if (rc != SQLITE_BUSY)
 					break;
 
@@ -60,42 +68,23 @@ namespace PokemonGame_Impl
 		void CreateTable (const std::string &tableName,
 						  const std::string &params)
 		{
-			auto cmd = "create table " + tableName + " (" + params + ");";
-			try
-			{
-				Excute (cmd, _callback);
-			}
-			catch (std::exception &e)
-			{
-				throw std::move (e);
-			}
+			auto cmd = "create table " + tableName +
+				" (" + params + ");";
+			Excute (cmd, _callback);
 		}
 
 		void DropTable (const std::string &tableName)
 		{
 			auto cmd = "drop table " + tableName + ";";
-			try
-			{
-				Excute (cmd, _callback);
-			}
-			catch (std::exception &e)
-			{
-				throw std::move (e);
-			}
+			Excute (cmd, _callback);
 		}
 
 		void InsertValue (const std::string &tableName,
 						  const std::string &value)
 		{
-			auto cmd = "insert into " + tableName + " values (" + value + ");";
-			try
-			{
-				Excute (cmd, _callback);
-			}
-			catch (std::exception &e)
-			{
-				throw std::move (e);
-			}
+			auto cmd = "insert into " + tableName +
+				" values (" + value + ");";
+			Excute (cmd, _callback);
 		}
 
 		void DeleteValue (const std::string &tableName,
@@ -103,38 +92,49 @@ namespace PokemonGame_Impl
 		{
 			std::string cmd;
 			if (where.size ())
-				cmd = "delete from " + tableName + " where " + where + ";";
+				cmd = "delete from " + tableName +
+				" where (" + where + ");";
 			else
 				cmd = "delete * from " + tableName + ";";
-			try
+			Excute (cmd, _callback);
+		}
+
+		size_t CountValue (const std::string &tableName,
+						   const std::string &select,
+						   const std::string &where)
+		{
+			std::string cmd;
+			if (where.size ())
+				cmd = "select count (" + select + ") as num from " + tableName +
+				" where (" + where + ");";
+			else
+				cmd = "select count (" + select + ") as num from " + tableName + ";";
+
+			auto ret = 0;
+			auto callback = [&] (int argc, char **argv,
+								char **azColName)
 			{
-				Excute (cmd, _callback);
-			}
-			catch (std::exception &e)
-			{
-				throw std::move (e);
-			}
+				std::istrstream strs (argv[0]);
+				strs >> ret;
+			};
+			Excute (cmd, callback);
+			return ret;
 		}
 
 		void QueryValue (const std::string &tableName,
 						 const std::string &select,
 						 const std::string &where,
-						 std::function<int (int argc, char **argv,
-											char **azColName) noexcept> callback)
+						 std::function<void (int argc, char **argv,
+											 char **azColName) noexcept>
+						 callback)
 		{
 			std::string cmd;
 			if (where.size ())
-				cmd = "select " + select + " from " + tableName + " where " + where + ";";
+				cmd = "select " + select + " from " + tableName +
+				" where (" + where + ");";
 			else
 				cmd = "select " + select + " from " + tableName + ";";
-			try
-			{
-				Excute (cmd, std::move (callback));
-			}
-			catch (std::exception &e)
-			{
-				throw std::move (e);
-			}
+			Excute (cmd, std::move (callback));
 		}
 
 		~SQLConnector ()
@@ -144,7 +144,8 @@ namespace PokemonGame_Impl
 
 	private:
 		sqlite3 *db;
-		static int _callback (int argc, char **argv, char **azColName) { return 0; }
+		static void _callback (int argc, char **argv, char **azColName)
+		{ return; }
 	};
 }
 

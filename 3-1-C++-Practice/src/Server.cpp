@@ -3,12 +3,13 @@
 #include <iostream>
 #include <vector>
 
-#include "Protocol.h"
+#include "PokemonServer.h"
+#define PORT 5768
 
 int main (int argc, char *argv[])
 {
 	std::cout << "Pokemon Server Started" << std::endl;
-	PokemonGame::PokemonServer (5768);
+	PokemonGame::PokemonServer (PORT);
 
 	return 0;
 }

@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\Pokemon.h" />
+    <ClInclude Include="..\src\PokemonClient.h" />
     <ClInclude Include="..\src\Socket.h" />
   </ItemGroup>
   <ItemGroup>

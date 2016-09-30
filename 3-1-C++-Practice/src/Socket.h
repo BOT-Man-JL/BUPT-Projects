@@ -9,6 +9,7 @@
 #ifdef WIN32
 
 #include <winsock2.h>
+#include <Ws2tcpip.h>
 #pragma comment(lib, "ws2_32.lib") 
 
 namespace PokemonGame_Impl
@@ -144,7 +145,9 @@ namespace PokemonGame_Impl
 			memset (&_sa, 0, sizeof (_sa));
 			_sa.sin_family = AF_INET;
 			_sa.sin_port = htons (port);
-			_sa.sin_addr.s_addr = inet_addr (ipAddr.c_str ());
+			inet_pton (_sa.sin_family,
+					   ipAddr.c_str (),
+					   &_sa.sin_addr);
 		}
 
 		std::string Request (const std::string &request)
@@ -154,7 +157,7 @@ namespace PokemonGame_Impl
 
 			// Socket
 			auto sock = socket (AF_INET, SOCK_STREAM,
-							IPPROTO_TCP);
+								IPPROTO_TCP);
 			if (sock == -1)
 				throw std::runtime_error ("Can not create socket");
 

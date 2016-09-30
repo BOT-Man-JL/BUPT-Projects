@@ -15,10 +15,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\Pokemon.h">
+    <ClInclude Include="..\src\Socket.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\Socket.h">
+    <ClInclude Include="..\src\PokemonClient.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

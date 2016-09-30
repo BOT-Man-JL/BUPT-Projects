@@ -1,0 +1,165 @@
+#ifndef POKEMON_CLIENT_H
+#define POKEMON_CLIENT_H
+
+#include <string>
+#include <vector>
+#include <strstream>
+
+#include "Pokemon.h"
+#include "Socket.h"
+
+namespace PokemonGame
+{
+	std::vector<std::string> SplitStr (const std::string &input,
+									   const std::string &delimiter)
+	{
+		std::vector<std::string> ret;
+		size_t pos = 0;
+		std::string inputStr = input;
+		while ((pos = inputStr.find (delimiter)) != std::string::npos)
+		{
+			ret.push_back (inputStr.substr (0, pos));
+			inputStr.erase (0, pos + delimiter.length ());
+		}
+		ret.push_back (inputStr);
+		return std::move (ret);
+	}
+
+	class PokemonClient
+	{
+	public:
+		PokemonClient (const std::string &ipAddr,
+					   unsigned short port)
+			: _sockClient (ipAddr, port)
+		{}
+
+		~PokemonClient ()
+		{
+			Logout ();
+		}
+
+		const std::string &ErrMsg () const
+		{
+			return _errMsg;
+		}
+
+		bool Login (const std::string &uid,
+					const std::string &pwd)
+		{
+			auto response = Request ("Login",
+									 uid + '\n' + pwd);
+			return HandleResponse<2> (response, [&] ()
+			{
+				_sessionID = response[1];
+				return true;
+			});
+		}
+
+		bool Register (const std::string &uid,
+					   const std::string &pwd)
+		{
+			auto response = Request ("Register",
+									 uid + '\n' + pwd);
+			return HandleResponse<1> (response, [&] ()
+			{
+				return true;
+			});
+		}
+
+		bool Logout ()
+		{
+			auto response = Request ("Logout",
+									 _sessionID);
+			return HandleResponse<1> (response, [&] ()
+			{
+				return true;
+			});
+		}
+
+		bool UsersPokemons (const std::string &uid,
+							std::vector<std::string> &out)
+		{
+			auto response = Request ("UsersPokemons",
+									 _sessionID + '\n' + uid);
+			return HandleResponse<1> (response, [&] ()
+			{
+				response.erase (response.begin ());
+				out = std::move (response);
+				return true;
+			});
+		}
+
+		bool UsersWonRate (const std::string &uid,
+						   double &out)
+		{
+			auto response = Request ("UsersWonRate",
+									 _sessionID + '\n' + uid);
+			return HandleResponse<2> (response, [&] ()
+			{
+				std::strstream strs;
+				strs << response[1];
+				strs >> out;
+				return true;
+			});
+		}
+
+		bool UsersAll (std::vector<std::string> &out)
+		{
+			auto response = Request ("UsersAll",
+									 _sessionID);
+			return HandleResponse<1> (response, [&] ()
+			{
+				response.erase (response.begin ());
+				out = std::move (response);
+				return true;
+			});
+		}
+
+		bool UsersOnline (std::vector<std::string> &out)
+		{
+			auto response = Request ("UsersOnline",
+									 _sessionID);
+			return HandleResponse<1> (response, [&] ()
+			{
+				response.erase (response.begin ());
+				out = std::move (response);
+				return true;
+			});
+		}
+
+	private:
+		std::vector<std::string> Request (const std::string &strToken,
+										  const std::string &reqStr)
+		{
+			return SplitStr (
+				_sockClient.Request (strToken + '\n' + reqStr), "\n");
+		}
+
+		template<size_t responseCount>
+		bool HandleResponse (const std::vector<std::string> &response,
+							 std::function<bool ()> fnCaseSucceeded)
+		{
+			static_assert (responseCount >= 1, "responseCount >= 2");
+
+			if (response.size () < responseCount)
+			{
+				_errMsg = "Bad Response";
+				return false;
+			}
+			else if (response[0] == "1")
+				return fnCaseSucceeded ();
+			else
+			{
+				_errMsg = response[1];
+				return false;
+			}
+		}
+
+		PokemonGame_Impl::Client _sockClient;
+		std::string _sessionID;
+		std::string _errMsg;
+	};
+
+}
+
+#endif // !POKEMON_CLIENT_H

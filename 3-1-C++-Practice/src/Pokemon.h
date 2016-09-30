@@ -1,6 +1,7 @@
 #ifndef POKEMON_H
 #define POKEMON_H
 
+#include <random>
 #include <string>
 
 namespace PokemonGame
@@ -31,11 +32,7 @@ namespace PokemonGame
 			: _type (type), _name (name), _level (1), _expPoint (0),
 			_atk (atk), _def (def), _hp (hp), _fullHP (hp), _timeGap (timeGap)
 		{}
-
-		// Uninit
-		virtual ~Pokemon ()
-		{}
-
+		
 		// Upgrade
 		virtual bool Upgrade (ExpPoint exp)
 		{
@@ -71,9 +68,12 @@ namespace PokemonGame
 		Type GetType () const { return _type; }
 		Name GetName () const { return _name; }
 		Level GetLevel () const { return _level; }
+		Level GetExp () const { return _expPoint; }
 		HealthPoint GetAtk () const { return _atk; }
 		HealthPoint GetDef () const { return _def; }
 		TimeGap GetTimeGap () const { return _timeGap; }
+		HealthPoint GetHP () const { return _hp; }
+		HealthPoint GetFullHP () const { return _fullHP; }
 
 	protected:
 		Type _type;
@@ -146,6 +146,20 @@ namespace PokemonGame
 			return opPokemon.Hurt (damage);
 		}
 	};
+
+	Pokemon* NewPokemonRandly ()
+	{
+		const auto POKEMON_COUNT = 2;
+		switch (std::random_device ()() % POKEMON_COUNT)
+		{
+		case 0:
+			return new Pikachu;
+		case 1:
+			return new Charmander;
+		default:
+			return nullptr;
+		}
+	}
 }
 
 #endif // !POKEMON_H
