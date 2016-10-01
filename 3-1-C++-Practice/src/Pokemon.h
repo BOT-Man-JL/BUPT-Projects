@@ -32,7 +32,7 @@ namespace PokemonGame
 			: _type (type), _name (name), _level (1), _expPoint (0),
 			_atk (atk), _def (def), _hp (hp), _fullHP (hp), _timeGap (timeGap)
 		{}
-		
+
 		// Upgrade
 		virtual bool Upgrade (ExpPoint exp)
 		{
@@ -147,15 +147,19 @@ namespace PokemonGame
 		}
 	};
 
-	Pokemon* NewPokemonRandly ()
+}
+
+namespace PokemonGame_Impl
+{
+	PokemonGame::Pokemon* NewPokemonRandly ()
 	{
 		const auto POKEMON_COUNT = 2;
 		switch (std::random_device ()() % POKEMON_COUNT)
 		{
 		case 0:
-			return new Pikachu;
+			return new PokemonGame::Pikachu;
 		case 1:
-			return new Charmander;
+			return new PokemonGame::Charmander;
 		default:
 			return nullptr;
 		}

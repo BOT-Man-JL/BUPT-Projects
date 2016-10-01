@@ -8,7 +8,7 @@
 #include "Pokemon.h"
 #include "Socket.h"
 
-namespace PokemonGame
+namespace PokemonGame_Impl
 {
 	std::vector<std::string> SplitStr (const std::string &input,
 									   const std::string &delimiter)
@@ -24,7 +24,10 @@ namespace PokemonGame
 		ret.push_back (inputStr);
 		return std::move (ret);
 	}
+}
 
+namespace PokemonGame
+{
 	class PokemonClient
 	{
 	public:
@@ -46,8 +49,7 @@ namespace PokemonGame
 		bool Login (const std::string &uid,
 					const std::string &pwd)
 		{
-			auto response = Request ("Login",
-									 uid + '\n' + pwd);
+			auto response = Request ("Login", uid, pwd);
 			return HandleResponse<2> (response, [&] ()
 			{
 				_sessionID = response[1];
@@ -58,8 +60,7 @@ namespace PokemonGame
 		bool Register (const std::string &uid,
 					   const std::string &pwd)
 		{
-			auto response = Request ("Register",
-									 uid + '\n' + pwd);
+			auto response = Request ("Register", uid, pwd);
 			return HandleResponse<1> (response, [&] ()
 			{
 				return true;
@@ -68,8 +69,7 @@ namespace PokemonGame
 
 		bool Logout ()
 		{
-			auto response = Request ("Logout",
-									 _sessionID);
+			auto response = Request ("Logout", _sessionID);
 			return HandleResponse<1> (response, [&] ()
 			{
 				return true;
@@ -79,8 +79,7 @@ namespace PokemonGame
 		bool UsersPokemons (const std::string &uid,
 							std::vector<std::string> &out)
 		{
-			auto response = Request ("UsersPokemons",
-									 _sessionID + '\n' + uid);
+			auto response = Request ("UsersPokemons", _sessionID, uid);
 			return HandleResponse<1> (response, [&] ()
 			{
 				response.erase (response.begin ());
@@ -92,8 +91,7 @@ namespace PokemonGame
 		bool UsersWonRate (const std::string &uid,
 						   double &out)
 		{
-			auto response = Request ("UsersWonRate",
-									 _sessionID + '\n' + uid);
+			auto response = Request ("UsersWonRate", _sessionID, uid);
 			return HandleResponse<2> (response, [&] ()
 			{
 				std::strstream strs;
@@ -105,8 +103,7 @@ namespace PokemonGame
 
 		bool UsersAll (std::vector<std::string> &out)
 		{
-			auto response = Request ("UsersAll",
-									 _sessionID);
+			auto response = Request ("UsersAll", _sessionID);
 			return HandleResponse<1> (response, [&] ()
 			{
 				response.erase (response.begin ());
@@ -117,8 +114,7 @@ namespace PokemonGame
 
 		bool UsersOnline (std::vector<std::string> &out)
 		{
-			auto response = Request ("UsersOnline",
-									 _sessionID);
+			auto response = Request ("UsersOnline", _sessionID);
 			return HandleResponse<1> (response, [&] ()
 			{
 				response.erase (response.begin ());
@@ -128,11 +124,17 @@ namespace PokemonGame
 		}
 
 	private:
-		std::vector<std::string> Request (const std::string &strToken,
-										  const std::string &reqStr)
+		std::vector<std::string> Request (const std::string &strToken)
 		{
-			return SplitStr (
-				_sockClient.Request (strToken + '\n' + reqStr), "\n");
+			return PokemonGame_Impl::SplitStr (
+				_sockClient.Request (strToken), "\n");
+		}
+
+		template<typename T, typename... Args>
+		std::vector<std::string> Request (const std::string &strToken,
+										  const T &arg1, Args... args)
+		{
+			return Request (strToken + '\n' + arg1, args...);
 		}
 
 		template<size_t responseCount>

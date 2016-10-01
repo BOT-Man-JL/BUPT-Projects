@@ -12,7 +12,7 @@
 #include "Socket.h"
 #include "SQL.h"
 
-namespace PokemonGame
+namespace PokemonGame_Impl
 {
 	std::vector<std::string> SplitStr (const std::string &input,
 									   const std::string &delimiter)
@@ -29,6 +29,48 @@ namespace PokemonGame
 		return std::move (ret);
 	}
 
+	void GetFmtStr (
+		std::string &fmt,
+		std::pair<std::string, std::string> arg1,
+		bool isPrimaryKey)
+	{
+		auto fmt1 = std::move (arg1.first) + ' ' + std::move (arg1.second);
+		if (isPrimaryKey)
+			fmt1 += " primary key";
+		fmt = std::move (fmt1) + fmt;
+	}
+
+	template <typename... Args>
+	void GetFmtStr (
+		std::string &fmt,
+		std::pair<std::string, std::string> arg1,
+		bool isPrimaryKey,
+		std::pair<std::string, std::string> arg2,
+		Args... args)
+	{
+		fmt += "," + std::move (arg2.first) + " " + std::move (arg2.second);
+		GetFmtStr (fmt, std::move (arg1), isPrimaryKey, args...);
+	}
+
+	std::string PokemonToString (const PokemonGame::Pokemon &pokemon)
+	{
+		std::strstream strs;
+		strs << '\'' << pokemon.GetName () << "',"
+			<< pokemon.GetLevel () << ','
+			<< pokemon.GetExp () << ','
+			<< pokemon.GetAtk () << ','
+			<< pokemon.GetDef () << ','
+			<< pokemon.GetTimeGap () << ','
+			<< pokemon.GetFullHP () << ','
+			<< pokemon.GetHP ();
+		std::string ret;
+		strs >> ret;
+		return std::move (ret);
+	}
+}
+
+namespace PokemonGame
+{
 	class PokemonServer
 	{
 	public:
@@ -59,24 +101,7 @@ namespace PokemonGame
 
 			// Init db
 			{
-				auto tblUserFmt =
-					fmtUid.first + ' ' + fmtUid.second + " primary key, " +
-					fmtPwd.first + ' ' + fmtPwd.second + ", " +
-					fmtWrt.first + ' ' + fmtWrt.second;
-				auto tblSessionFmt =
-					fmtUid.first + ' ' + fmtUid.second + " primary key, " +
-					fmtSid.first + ' ' + fmtSid.second;
-				auto tblPokemonFmt = 
-					fmtMid.first + ' ' + fmtMid.second + " primary key, " +
-					fmtUid.first + ' ' + fmtUid.second + ", " +
-					fmtMNam.first + ' ' + fmtMNam.second + ", " +
-					fmtMLev.first + ' ' + fmtMLev.second + ", " +
-					fmtMExp.first + ' ' + fmtMExp.second + ", " +
-					fmtMAtk.first + ' ' + fmtMAtk.second + ", " +
-					fmtMDef.first + ' ' + fmtMDef.second + ", " +
-					fmtMGap.first + ' ' + fmtMGap.second + ", " +
-					fmtMFHp.first + ' ' + fmtMFHp.second + ", " +
-					fmtMCHp.first + ' ' + fmtMCHp.second;
+				using namespace PokemonGame_Impl;
 
 				PokemonGame_Impl::SQLConnector connector (dbName);
 				auto CreateTable = [&] (const std::string &tbl,
@@ -92,76 +117,67 @@ namespace PokemonGame
 						std::cerr << e.what () << std::endl;
 					}
 				};
-				CreateTable (tblUser, tblUserFmt);
-				CreateTable (tblSession, tblSessionFmt);
-				CreateTable (tblPokemon, tblPokemonFmt);
+
+				std::string strFmt;
+				GetFmtStr (strFmt, fmtUid, true, fmtPwd, fmtWrt);
+				CreateTable (tblUser, strFmt);
+
+				strFmt.clear ();
+				GetFmtStr (strFmt, fmtUid, true, fmtSid);
+				CreateTable (tblSession, strFmt);
+
+				strFmt.clear ();
+				GetFmtStr (strFmt, fmtMid, true, fmtUid,
+						   fmtMNam, fmtMLev, fmtMExp,
+						   fmtMAtk, fmtMDef, fmtMGap,
+						   fmtMFHp, fmtMCHp);
+				CreateTable (tblPokemon, strFmt);
 			}
 
 			// Check Sid
-			// Get UID from SID
+			// Return true if Found, and Set uid
 			auto CheckSid = [&] (const std::string &sid,
 								 std::string &uid)
 			{
 				auto ret = false;
-				PokemonGame_Impl::SQLConnector connector (dbName);
 				try
 				{
-					// Query Session
+					PokemonGame_Impl::SQLConnector connector (dbName);
+					// Get UID from SID
 					connector.QueryValue (tblSession, fmtUid.first,
 										  fmtSid.first + "='" + sid + '\'',
 										  [&] (int, char **argv, char **)
 					{
-						// Found
 						uid = argv[0];
 						ret = true;
 					});
 				}
 				catch (const std::exception&) {}
-
 				return ret;
 			};
 
-			auto PokemonToString = [] (const Pokemon &pokemon)
-			{
-				std::strstream strs;
-				strs << '\'' << pokemon.GetName () << "',"
-					<< pokemon.GetLevel () << ','
-					<< pokemon.GetExp () << ','
-					<< pokemon.GetAtk () << ','
-					<< pokemon.GetDef () << ','
-					<< pokemon.GetTimeGap () << ','
-					<< pokemon.GetFullHP () << ','
-					<< pokemon.GetHP ();
-				std::string ret;
-				strs >> ret;
-				return std::move (ret);
-			};
-
-			auto StringToPokemon = [] (const std::string &str)
-			{
-				// Todo
-			};
-
+			// Allocate Pokemon to User
+			// Return true if Insert New Pokemon Successfully
 			auto AddPokemon = [&] (const std::string &uid,
 								   const Pokemon &pokemon)
 			{
-				PokemonGame_Impl::SQLConnector connector (dbName);
-
-				auto midIndex = connector.CountValue (tblPokemon, "mid", "");
 				try
 				{
-					auto sqlParam = std::to_string (midIndex) +
-						",'" + uid + "'," + PokemonToString (pokemon);
+					PokemonGame_Impl::SQLConnector connector (dbName);
+					auto sqlParam = std::to_string (
+						connector.CountValue (tblPokemon, "mid", "")) +
+						",'" + uid + "'," +
+						PokemonGame_Impl::PokemonToString (pokemon);
 					connector.InsertValue (tblPokemon, sqlParam);
+					return true;
 				}
-				catch (const std::exception&)
-				{
-					return false;
-				}
-				return true;
+				catch (const std::exception&) {}
+				return false;
 			};
 
 			// Handle Login
+			// Succeed if Set Sid / Get Sid is OK
+			// Fail if No Uid Found / Wrong Pwd / Get Sid Failed
 			SetHandler ("Login", [&] (std::string &response,
 									  const std::vector<std::string> &args)
 			{
@@ -170,22 +186,20 @@ namespace PokemonGame
 					SetResponse (response, false, "Too Few Arguments");
 					return;
 				}
+
 				const auto &uid = args[1];
 				const auto &pwd = args[2];
-
 				SetResponse (response, false, "Bad Login Attempt");
-				PokemonGame_Impl::SQLConnector connector (dbName);
+
 				try
 				{
-					// Query User
+					PokemonGame_Impl::SQLConnector connector (dbName);
 					connector.QueryValue (tblUser, fmtPwd.first,
 										  fmtUid.first + "='" + uid + '\'',
 										  [&] (int, char **argv, char **)
 					{
 						// Wrong PWD
-						if (argv[0] != pwd)
-							return;
-
+						if (argv[0] != pwd) return;
 						try
 						{
 							// Set new SID
@@ -198,17 +212,13 @@ namespace PokemonGame
 						catch (const std::exception&)
 						{
 							// Get SID From UID
-							try
+							connector.QueryValue (tblSession, fmtSid.first,
+												  fmtUid.first + "='" + uid + '\'',
+												  [&] (int, char **argv, char **)
 							{
-								connector.QueryValue (tblSession, fmtSid.first,
-													  fmtUid.first + "='" + uid + '\'',
-													  [&] (int, char **argv, char **)
-								{
-									auto sid = argv[0];
-									SetResponse (response, true, sid);
-								});
-							}
-							catch (const std::exception&) {}
+								auto sid = argv[0];
+								SetResponse (response, true, sid);
+							});
 						}
 					});
 				}
@@ -216,6 +226,8 @@ namespace PokemonGame
 			});
 
 			// Handle Register
+			// Succeed if Set Uid and New Pokemon are OK
+			// Fail if Set Uid / New Pokemon Failed
 			SetHandler ("Register", [&] (std::string &response,
 										 const std::vector<std::string> &args)
 			{
@@ -224,13 +236,14 @@ namespace PokemonGame
 					SetResponse (response, false, "Too Few Arguments");
 					return;
 				}
+
 				const auto &uid = args[1];
 				const auto &pwd = args[2];
-
 				SetResponse (response, false, "UserID has been Taken");
-				PokemonGame_Impl::SQLConnector connector (dbName);
+
 				try
 				{
+					PokemonGame_Impl::SQLConnector connector (dbName);
 					connector.InsertValue (tblUser, '\'' + uid + "','"
 										   + pwd + "',0");
 
@@ -239,7 +252,8 @@ namespace PokemonGame
 					auto isAddPokemon = true;
 					for (size_t i = 0; i < initPokemonCount; i++)
 					{
-						auto newPokemon = NewPokemonRandly ();
+						auto newPokemon =
+							PokemonGame_Impl::NewPokemonRandly ();
 						if (!AddPokemon (uid, *newPokemon))
 							isAddPokemon = false;
 						delete newPokemon;
@@ -257,6 +271,8 @@ namespace PokemonGame
 			});
 
 			// Handle Logout
+			// Succeed if Delete Sid is OK
+			// Fail if Delete Sid Failed
 			SetHandler ("Logout", [&] (std::string &response,
 									   const std::vector<std::string> &args)
 			{
@@ -265,12 +281,13 @@ namespace PokemonGame
 					SetResponse (response, false, "Too Few Arguments");
 					return;
 				}
-				const auto &sid = args[1];
 
+				const auto &sid = args[1];
 				SetResponse (response, false, "Logout Failed");
-				PokemonGame_Impl::SQLConnector connector (dbName);
+
 				try
 				{
+					PokemonGame_Impl::SQLConnector connector (dbName);
 					connector.DeleteValue (tblSession,
 										   fmtSid.first + "='" + sid + '\'');
 					SetResponse (response, true, "Logout Successfully");
@@ -279,6 +296,8 @@ namespace PokemonGame
 			});
 
 			// Handle UsersPokemons
+			// Succeed if Pokemon Found
+			// Fail if No Sid Found / No Pokemon Found / Query Failed
 			SetHandler ("UsersPokemons", [&] (std::string &response,
 											  const std::vector<std::string> &args)
 			{
@@ -287,6 +306,7 @@ namespace PokemonGame
 					SetResponse (response, false, "Too Few Arguments");
 					return;
 				}
+
 				const auto &sid = args[1];
 				const auto &uidToSearch = args[2];
 
@@ -297,9 +317,9 @@ namespace PokemonGame
 				}
 
 				SetResponse (response, false, "No Pokemon Found");
-				PokemonGame_Impl::SQLConnector connector (dbName);
 				try
 				{
+					PokemonGame_Impl::SQLConnector connector (dbName);
 					std::string ret;
 					auto where = fmtUid.first + "='" + uidToSearch + '\'';
 					connector.QueryValue (tblPokemon, fmtMNam.first, where,
@@ -316,6 +336,8 @@ namespace PokemonGame
 			});
 
 			// Handle UsersWonRate
+			// Succeed if User Found
+			// Fail if No Sid Found / No User Found / Query Failed
 			SetHandler ("UsersWonRate", [&] (std::string &response,
 											 const std::vector<std::string> &args)
 			{
@@ -324,6 +346,7 @@ namespace PokemonGame
 					SetResponse (response, false, "Too Few Arguments");
 					return;
 				}
+
 				const auto &sid = args[1];
 				const auto &uidToSearch = args[2];
 
@@ -334,9 +357,9 @@ namespace PokemonGame
 				}
 
 				SetResponse (response, false, "No Such User");
-				PokemonGame_Impl::SQLConnector connector (dbName);
 				try
 				{
+					PokemonGame_Impl::SQLConnector connector (dbName);
 					auto where = fmtUid.first + "='" + uidToSearch + '\'';
 					connector.QueryValue (tblUser, fmtWrt.first, where,
 										  [&] (int, char **argv, char **)
@@ -349,6 +372,8 @@ namespace PokemonGame
 			});
 
 			// Handle UsersAll
+			// Succeed if User Found
+			// Fail if No Sid Found / No User Found / Query Failed
 			SetHandler ("UsersAll", [&] (std::string &response,
 										 const std::vector<std::string> &args)
 			{
@@ -357,6 +382,7 @@ namespace PokemonGame
 					SetResponse (response, false, "Too Few Arguments");
 					return;
 				}
+
 				const auto &sid = args[1];
 
 				if (!CheckSid (sid, std::string ()))
@@ -366,9 +392,9 @@ namespace PokemonGame
 				}
 
 				SetResponse (response, false, "No User Registered");
-				PokemonGame_Impl::SQLConnector connector (dbName);
 				try
 				{
+					PokemonGame_Impl::SQLConnector connector (dbName);
 					std::string ret;
 					connector.QueryValue (tblUser, fmtUid.first, "",
 										  [&] (int, char **argv, char **)
@@ -384,6 +410,8 @@ namespace PokemonGame
 			});
 
 			// Handle UsersOnline
+			// Succeed if User Found
+			// Fail if No Sid Found / No User Found / Query Failed
 			SetHandler ("UsersOnline", [&] (std::string &response,
 											const std::vector<std::string> &args)
 			{
@@ -392,6 +420,7 @@ namespace PokemonGame
 					SetResponse (response, false, "Too Few Arguments");
 					return;
 				}
+
 				const auto &sid = args[1];
 
 				if (!CheckSid (sid, std::string ()))
@@ -401,9 +430,9 @@ namespace PokemonGame
 				}
 
 				SetResponse (response, false, "No User Online");
-				PokemonGame_Impl::SQLConnector connector (dbName);
 				try
 				{
+					PokemonGame_Impl::SQLConnector connector (dbName);
 					std::string ret;
 					connector.QueryValue (tblSession, fmtUid.first, "",
 										  [&] (int, char **argv, char **)
@@ -424,7 +453,7 @@ namespace PokemonGame
 									  [&] (const std::string &request,
 										   std::string &response)
 			{
-				auto args = SplitStr (request, "\n");
+				auto args = PokemonGame_Impl::SplitStr (request, "\n");
 				if (args.size () < 1)
 					SetResponse (response, false, "No Arguments");
 				else if (_handlers.find (args[0]) == _handlers.end ())
@@ -432,10 +461,8 @@ namespace PokemonGame
 				else
 					_handlers[args[0]] (response, args);
 
-				{
-					std::lock_guard<std::mutex> lck (ioLock);
-					std::cout << '\n' << request << '\n' << response << "\n\n";
-				}
+				std::lock_guard<std::mutex> lck (ioLock);
+				std::cout << '\n' << request << '\n' << response << "\n\n";
 			});
 		}
 
