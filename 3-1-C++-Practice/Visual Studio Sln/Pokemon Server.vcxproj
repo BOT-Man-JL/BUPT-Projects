@@ -24,11 +24,9 @@
     <ClInclude Include="..\src\Socket.h" />
     <ClInclude Include="..\src\SQL.h" />
     <ClInclude Include="..\src\SQLite\sqlite3.h" />
-    <ClInclude Include="..\src\SQLite\sqlite3ext.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\Server.cpp" />
-    <ClCompile Include="..\src\SQLite\shell.c" />
     <ClCompile Include="..\src\SQLite\sqlite3.c" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

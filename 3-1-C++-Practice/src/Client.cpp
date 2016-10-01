@@ -40,7 +40,7 @@ int main (int argc, char *argv[])
 							   const std::string &uid)
 	{
 		std::vector<std::string> result;
-		std::cout << "Pokemons of User " << uid << std::endl;
+		std::cout << "Pokemons of User: " << uid << std::endl;
 		if (client.UsersPokemons (uid, result))
 			for (const auto pokemon : result)
 				std::cout << '\t' << pokemon << std::endl;
@@ -52,9 +52,21 @@ int main (int argc, char *argv[])
 							  const std::string &uid)
 	{
 		double result;
-		std::cout << "WonRate of User " << uid << std::endl;
+		std::cout << "WonRate of User: " << uid << std::endl;
 		if (client.UsersWonRate (uid, result))
 			std::cout << '\t' << result << std::endl;
+		else
+			std::cerr << client.ErrMsg () << std::endl;
+	};
+
+	auto fnUsersBadges = [] (PokemonGame::PokemonClient &client,
+							  const std::string &uid)
+	{
+		std::vector<std::string> result;
+		std::cout << "Badges of User: " << uid << std::endl;
+		if (client.UsersBadges (uid, result))
+			for (const auto user : result)
+				std::cout << '\t' << user << std::endl;
 		else
 			std::cerr << client.ErrMsg () << std::endl;
 	};
@@ -108,6 +120,7 @@ int main (int argc, char *argv[])
 	fnUsersAll (client3);
 	fnUsersOnline (client3);
 	fnUsersWonRate (client3, "BOT");
+	fnUsersBadges (client3, "BOT");
 
 	fnLogout (client2);
 	fnLogout (client3);

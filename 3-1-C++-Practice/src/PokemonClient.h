@@ -61,7 +61,7 @@ namespace PokemonGame
 					   const std::string &pwd)
 		{
 			auto response = Request ("Register", uid, pwd);
-			return HandleResponse<1> (response, [&] ()
+			return HandleResponse<2> (response, [&] ()
 			{
 				return true;
 			});
@@ -70,7 +70,7 @@ namespace PokemonGame
 		bool Logout ()
 		{
 			auto response = Request ("Logout", _sessionID);
-			return HandleResponse<1> (response, [&] ()
+			return HandleResponse<2> (response, [&] ()
 			{
 				return true;
 			});
@@ -80,7 +80,7 @@ namespace PokemonGame
 							std::vector<std::string> &out)
 		{
 			auto response = Request ("UsersPokemons", _sessionID, uid);
-			return HandleResponse<1> (response, [&] ()
+			return HandleResponse<2> (response, [&] ()
 			{
 				response.erase (response.begin ());
 				out = std::move (response);
@@ -101,10 +101,22 @@ namespace PokemonGame
 			});
 		}
 
+		bool UsersBadges (const std::string &uid,
+						  std::vector<std::string> &out)
+		{
+			auto response = Request ("UsersBadges", _sessionID, uid);
+			return HandleResponse<2> (response, [&] ()
+			{
+				response.erase (response.begin ());
+				out = std::move (response);
+				return true;
+			});
+		}
+
 		bool UsersAll (std::vector<std::string> &out)
 		{
 			auto response = Request ("UsersAll", _sessionID);
-			return HandleResponse<1> (response, [&] ()
+			return HandleResponse<2> (response, [&] ()
 			{
 				response.erase (response.begin ());
 				out = std::move (response);
@@ -115,7 +127,7 @@ namespace PokemonGame
 		bool UsersOnline (std::vector<std::string> &out)
 		{
 			auto response = Request ("UsersOnline", _sessionID);
-			return HandleResponse<1> (response, [&] ()
+			return HandleResponse<2> (response, [&] ()
 			{
 				response.erase (response.begin ());
 				out = std::move (response);
@@ -141,7 +153,7 @@ namespace PokemonGame
 		bool HandleResponse (const std::vector<std::string> &response,
 							 std::function<bool ()> fnCaseSucceeded)
 		{
-			static_assert (responseCount >= 1, "responseCount >= 2");
+			static_assert (responseCount >= 2, "responseCount >= 2");
 
 			if (response.size () < responseCount)
 			{

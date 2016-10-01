@@ -6,7 +6,7 @@
 #include <thread>
 #include <exception>
 #include <strstream>
-#include "SQLite\sqlite3.h"
+#include "./SQLite/sqlite3.h"
 
 namespace PokemonGame_Impl
 {
@@ -53,8 +53,7 @@ namespace PokemonGame_Impl
 				if (rc != SQLITE_BUSY)
 					break;
 
-				using namespace std::chrono_literals;
-				std::this_thread::sleep_for (20ms);
+				std::this_thread::sleep_for (std::chrono::microseconds(20));
 			}
 
 			if (rc != SQLITE_OK)
@@ -88,7 +87,7 @@ namespace PokemonGame_Impl
 		}
 
 		void DeleteValue (const std::string &tableName,
-						  const std::string &where)
+						  const std::string &where = "")
 		{
 			std::string cmd;
 			if (where.size ())
@@ -101,7 +100,7 @@ namespace PokemonGame_Impl
 
 		size_t CountValue (const std::string &tableName,
 						   const std::string &select,
-						   const std::string &where)
+						   const std::string &where = "")
 		{
 			std::string cmd;
 			if (where.size ())
