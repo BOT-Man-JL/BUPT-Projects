@@ -122,15 +122,16 @@ namespace BOT_ORM_Impl
 
 	protected:
 		template <typename T, typename... Args>
-		void _Visit (T &property, Args & ... args)
+		inline void _Visit (T &property, Args & ... args)
 		{
 			_Visit (property);
 			_Visit (args...);
 		}
 
 		template <typename T>
-		void _Visit (T &property)
+		inline void _Visit (T &property)
 		{
+			// If you want to Use other Types, please Convert first...
 			static_assert (false,
 						   "Only Support long, double, std::string :-(");
 		}
@@ -378,6 +379,13 @@ namespace BOT_ORM
 					out.push_back (std::move (obj));
 				});
 			});
+		}
+
+		// Select == Query
+		inline bool Select (std::vector<C> &out,
+							const std::string &cond = "")
+		{
+			Query (out, cond);
 		}
 
 		size_t Count (const std::string &cond = "")
