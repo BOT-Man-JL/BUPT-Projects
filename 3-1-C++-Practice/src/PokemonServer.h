@@ -5,7 +5,6 @@
 #include <string>
 #include <unordered_map>
 #include <iostream>
-#include <mutex>
 #include <memory>
 
 #include "Pokemon.h"
@@ -354,7 +353,6 @@ namespace PokemonGame
 			});
 
 			// Run
-			std::mutex ioLock;
 			BOT_Socket::Server (port, [&] (const std::string &request,
 										   std::string &response,
 										   bool &isKeepAlive)
@@ -369,9 +367,6 @@ namespace PokemonGame
 					SetResponse (response, false, "No Handler Found");
 				else
 					_handlers[args[0]] (response, isKeepAlive, args);
-
-				std::lock_guard<std::mutex> lck (ioLock);
-				std::cout << '\n' << request << '\n' << response << "\n\n";
 			});
 		}
 

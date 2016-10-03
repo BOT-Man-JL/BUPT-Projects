@@ -3,7 +3,6 @@
 
 #include <string>
 #include <vector>
-#include <strstream>
 
 #include "Pokemon.h"
 #include "Socket.h"
@@ -89,9 +88,7 @@ namespace PokemonGame
 			auto response = Request ("UsersWonRate", _sessionID, uid);
 			return HandleResponse<2> (response, [&] ()
 			{
-				std::strstream strs;
-				strs << response[1];
-				strs >> out;
+				out = std::stod (response[1]);
 				return true;
 			});
 		}
@@ -133,8 +130,15 @@ namespace PokemonGame
 	private:
 		std::vector<std::string> Request (const std::string &strToken)
 		{
-			return PokemonGame_Impl::SplitStr (
-				_sockClient.Request (strToken), "\n");
+			try
+			{
+				return PokemonGame_Impl::SplitStr (
+					_sockClient.Request (strToken), "\n");
+			}
+			catch (const std::exception &ex)
+			{
+				return { "0", ex.what () };
+			}
 		}
 
 		template<typename T, typename... Args>

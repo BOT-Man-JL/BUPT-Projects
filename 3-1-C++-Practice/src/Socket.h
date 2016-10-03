@@ -9,6 +9,10 @@
 #include <functional>
 #include <thread>
 
+// Logging
+#include <mutex>
+#include <iostream>
+
 #ifdef WIN32
 
 #include <winsock2.h>
@@ -84,18 +88,26 @@ namespace BOT_Socket
 				throw std::runtime_error ("Failed at listen");
 			}
 
+			std::mutex ioLock;
+			auto clientCount = 0;
 			while (true)
 			{
 				// Accept
 				auto connectSock = accept (sock, NULL, NULL);
 				if (connectSock == -1)
-				{
-					CloseSocket (sock);
-					throw std::runtime_error ("Failed at accept");
-				}
+					continue;
 
-				std::thread ([&callback, connectSock] ()
+				std::thread ([&] ()
 				{
+					auto curClientCount = 0;
+					// Log
+					{
+						std::lock_guard<std::mutex> lck (ioLock);
+						curClientCount = ++clientCount;
+						std::cout << "\n<--------------------  "
+							<< curClientCount << "  \n\n";
+					}
+
 					for (auto isKeepAlive = true; isKeepAlive; )
 					{
 						isKeepAlive = false;
@@ -103,18 +115,23 @@ namespace BOT_Socket
 						// Recv
 						char recvBuf[BUF_SIZE];
 						auto bytesRead = 0;
-						recvBuf[bytesRead] = 1;
 						while (bytesRead < BUF_SIZE)
 						{
-							// Read '\0'
-							if (!recvBuf[bytesRead - 1])
+							auto curRecv = recv (connectSock, recvBuf + bytesRead,
+											 BUF_SIZE - bytesRead, 0);
+							if (curRecv == 0 || curRecv == -1)
 								break;
 
-							auto ret = recv (connectSock, recvBuf + bytesRead,
-											 BUF_SIZE - bytesRead, 0);
-							if (ret > 0) bytesRead += ret;
-							else break;
+							bytesRead += curRecv;
+
+							// Read '\0'
+							if (bytesRead > 1 && !recvBuf[bytesRead - 1])
+								break;
 						}
+
+						// Client Close the Connection
+						if (!bytesRead)
+							break;
 
 						// Callback
 						std::string response;
@@ -122,25 +139,30 @@ namespace BOT_Socket
 							callback (recvBuf, response, isKeepAlive);
 
 						// Send
-						if (-1 == send (connectSock, response.c_str (), response.size () + 1, 0))
+						if (-1 == send (connectSock, response.c_str (),
+										response.size () + 1, 0))
+							break;
+
+						// Log
 						{
-							CloseSocket (connectSock);
-							//CloseSocket (sock);
-							throw std::runtime_error ("Failed at send");
+							std::lock_guard<std::mutex> lck (ioLock);
+							std::cout << '\n' << recvBuf << '\n' << response << "\n\n";
 						}
 					}
 
 					// Shutdown Conncetion
 					// SHUT_RDWR (Linux)/ SD_BOTH (Windows) = 2
-					if (shutdown (connectSock, 2) == -1)
-					{
-						CloseSocket (connectSock);
-						//CloseSocket (sock);
-						throw std::runtime_error ("Failed at shutdown");
-					}
+					shutdown (connectSock, 2);
 
-					// Close Connection
+					// Close
 					CloseSocket (connectSock);
+
+					// Log
+					{
+						std::lock_guard<std::mutex> lck (ioLock);
+						std::cout << "\n-------------------->  "
+							<< curClientCount << "  \n\n";
+					}
 				}).detach ();
 			}
 
@@ -197,24 +219,29 @@ namespace BOT_Socket
 			if (-1 == send (_sock, request.c_str (), request.size () + 1, 0))
 			{
 				CloseSocket (_sock);
-				throw std::runtime_error ("Failed at send");
+				throw std::runtime_error ("Server Close the Connection");
 			}
 
 			// Recv
 			char recvBuf[BUF_SIZE];
 			auto bytesRead = 0;
-			recvBuf[bytesRead] = 1;
 			while (bytesRead < BUF_SIZE)
 			{
-				// Read '\0'
-				if (!recvBuf[bytesRead - 1])
+				auto curRecv = recv (_sock, recvBuf + bytesRead,
+									 BUF_SIZE - bytesRead, 0);
+				if (curRecv == 0 || curRecv == -1)
 					break;
 
-				auto ret = recv (_sock, recvBuf + bytesRead,
-								 BUF_SIZE - bytesRead, 0);
-				if (ret > 0) bytesRead += ret;
-				else break;
+				bytesRead += curRecv;
+
+				// Read '\0'
+				if (bytesRead > 1 && !recvBuf[bytesRead - 1])
+					break;
 			}
+
+			// Server Close the Connection
+			if (!bytesRead)
+				throw std::runtime_error ("Server Close the Connection");
 
 			return recvBuf;
 		}
