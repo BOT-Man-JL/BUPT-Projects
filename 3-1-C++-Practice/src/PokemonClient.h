@@ -36,11 +36,6 @@ namespace PokemonGame
 			: _sockClient (ipAddr, port)
 		{}
 
-		~PokemonClient ()
-		{
-			Logout ();
-		}
-
 		const std::string &ErrMsg () const
 		{
 			return _errMsg;
@@ -144,7 +139,7 @@ namespace PokemonGame
 
 		template<typename T, typename... Args>
 		std::vector<std::string> Request (const std::string &strToken,
-										  const T &arg1, Args... args)
+										  const T &arg1, Args & ... args)
 		{
 			return Request (strToken + '\n' + arg1, args...);
 		}
@@ -169,7 +164,7 @@ namespace PokemonGame
 			}
 		}
 
-		PokemonGame_Impl::Client _sockClient;
+		BOT_Socket::Client _sockClient;
 		std::string _sessionID;
 		std::string _errMsg;
 	};

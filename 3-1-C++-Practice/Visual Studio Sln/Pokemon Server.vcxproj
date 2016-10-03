@@ -19,15 +19,16 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\Model.h" />
+    <ClInclude Include="..\src\ORM-Lite\ORMLite.h" />
+    <ClInclude Include="..\src\ORM-Lite\sqlite3.h" />
     <ClInclude Include="..\src\Pokemon.h" />
     <ClInclude Include="..\src\PokemonServer.h" />
     <ClInclude Include="..\src\Socket.h" />
-    <ClInclude Include="..\src\SQL.h" />
-    <ClInclude Include="..\src\SQLite\sqlite3.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\ORM-Lite\sqlite3.c" />
     <ClCompile Include="..\src\Server.cpp" />
-    <ClCompile Include="..\src\SQLite\sqlite3.c" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{B3183380-E046-4411-89FF-C71E0EB67104}</ProjectGuid>

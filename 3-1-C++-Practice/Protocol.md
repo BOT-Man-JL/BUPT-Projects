@@ -4,6 +4,12 @@
 
 **PokemonClient** is the Client who send Request to Server;
 
+## Session
+
+Keep Alive by Default;
+
+Close the Session only when Receiving the **Quit**;
+
 ## Format
 
 ### Request Format
@@ -35,6 +41,14 @@ If Failed:
 > Request Params
 >
 > Response Params
+
+### Control
+
+#### Quit
+
+> Quit
+>
+> Msg
 
 ### Accounting
 
