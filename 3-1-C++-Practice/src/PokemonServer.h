@@ -120,7 +120,7 @@ namespace PokemonGame
 				const auto &pwd = args[2];
 
 				std::vector<UserModel> users;
-				userMapper.Query (users, "where uid='" + uid + "'");
+				userMapper.Select (users, "where uid='" + uid + "'");
 
 				// Wrong PWD
 				if (users.empty () || users[0].pwd != pwd)
@@ -141,7 +141,7 @@ namespace PokemonGame
 
 				// Get Sid From Uid
 				std::vector<SessionModel> sessions;
-				sessionMapper.Query (sessions, "where uid='" + uid + "'");
+				sessionMapper.Select (sessions, "where uid='" + uid + "'");
 				if (!sessions.empty ())
 				{
 					SetResponse (response, true, sessions[0].sid);
@@ -213,7 +213,7 @@ namespace PokemonGame
 
 			// Handle UsersPokemons
 			// Succeed if Pokemon Found
-			// Fail if No Sid Found / No Pokemon Found / Query Failed
+			// Fail if No Sid Found / No Pokemon Found / Select Failed
 			SetHandler ("UsersPokemons", [&] (std::string &response,
 											  bool &isKeepAlive,
 											  const std::vector<std::string> &args)
@@ -223,7 +223,7 @@ namespace PokemonGame
 				const auto &uidToSearch = args[2];
 
 				std::vector<PokemonModel> pokemons;
-				pokemonMapper.Query (pokemons,
+				pokemonMapper.Select (pokemons,
 									 "where uid='" + uidToSearch + "'");
 				if (pokemons.empty ())
 				{
@@ -243,7 +243,7 @@ namespace PokemonGame
 
 			// Handle UsersWonRate
 			// Succeed if User Found
-			// Fail if No Sid Found / No User Found / Query Failed
+			// Fail if No Sid Found / No User Found / Select Failed
 			SetHandler ("UsersWonRate", [&] (std::string &response,
 											 bool &isKeepAlive,
 											 const std::vector<std::string> &args)
@@ -253,7 +253,7 @@ namespace PokemonGame
 				const auto &uidToSearch = args[2];
 
 				std::vector<UserModel> users;
-				userMapper.Query (users,
+				userMapper.Select (users,
 								  "where uid='" + uidToSearch + "'");
 
 				if (users.empty ())
@@ -267,7 +267,7 @@ namespace PokemonGame
 
 			// Handle UsersBadges
 			// Succeed if Badges Found
-			// Fail if No Sid Found / No User Found / Query Failed
+			// Fail if No Sid Found / No User Found / Select Failed
 			SetHandler ("UsersBadges", [&] (std::string &response,
 											bool &isKeepAlive,
 											const std::vector<std::string> &args)
@@ -277,7 +277,7 @@ namespace PokemonGame
 				const auto &uidToSearch = args[2];
 
 				std::vector<UserModel> users;
-				userMapper.Query (users,
+				userMapper.Select (users,
 								  "where uid='" + uidToSearch + "'");
 
 				if (users.empty ())
@@ -288,7 +288,7 @@ namespace PokemonGame
 
 			// Handle UsersAll
 			// Succeed if User Found
-			// Fail if No Sid Found / No User Found / Query Failed
+			// Fail if No Sid Found / No User Found / Select Failed
 			SetHandler ("UsersAll", [&] (std::string &response,
 										 bool &isKeepAlive,
 										 const std::vector<std::string> &args)
@@ -297,7 +297,7 @@ namespace PokemonGame
 					return;
 
 				std::vector<UserModel> users;
-				userMapper.Query (users);
+				userMapper.Select (users);
 
 				if (users.empty ())
 				{
@@ -317,7 +317,7 @@ namespace PokemonGame
 
 			// Handle UsersOnline
 			// Succeed if User Found
-			// Fail if No Sid Found / No User Found / Query Failed
+			// Fail if No Sid Found / No User Found / Select Failed
 			SetHandler ("UsersOnline", [&] (std::string &response,
 											bool &isKeepAlive,
 											const std::vector<std::string> &args)
@@ -326,7 +326,7 @@ namespace PokemonGame
 					return;
 
 				std::vector<SessionModel> sessions;
-				sessionMapper.Query (sessions);
+				sessionMapper.Select (sessions);
 
 				if (sessions.empty ())
 				{

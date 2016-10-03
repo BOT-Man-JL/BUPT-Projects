@@ -226,7 +226,7 @@ namespace BOT_ORM
 			_tblName (C ().__ClassName ())
 		{}
 
-		const std::string &ErrMsg () const
+		inline const std::string &ErrMsg () const
 		{
 			return _errMsg;
 		}
@@ -358,7 +358,7 @@ namespace BOT_ORM
 			});
 		}
 
-		bool Query (std::vector<C> &out,
+		bool Select (std::vector<C> &out,
 					const std::string &cond = "")
 		{
 			return HandleException ([&] (
@@ -379,13 +379,6 @@ namespace BOT_ORM
 					out.push_back (std::move (obj));
 				});
 			});
-		}
-
-		// Select == Query
-		inline bool Select (std::vector<C> &out,
-							const std::string &cond = "")
-		{
-			Query (out, cond);
 		}
 
 		size_t Count (const std::string &cond = "")
