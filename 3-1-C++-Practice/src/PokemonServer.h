@@ -79,8 +79,12 @@ namespace PokemonGame
 						return false;
 					}
 
-					const auto &sid = args[1];
-					if (!sessionMapper.Count ("where sid='" + sid + "'"))
+					SessionModel sessionModel;
+					sessionModel.sid = args[1];
+
+					if (!sessionMapper.Query (sessionModel)
+						.Where (sessionModel.sid)
+						.Count ())
 					{
 						SetResponse (response, false, "You haven't Login");
 						return false;
@@ -96,7 +100,7 @@ namespace PokemonGame
 								   const Pokemon &pokemon)
 			{
 				auto newPkm = std::unique_ptr<PokemonModel> (
-					PokemonModel::NewFromPokemon (pokemon));
+					PokemonModel::NewFromPokemon (uid, pokemon));
 
 				newPkm->id = pokemonMapper.Count ();
 				if (!pokemonMapper.Insert (*newPkm))
@@ -115,32 +119,38 @@ namespace PokemonGame
 				if (!CheckArgAndLogin (response, args, 3, false))
 					return;
 
-				const auto &uid = args[1];
-				const auto &pwd = args[2];
+				UserModel userModel;
+				userModel.uid = args[1];
+				userModel.pwd = args[2];
 
-				std::vector<UserModel> users;
-				userMapper.Select (users, "where uid='" + uid + "'");
-
-				// Wrong PWD
-				if (users.empty () || users[0].pwd != pwd)
+				// No User & Password Match
+				if (!userMapper.Query (userModel)
+					.Where (userModel.uid)
+					.WhereAnd ()
+					.Where (userModel.pwd)
+					.Count ())
 				{
 					SetResponse (response, false, "Bad Login Attempt");
 					return;
 				}
 
+				SessionModel sessionModel;
+				sessionModel.uid = args[1];
+				sessionModel.sid = (args[1] + std::to_string (time (0)))
+					.substr (0, 32);
+
 				// New Sid
-				auto sid = uid + std::to_string (time (nullptr));
-				sid = sid.substr (0, 32);
-				SessionModel session { uid, sid };
-				if (sessionMapper.Insert (session))
+				if (sessionMapper.Insert (sessionModel))
 				{
-					SetResponse (response, true, sid);
+					SetResponse (response, true, sessionModel.sid);
 					return;
 				}
 
 				// Get Sid From Uid
-				std::vector<SessionModel> sessions;
-				sessionMapper.Select (sessions, "where uid='" + uid + "'");
+				auto sessions = sessionMapper.Query (sessionModel)
+					.Where (sessionModel.uid)
+					.ToVector ();
+
 				if (!sessions.empty ())
 				{
 					SetResponse (response, true, sessions[0].sid);
@@ -148,7 +158,7 @@ namespace PokemonGame
 				}
 
 				// No such Logic :-(
-				SetResponse (response, false, "Server Error");
+				SetResponse (response, false, "Server Error at Login :-(");
 			});
 
 			// Handle Register
@@ -202,9 +212,13 @@ namespace PokemonGame
 			{
 				if (!CheckArgAndLogin (response, args, 2, true))
 					return;
-				const auto &sid = args[1];
 
-				if (sessionMapper.Delete ("where sid='" + sid + "'"))
+				SessionModel sessionModel;
+				sessionModel.sid = args[1];
+
+				if (sessionMapper.Query (sessionModel)
+					.Where (sessionModel.sid)
+					.Delete ())
 					SetResponse (response, true, "Logout Successfully");
 				else
 					SetResponse (response, false, "Logout Failed");
@@ -219,11 +233,15 @@ namespace PokemonGame
 			{
 				if (!CheckArgAndLogin (response, args, 3, true))
 					return;
-				const auto &uidToSearch = args[2];
 
-				std::vector<PokemonModel> pokemons;
-				pokemonMapper.Select (pokemons,
-									 "where uid='" + uidToSearch + "'");
+				PokemonModel pokemonModel;
+				pokemonModel.uid = args[2];
+
+				auto pokemons =
+					pokemonMapper.Query (pokemonModel)
+					.Where (pokemonModel.uid)
+					.ToList ();
+
 				if (pokemons.empty ())
 				{
 					SetResponse (response, false, "No Pokemon Found");
@@ -249,11 +267,13 @@ namespace PokemonGame
 			{
 				if (!CheckArgAndLogin (response, args, 3, true))
 					return;
-				const auto &uidToSearch = args[2];
 
-				std::vector<UserModel> users;
-				userMapper.Select (users,
-								  "where uid='" + uidToSearch + "'");
+				UserModel userModel;
+				userModel.uid = args[2];
+				auto users =
+					userMapper.Query (userModel)
+					.Where (userModel.uid)
+					.ToVector ();
 
 				if (users.empty ())
 					SetResponse (response, false, "No Such User");
@@ -273,11 +293,13 @@ namespace PokemonGame
 			{
 				if (!CheckArgAndLogin (response, args, 3, true))
 					return;
-				const auto &uidToSearch = args[2];
 
-				std::vector<UserModel> users;
-				userMapper.Select (users,
-								  "where uid='" + uidToSearch + "'");
+				UserModel userModel;
+				userModel.uid = args[2];
+				auto users =
+					userMapper.Query (userModel)
+					.Where (userModel.uid)
+					.ToVector ();
 
 				if (users.empty ())
 					SetResponse (response, false, "No Badge Found");
@@ -295,8 +317,7 @@ namespace PokemonGame
 				if (!CheckArgAndLogin (response, args, 2, true))
 					return;
 
-				std::vector<UserModel> users;
-				userMapper.Select (users);
+				auto users = userMapper.Query (UserModel ()).ToList ();
 
 				if (users.empty ())
 				{
@@ -324,8 +345,7 @@ namespace PokemonGame
 				if (!CheckArgAndLogin (response, args, 2, true))
 					return;
 
-				std::vector<SessionModel> sessions;
-				sessionMapper.Select (sessions);
+				auto sessions = sessionMapper.Query (SessionModel ()).ToList ();
 
 				if (sessions.empty ())
 				{

@@ -10,6 +10,7 @@ namespace PokemonGame_Impl
 	struct PokemonModel
 	{
 		long id;
+		std::string uid;
 		std::string name;
 		long level;
 		long expPoint;
@@ -20,11 +21,12 @@ namespace PokemonGame_Impl
 		long timeGap;
 
 		static PokemonModel *NewFromPokemon (
+			std::string uid,
 			const PokemonGame::Pokemon &pokemon)
 		{
 			return new PokemonModel
 			{
-				0, pokemon.GetName (),
+				0, uid, pokemon.GetName (),
 				(long) pokemon.GetLevel (), (long) pokemon.GetExp (),
 				(long) pokemon.GetAtk (), (long) pokemon.GetDef (),
 				(long) pokemon.GetHP (), (long) pokemon.GetFullHP (),
@@ -33,7 +35,7 @@ namespace PokemonGame_Impl
 		}
 
 	private:
-		ORMAP (PokemonModel, id, name, level, expPoint,
+		ORMAP (PokemonModel, id, uid, name, level, expPoint,
 			   atk, def, hp, fullHP, timeGap)
 	};
 
