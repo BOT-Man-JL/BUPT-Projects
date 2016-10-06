@@ -125,9 +125,7 @@ namespace PokemonGame
 
 				// No User & Password Match
 				if (!userMapper.Query (userModel)
-					.Where (userModel.uid)
-					.WhereAnd ()
-					.Where (userModel.pwd)
+					.Where (Expr { userModel.uid } && Expr { userModel.pwd })
 					.Count ())
 				{
 					SetResponse (response, false, "Bad Login Attempt");

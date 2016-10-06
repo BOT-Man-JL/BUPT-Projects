@@ -27,14 +27,8 @@ void __Accept (BOT_ORM_Impl::ORVisitor &visitor) const   \
 {                                                         \
 	visitor.Visit (__VA_ARGS__);                          \
 }                                                         \
-std::string __ClassName () const                          \
-{                                                         \
-	return #_MY_CLASS_;                                   \
-}                                                         \
-std::string __FieldNames () const                         \
-{                                                         \
-	return #__VA_ARGS__;                                  \
-}
+static constexpr char *__ClassName = #_MY_CLASS_;         \
+static constexpr char *__FieldNames = #__VA_ARGS__;       \
 
 namespace BOT_ORM_Impl
 {
@@ -294,13 +288,79 @@ namespace BOT_ORM_Impl
 
 namespace BOT_ORM
 {
+	struct Expr
+	{
+		std::vector<std::pair<const void *, std::string>> expr;
+
+		template <typename T>
+		Expr (const T &property,
+			  const std::string &relOp = "=")
+			: Expr (property, relOp, property)
+		{}
+
+		Expr (const long &property,
+			  const std::string &relOp,
+			  long value)
+			: expr { std::make_pair (
+				&property,
+				relOp + std::to_string (value)) }
+		{}
+
+		Expr (const double &property,
+			  const std::string &relOp,
+			  double value)
+			: expr { std::make_pair (
+				&property,
+				relOp + BOT_ORM_Impl::DoubleToStr (value)) }
+		{}
+
+		Expr (const std::string &property,
+			  const std::string &relOp,
+			  std::string value)
+			: expr { std::make_pair (
+				&property,
+				relOp + "'" + std::move (value) + "'") }
+		{}
+
+		inline Expr operator && (const Expr &right)
+		{
+			return And_Or (right, " and ");
+		}
+
+		inline Expr operator || (const Expr &right)
+		{
+			return And_Or (right, " or ");
+		}
+
+	private:
+		Expr And_Or (const Expr &right, std::string logOp)
+		{
+			constexpr void *ptr = nullptr;
+
+			expr.emplace (
+				expr.begin (),
+				std::make_pair (ptr, std::string ("("))
+			);
+			expr.emplace_back (
+				std::make_pair (ptr, std::move (logOp))
+			);
+			for (const auto exprPair : right.expr)
+				expr.emplace_back (exprPair);
+			expr.emplace_back (
+				std::make_pair (ptr, std::string (")"))
+			);
+
+			return *this;
+		}
+	};
+
 	template <typename C>
 	class ORMapper
 	{
 	public:
 		ORMapper (const std::string &dbName)
 			: _dbName (dbName),
-			_tblName (C ().__ClassName ())
+			_tblName (C::__ClassName)
 		{}
 
 		inline const std::string &ErrMsg () const
@@ -318,7 +378,7 @@ namespace BOT_ORM
 				obj.__Accept (visitor);
 
 				auto strTypes = std::move (visitor.serializedTypes);
-				auto strFieldNames = _ExtractFieldName (obj);
+				auto strFieldNames = _ExtractFieldName ();
 
 				auto typeFmt = BOT_ORM_Impl::SplitStr (strTypes);
 				auto fieldName = BOT_ORM_Impl::SplitStr (strFieldNames);
@@ -401,7 +461,7 @@ namespace BOT_ORM
 				value.__Accept (visitor);
 
 				auto strVals = std::move (visitor.serializedValues);
-				auto strFieldNames = _ExtractFieldName (value);
+				auto strFieldNames = _ExtractFieldName ();
 
 				// Only Set Key
 				auto val = BOT_ORM_Impl::SplitStr (strVals);
@@ -433,7 +493,7 @@ namespace BOT_ORM
 				value.__Accept (visitor);
 
 				auto strVals = std::move (visitor.serializedValues);
-				auto strFieldNames = _ExtractFieldName (value);
+				auto strFieldNames = _ExtractFieldName ();
 
 				std::string strKey;
 				{
@@ -464,7 +524,7 @@ namespace BOT_ORM
 			return _HandleException ([&] (
 				BOT_ORM_Impl::SQLConnector &connector)
 			{
-				auto strFieldNames = _ExtractFieldName (*values.begin ());
+				auto strFieldNames = _ExtractFieldName ();
 				std::vector<std::string> fieldNames;
 				while (!strFieldNames.empty ())
 					fieldNames.emplace_back (BOT_ORM_Impl::SplitStr (strFieldNames));
@@ -546,62 +606,14 @@ namespace BOT_ORM
 			{}
 
 			// Where
-			template <typename T>
-			inline ORQuery &Where (const T &property,
-								   const std::string &relOp = "=")
+			ORQuery &Where (const Expr &expr)
 			{
-				return Where (property, relOp, property);
-			}
-
-			ORQuery &Where (const long &property,
-							const std::string &relOp,
-							long value)
-			{
-				_sqlWhere += _GetFieldName (&property) +
-					relOp + std::to_string (value);
-				return *this;
-			}
-
-			ORQuery &Where (const double &property,
-							const std::string &relOp,
-							double value)
-			{
-				_sqlWhere += _GetFieldName (&property) +
-					relOp + BOT_ORM_Impl::DoubleToStr (value);
-				return *this;
-			}
-
-			ORQuery &Where (const std::string &property,
-							const std::string &relOp,
-							std::string value)
-			{
-				_sqlWhere += _GetFieldName (&property) +
-					relOp + "'" + std::move (value) + "'";
-				return *this;
-			}
-
-			// Where Helper
-			ORQuery &WhereLBracket ()
-			{
-				_sqlWhere += "(";
-				return *this;
-			}
-
-			ORQuery &WhereRBracket ()
-			{
-				_sqlWhere += ")";
-				return *this;
-			}
-
-			ORQuery &WhereAnd ()
-			{
-				_sqlWhere += " and ";
-				return *this;
-			}
-
-			ORQuery &WhereOr ()
-			{
-				_sqlWhere += " or ";
+				for (const auto exprStr : expr.expr)
+				{
+					if (exprStr.first != nullptr)
+						_sqlWhere += _GetFieldName (exprStr.first);
+					_sqlWhere += exprStr.second;
+				}
 				return *this;
 			}
 
@@ -673,7 +685,7 @@ namespace BOT_ORM
 				if (!visitor.isFound)
 					throw std::runtime_error ("No such Field in the Table");
 
-				auto strFieldNames = _ExtractFieldName (*_qObj);
+				auto strFieldNames = _ExtractFieldName ();
 				auto fieldName = BOT_ORM_Impl::SplitStr (strFieldNames);
 				for (auto index = visitor.index; index > 0; index--)
 				{
@@ -708,10 +720,9 @@ namespace BOT_ORM
 			}
 		}
 
-		static std::string _ExtractFieldName (const C& obj)
+		static std::string _ExtractFieldName ()
 		{
-			std::string ret;
-			auto rawStr = obj.__FieldNames ();
+			std::string ret, rawStr (C::__FieldNames);
 			ret.reserve (rawStr.size ());
 			for (const auto &ch : rawStr)
 			{
