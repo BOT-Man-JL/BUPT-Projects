@@ -17,28 +17,36 @@
 
 #include <winsock2.h>
 #include <Ws2tcpip.h>
-#pragma comment(lib, "ws2_32.lib") 
+#pragma comment(lib, "ws2_32.lib")
+
+#define CloseSocket closesocket
 
 namespace BOT_Socket
 {
 	class SocketInit
 	{
+		static size_t refCount;
 	public:
 		SocketInit ()
 		{
-			WSADATA wsaData;
-			if (WSAStartup (MAKEWORD (2, 2), &wsaData) != 0)
-				throw std::runtime_error ("Failed at WSAStartup");
+			if (!refCount)
+			{
+				WSADATA wsaData;
+				if (WSAStartup (MAKEWORD (2, 2), &wsaData) != 0)
+					throw std::runtime_error ("Failed at WSAStartup");
+			}
+			refCount++;
 		}
 
 		~SocketInit ()
 		{
-			WSACleanup ();
+			refCount--;
+			if (!refCount)
+				WSACleanup ();
 		}
 	};
+	size_t SocketInit::refCount = 0;
 }
-
-#define CloseSocket closesocket
 
 #else
 
@@ -97,7 +105,7 @@ namespace BOT_Socket
 				if (connectSock == -1)
 					continue;
 
-				std::thread ([&] ()
+				std::thread ([&ioLock, &clientCount, &callback, connectSock] ()
 				{
 					auto curClientCount = 0;
 					// Log
@@ -118,7 +126,7 @@ namespace BOT_Socket
 						while (bytesRead < BUF_SIZE)
 						{
 							auto curRecv = recv (connectSock, recvBuf + bytesRead,
-											 BUF_SIZE - bytesRead, 0);
+												 BUF_SIZE - bytesRead, 0);
 							if (curRecv == 0 || curRecv == -1)
 								break;
 
@@ -193,7 +201,7 @@ namespace BOT_Socket
 
 			// Socket
 			_sock = socket (AF_INET, SOCK_STREAM,
-								IPPROTO_TCP);
+							IPPROTO_TCP);
 			if (_sock == -1)
 				throw std::runtime_error ("Can not create socket");
 
@@ -209,6 +217,7 @@ namespace BOT_Socket
 			if (iTry == MAX_TRIAL)
 			{
 				CloseSocket (_sock);
+				_sock = -1;
 				throw std::runtime_error ("Failed at conncet");
 			}
 		}
@@ -219,6 +228,7 @@ namespace BOT_Socket
 			if (-1 == send (_sock, request.c_str (), request.size () + 1, 0))
 			{
 				CloseSocket (_sock);
+				_sock = -1;
 				throw std::runtime_error ("Server Close the Connection");
 			}
 
@@ -248,17 +258,13 @@ namespace BOT_Socket
 
 		~Client ()
 		{
-			// Send *Quit* and Wait for Response
-			// On receiving a Response, the Server had Closed
-			// the Session with this Client
-			Request ("Quit");
-
 			// Shutdown
 			// SHUT_RDWR (Linux)/ SD_BOTH (Windows) = 2
 			shutdown (_sock, 2);
 
 			// Close
-			CloseSocket (_sock);
+			if (_sock != -1)
+				CloseSocket (_sock);
 		}
 
 	private:
