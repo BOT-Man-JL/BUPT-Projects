@@ -35,12 +35,6 @@ namespace PokemonGame
 			: _sockClient (ipAddr, port)
 		{}
 
-		~PokemonClient ()
-		{
-			// Send Quit without Getting Msg
-			Request ("Quit");
-		}
-
 		const std::string &ErrMsg () const
 		{
 			return _errMsg;

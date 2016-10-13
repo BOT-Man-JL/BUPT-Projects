@@ -112,8 +112,8 @@ namespace BOT_Socket
 					{
 						std::lock_guard<std::mutex> lck (ioLock);
 						curClientCount = ++clientCount;
-						std::cout << "\n<--------------------  "
-							<< curClientCount << "  \n\n";
+						std::cout << "\n<" << curClientCount
+							<< "> Connected...\n";
 					}
 
 					for (auto isKeepAlive = true; isKeepAlive; )
@@ -154,7 +154,9 @@ namespace BOT_Socket
 						// Log
 						{
 							std::lock_guard<std::mutex> lck (ioLock);
-							std::cout << '\n' << recvBuf << '\n' << response << "\n\n";
+							std::cout << "\n<" << curClientCount
+								<< ">\nRequest:\n" << recvBuf <<
+								"\nResponse:\n" << response << "\n";
 						}
 					}
 
@@ -168,8 +170,8 @@ namespace BOT_Socket
 					// Log
 					{
 						std::lock_guard<std::mutex> lck (ioLock);
-						std::cout << "\n-------------------->  "
-							<< curClientCount << "  \n\n";
+						std::cout << "\n<" << curClientCount
+							<< "> Disconnected...\n";
 					}
 				}).detach ();
 			}
@@ -197,7 +199,7 @@ namespace BOT_Socket
 					   ipAddr.c_str (),
 					   &sa.sin_addr);
 
-			const size_t MAX_TRIAL = 16;
+			const size_t MAX_TRIAL = 3;
 
 			// Socket
 			_sock = socket (AF_INET, SOCK_STREAM,

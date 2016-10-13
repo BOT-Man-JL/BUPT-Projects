@@ -101,8 +101,13 @@ namespace PokemonGame
 			{
 				auto newPkm = std::unique_ptr<PokemonModel> (
 					PokemonModel::NewFromPokemon (uid, pokemon));
+				static const auto _pm = PokemonModel ();
 
-				newPkm->id = pokemonMapper.Count ();
+				newPkm->id = pokemonMapper
+					.Query (_pm)
+					.OrderBy (_pm.level)
+					.Limit (1)
+					.Count ();
 				if (!pokemonMapper.Insert (*newPkm))
 					return false;
 
@@ -359,15 +364,6 @@ namespace PokemonGame
 				}
 				ret.pop_back ();
 				SetResponse (response, true, ret);
-			});
-
-			// Quit
-			SetHandler ("Quit", [&] (std::string &response,
-									 bool &isKeepAlive,
-									 const std::vector<std::string> &args)
-			{
-				isKeepAlive = false;
-				SetResponse (response, true, "End of Session");
 			});
 
 			// Run

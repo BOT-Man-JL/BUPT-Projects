@@ -10,6 +10,11 @@ int main (int argc, char *argv[])
 {
 	std::cout << "Pokemon Client\n";
 
+	auto fnConnect = [] ()
+	{
+		return PokemonGame::PokemonClient (IPADDR, PORT);
+	};
+
 	auto fnLogin = [] (PokemonGame::PokemonClient &client,
 					   std::string uid, std::string pwd)
 	{
@@ -94,7 +99,7 @@ int main (int argc, char *argv[])
 	};
 
 	std::cout << "Client 1:\n";
-	PokemonGame::PokemonClient client (IPADDR, PORT);
+	auto client = fnConnect ();
 	fnRegister (client, "Xuzhu", "xuzhu");
 	fnRegister (client, "Xuzhu", "xuzhu");
 	fnLogin (client, "Xuzhu", "xuzhu");
@@ -108,12 +113,12 @@ int main (int argc, char *argv[])
 	fnUsersPokemons (client, "xuzhu");
 
 	std::cout << "Client 2:\n";
-	PokemonGame::PokemonClient client2 (IPADDR, PORT);
+	auto client2 = fnConnect ();
 	fnRegister (client2, "John", "Lee");
 	fnLogin (client2, "John", "Lee");
 
 	std::cout << "Client 3:\n";
-	PokemonGame::PokemonClient client3 (IPADDR, PORT);
+	auto client3 = fnConnect ();
 	fnRegister (client3, "BOT", "Man");
 	fnLogin (client3, "BOT", "Man");
 	fnUsersPokemons (client3, "BOT");

@@ -8,8 +8,6 @@
 
 Keep Alive by Default;
 
-Close the Session only when Receiving the **Quit**;
-
 ## Format
 
 ### Request Format
@@ -43,12 +41,6 @@ If Failed:
 > Response Params
 
 ### Control
-
-#### Quit
-
-> Quit
->
-> Msg
 
 ### Accounting
 
