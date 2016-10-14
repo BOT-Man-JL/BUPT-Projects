@@ -43,7 +43,8 @@ together with [**buptczq**](https://github.com/buptczq/RE_Bupt_Computer_Network_
 - Useful Tool: [**BUPT Campus Network Auto Login**](https://github.com/BOT-Man-JL/BUPT-Projects/tree/master/0-3-Network-Login)
 - Useful Tool: [**Notebook Sleep Manager**](https://github.com/BOT-Man-JL/BUPT-Projects/tree/master/0-2-Sleep-Manager)
 - Useful Tool: [**Little Note Pin**](https://github.com/BOT-Man-JL/BUPT-Projects/tree/master/0-1-Note-Pin)
-- Useful Tool: [**QR Code Generator**](https://bot-man-jl.github.io/QRCode-Generator) (Folked from https://github.com/kazuhikoarase/qrcode-generator)
+- Useful Tool: [**QR Code Generator**](https://bot-man-jl.github.io/QRCodeGen) (Folked from https://github.com/kazuhikoarase/qrcode-generator)
+- GitHub Page Framework: [**BOT-Frame**](https://github.com/BOT-Man-JL/BOT-Man-JL.github.io)
 - UWP Game: [**Hit the Mole**](https://github.com/ZhangYuef/Hit-the-Mole) (built together with [**ZhangYuef**](https://github.com/ZhangYuef))
 - GDI Monkey
 - Calculator in `C`
