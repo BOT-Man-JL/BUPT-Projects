@@ -50,12 +50,12 @@ namespace PokemonGame
 				std::cerr << pokemonMapper.ErrMsg () << std::endl;
 
 			if (userMapper.CreateTbl ())
-				std::cout << "Created Pokemon\n";
+				std::cout << "Created User\n";
 			else
 				std::cerr << userMapper.ErrMsg () << std::endl;
 
 			if (sessionMapper.CreateTbl ())
-				std::cout << "Created Pokemon\n";
+				std::cout << "Created Session\n";
 			else
 				std::cerr << sessionMapper.ErrMsg () << std::endl;
 

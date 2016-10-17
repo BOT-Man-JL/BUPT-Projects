@@ -11,14 +11,15 @@ namespace PokemonGame_Impl
 	{
 		long id;
 		std::string uid;
+
 		std::string name;
-		long level;
-		long expPoint;
-		long atk;
-		long def;
-		long hp;
-		long fullHP;
-		long timeGap;
+		PokemonGame::Pokemon::Level level;
+		PokemonGame::Pokemon::ExpPoint expPoint;
+		PokemonGame::Pokemon::HealthPoint atk;
+		PokemonGame::Pokemon::HealthPoint def;
+		PokemonGame::Pokemon::HealthPoint hp;
+		PokemonGame::Pokemon::HealthPoint fullHP;
+		PokemonGame::Pokemon::TimeGap timeGap;
 
 		static PokemonModel *NewFromPokemon (
 			std::string uid,
@@ -27,10 +28,10 @@ namespace PokemonGame_Impl
 			return new PokemonModel
 			{
 				0, uid, pokemon.GetName (),
-				(long) pokemon.GetLevel (), (long) pokemon.GetExp (),
-				(long) pokemon.GetAtk (), (long) pokemon.GetDef (),
-				(long) pokemon.GetHP (), (long) pokemon.GetFullHP (),
-				(long) pokemon.GetTimeGap ()
+				pokemon.GetLevel (), pokemon.GetExp (),
+				pokemon.GetAtk (), pokemon.GetDef (),
+				pokemon.GetHP (), pokemon.GetFullHP (),
+				pokemon.GetTimeGap ()
 			};
 		}
 
@@ -43,8 +44,8 @@ namespace PokemonGame_Impl
 	{
 		std::string uid;
 		std::string pwd;
-		long won;
-		long los;
+		size_t won;
+		size_t los;
 		std::string badge;
 
 	private:
