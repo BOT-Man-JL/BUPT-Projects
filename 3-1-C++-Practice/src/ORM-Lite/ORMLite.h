@@ -120,7 +120,7 @@ namespace BOT_ORM_Impl
 		{ return; }
 	};
 
-	// Helper Funcion
+	// Helper - Split String
 	std::string SplitStr (std::string &inputStr,
 						  char delim = char (0))
 	{
@@ -134,20 +134,35 @@ namespace BOT_ORM_Impl
 		return std::string ();
 	}
 
-	// Helper Function
+	// Helper - Serialize
 	template <typename T>
-	std::string SerializeRValue (T &&value)
+	std::string SerializeValue (T value)
 	{
 		std::stringstream strs;
 		strs << value;
 		return strs.str ();
 	}
 
-	template <>
-	inline std::string SerializeRValue
-		<std::string> (std::string &&value)
+	template <>  // Assume not CV string
+	inline std::string SerializeValue
+		<std::string> (std::string value)
 	{
 		return "'" + value + "'";
+	}
+
+	// Helper - Deserialize
+	template <typename T>
+	inline void DeserializeValue (T &property, std::string value)
+	{
+		std::stringstream ostr (value);
+		ostr >> property;
+	}
+
+	template <>  // Assume not CV string
+	inline void DeserializeValue <std::string>
+		(std::string &property, std::string value)
+	{
+		property = std::move (value);
 	}
 
 	class TypeVisitor
@@ -159,6 +174,18 @@ namespace BOT_ORM_Impl
 		std::string serializedTypes;
 	protected:
 		template <typename T>
+		struct IsString
+		{
+			// Remarks:
+			// Bad Support of std::remove_cv in gcc :-(
+			constexpr static bool value =
+				std::is_same<T, std::string>::value ||
+				std::is_same<T, const std::string>::value ||
+				std::is_same<T, volatile std::string>::value ||
+				std::is_same<T, const volatile std::string>::value;
+		};
+
+		template <typename T>
 		struct TypeString
 		{
 			// Remarks:
@@ -166,24 +193,12 @@ namespace BOT_ORM_Impl
 			constexpr static const char *typeStr =
 				std::is_integral<T>::value ? "integer" : (
 					std::is_floating_point<T>::value ? "real" : (
-						std::is_same<std::remove_cv<T>::type, std::string>::value ? "text" : nullptr
+						IsString<T>::value ? "text" : nullptr
 						)
 					);
 			static_assert (typeStr != nullptr,
 						   "Only Support Integral, Floating Point and"
 						   " std::string :-(");
-		private:
-			template <typename T>
-			struct IsString
-			{
-				// Remarks:
-				// Bad Support of std::remove_cv in gcc :-(
-				constexpr static bool value =
-					std::is_same<T, std::string>::value ||
-					std::is_same<T, const std::string>::value ||
-					std::is_same<T, volatile std::string>::value ||
-					std::is_same<T, const volatile std::string>::value;
-			};
 		};
 
 		template <typename T>
@@ -212,7 +227,7 @@ namespace BOT_ORM_Impl
 		inline void _Visit (T &property)
 		{
 			serializedValues
-				<< SerializeRValue (T (property))
+				<< SerializeValue (T (property))
 				<< _delim;
 		}
 	};
@@ -232,15 +247,10 @@ namespace BOT_ORM_Impl
 		template <typename T>
 		inline void _Visit (T &property)
 		{
-			std::stringstream ostr (SplitStr (_serializedValues));
-			ostr >> property;
-		}
-
-		// Assume not CV string
-		template <>
-		inline void _Visit <std::string> (std::string &property)
-		{
-			property = SplitStr (_serializedValues);
+			// Remarks:
+			// GCC Hell: explicit specialization in non-namespace scope
+			// So, unable to Write Impl Here
+			DeserializeValue (property, SplitStr (_serializedValues));
 		}
 	};
 
@@ -289,7 +299,7 @@ namespace BOT_ORM
 			  const T &value)
 			: expr { std::make_pair (
 				&property,
-				relOp + BOT_ORM_Impl::SerializeRValue (
+				relOp + BOT_ORM_Impl::SerializeValue (
 					T (value))) }
 		{}
 

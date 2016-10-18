@@ -214,3 +214,4 @@ ModelManifest.xml
 *.db
 /3-1-C++-Practice/src/ORM-Lite/sqlite3.h
 /3-1-C++-Practice/src/ORM-Lite/sqlite3.c
+*.class
