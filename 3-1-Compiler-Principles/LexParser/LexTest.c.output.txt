@@ -1,0 +1,210 @@
+Total Lines: 33
+Total Chars: 648
+
+Total Words:
+[   keyword]:	16
+[identifier]:	24
+[  constant]:	24
+[    string]:	4
+
+Symbols:
+a
+argc
+argv
+b
+c
+ch
+d
+d1
+dd
+dd0
+main
+printf
+scanf
+str
+xx
+xxx
+
+Tokens:
+<   keyword>	int
+<identifier>	main
+<punctuator>	(
+<   keyword>	int
+<identifier>	argc
+<punctuator>	,
+<   keyword>	char
+<punctuator>	*
+<identifier>	argv
+<punctuator>	[
+<punctuator>	]
+<punctuator>	)
+<punctuator>	{
+<   keyword>	int
+<identifier>	a
+<punctuator>	=
+<  constant>	10
+<punctuator>	,
+<  constant>	0x90
+<punctuator>	,
+<  constant>	0070
+<punctuator>	,
+<  constant>	0
+<punctuator>	,
+<  constant>	00
+<punctuator>	,
+<  constant>	0x0
+<punctuator>	;
+<   keyword>	double
+<identifier>	b
+<punctuator>	=
+<  constant>	0.5
+<punctuator>	,
+<  constant>	1.5
+<punctuator>	,
+<  constant>	.0
+<punctuator>	,
+<  constant>	.1
+<punctuator>	,
+<  constant>	0.
+<punctuator>	,
+<  constant>	1.
+<punctuator>	,
+<  constant>	56e-3
+<punctuator>	,
+<  constant>	0.7e+8
+<punctuator>	;
+<   keyword>	auto
+<identifier>	c
+<punctuator>	=
+<identifier>	a
+<punctuator>	+
+<identifier>	b
+<punctuator>	=
+<identifier>	a
+<punctuator>	/
+<identifier>	b
+<punctuator>	;
+<punctuator>	;
+<punctuator>	;
+<   keyword>	auto
+<identifier>	d
+<punctuator>	=
+<identifier>	dd0
+<punctuator>	.
+<identifier>	xxx
+<punctuator>	,
+<identifier>	dd
+<punctuator>	.
+<identifier>	xx
+<punctuator>	,
+<identifier>	d1
+<punctuator>	.
+<punctuator>	;
+<   keyword>	char
+<identifier>	ch
+<punctuator>	=
+<  constant>	'@this is a \'Char\''
+<punctuator>	;
+<   keyword>	const
+<   keyword>	char
+<punctuator>	*
+<identifier>	str
+<punctuator>	=
+<    string>	"$this is a \"String\""
+<punctuator>	,
+<    string>	"String\n\r\v\t		2"
+<punctuator>	;
+<identifier>	printf
+<punctuator>	(
+<    string>	"LexTest\n\r\v\t"
+<punctuator>	)
+<punctuator>	;
+<punctuator>	[
+<punctuator>	]
+<punctuator>	(
+<punctuator>	)
+<punctuator>	{
+<punctuator>	}
+<punctuator>	.
+<punctuator>	->
+<punctuator>	++
+<punctuator>	--
+<punctuator>	&
+<punctuator>	*
+<punctuator>	+
+<punctuator>	-
+<punctuator>	~
+<punctuator>	!
+<punctuator>	/
+<punctuator>	%
+<punctuator>	<<
+<punctuator>	>>
+<punctuator>	<
+<punctuator>	>
+<punctuator>	<=
+<punctuator>	>=
+<punctuator>	==
+<punctuator>	!=
+<punctuator>	^
+<punctuator>	|
+<punctuator>	&&
+<punctuator>	||
+<punctuator>	?
+<punctuator>	:
+<punctuator>	,
+<punctuator>	;
+<punctuator>	=
+<punctuator>	*=
+<punctuator>	/=
+<punctuator>	%=
+<punctuator>	+=
+<punctuator>	-=
+<punctuator>	<<=
+<punctuator>	>>=
+<punctuator>	&=
+<punctuator>	^=
+<punctuator>	|=
+<   keyword>	int
+<identifier>	a
+<punctuator>	=
+<punctuator>	;
+<   keyword>	double
+<identifier>	b
+<punctuator>	=
+<punctuator>	,
+<punctuator>	,
+<punctuator>	;
+<   keyword>	char
+<identifier>	ch
+<punctuator>	=
+<punctuator>	,
+<   keyword>	const
+<   keyword>	char
+<punctuator>	*
+<identifier>	str
+<punctuator>	=
+<identifier>	scanf
+<punctuator>	(
+<    string>	"LexTest"
+<punctuator>	)
+<punctuator>	;
+<   keyword>	return
+<  constant>	0
+<punctuator>	;
+<punctuator>	}
+
+Errors:
+[25]	Invalid 0x
+[26]	Bad Exponential: 5.0e
+[26]	Bad Exponential: 65e+
+[26]	Bad Exponential: 72e-
+[27]	Too few chars inside Pair ''
+[28]	No End Bracket: ';
+[29]	No End Bracket: "haha;
+[29]	Invalid Escape Char: \e
+[29]	Invalid Escape Char: \*
+[29]	Invalid Escape Char: \|
+[29]	Invalid Escape Char: \h
+[30]	Invalid Punctuator: @
+[30]	Invalid Punctuator: $
+[30]	Invalid Punctuator: `
