@@ -4,37 +4,102 @@
 #include <random>
 #include <string>
 
+#define POKEMONCONSTRUCTOR(CLASSNAME)				  \
+CLASSNAME (Level level,								  \
+ExpPoint expPoint,									  \
+HealthPoint atk,									  \
+HealthPoint def,									  \
+HealthPoint hp,										  \
+TimeGap timeGap)									  \
+: Pokemon (level, expPoint, atk, def, hp, timeGap)	  \
+{}													  \
+
 namespace PokemonGame
 {
 	class Pokemon
 	{
 	public:
-		// Attribute
-		enum struct Type
+		// this Pokemon Attack opPokemon
+		// Return <isKilling, isUpgraded>
+		std::pair<bool, bool> Attack (Pokemon &opPokemon)
 		{
-			Strength,
-			Tank,
-			Defending,
-			Swift
-		};
-		typedef std::string Name;
+			auto &thisPokemon = *this;
+			auto damage = thisPokemon.GetDamagePoint (opPokemon);
+			auto isKilling = opPokemon.Hurt (damage);
+			auto isUpgraded = false;
+
+			if (isKilling)
+			{
+				opPokemon._hp = opPokemon._fullHP;
+				opPokemon.OnKilled ();
+			}
+			else
+			{
+				isUpgraded = thisPokemon.Upgrade (opPokemon.GetLevel () * 100);
+				if (isUpgraded) thisPokemon.OnUpgrade ();
+			}
+
+			return std::make_pair (isKilling, isUpgraded);
+		}
+
+		// Attribute
 		typedef unsigned Level;
 		typedef unsigned ExpPoint;
 		typedef unsigned HealthPoint;
 		typedef unsigned TimeGap;
 
-		// Init
-		Pokemon (Type type, Name name,
+		// Get Attr
+		virtual std::string GetName () const = 0;
+
+		Level GetLevel () const { return _level; }
+		Level GetExp () const { return _expPoint; }
+		HealthPoint GetAtk () const { return _atk; }
+		HealthPoint GetDef () const { return _def; }
+		TimeGap GetTimeGap () const { return _timeGap; }
+		HealthPoint GetHP () const { return _hp; }
+		HealthPoint GetFullHP () const { return _fullHP; }
+
+	protected:
+		Level _level;
+		ExpPoint _expPoint;
+		HealthPoint _atk;
+		HealthPoint _def;
+		TimeGap _timeGap;
+		HealthPoint _hp;
+		HealthPoint _fullHP;
+
+		// Constructor
+		Pokemon (Level level,
+				 ExpPoint expPoint,
 				 HealthPoint atk,
 				 HealthPoint def,
 				 HealthPoint hp,
 				 TimeGap timeGap)
-			: _type (type), _name (name), _level (1), _expPoint (0),
-			_atk (atk), _def (def), _hp (hp), _fullHP (hp), _timeGap (timeGap)
+			: _level (level), _expPoint (expPoint),
+			_atk (atk), _def (def), _timeGap (timeGap),
+			_hp (hp), _fullHP (hp)
 		{}
 
+		virtual HealthPoint GetDamagePoint (Pokemon &opPokemon) = 0;
+		virtual void OnKilled () = 0;
+		virtual void OnUpgrade () = 0;
+
+	private:
+		// Hurt
+		// Return true if Killed
+		// Return false otherwise
+		bool Hurt (HealthPoint damage)
+		{
+			_hp -= damage;
+			if (_hp <= 0)
+				return true;
+			return false;
+		}
+
 		// Upgrade
-		virtual bool Upgrade (ExpPoint exp)
+		// Return true if Upgraded
+		// Return false otherwise
+		bool Upgrade (ExpPoint exp)
 		{
 			_expPoint += exp;
 			if (_level >= 15)
@@ -50,62 +115,75 @@ namespace PokemonGame
 			}
 			return isUpgraded;
 		}
-
-		// Hurt
-		virtual bool Hurt (HealthPoint damage)
-		{
-			if (damage > _def)
-				_hp -= damage - _def / 2;
-			if (_hp <= 0)
-				return true;
-			return false;
-		}
-
-		// Attack
-		virtual bool Attack (Pokemon &) = 0;
-
-		// Get Attr
-		Type GetType () const { return _type; }
-		Name GetName () const { return _name; }
-		Level GetLevel () const { return _level; }
-		Level GetExp () const { return _expPoint; }
-		HealthPoint GetAtk () const { return _atk; }
-		HealthPoint GetDef () const { return _def; }
-		TimeGap GetTimeGap () const { return _timeGap; }
-		HealthPoint GetHP () const { return _hp; }
-		HealthPoint GetFullHP () const { return _fullHP; }
-
-	protected:
-		Type _type;
-		Name _name;
-		Level _level;
-		ExpPoint _expPoint;
-		HealthPoint _atk;
-		HealthPoint _def;
-		HealthPoint _hp;
-		HealthPoint _fullHP;
-		TimeGap _timeGap;
 	};
 
-	class Pikachu : public Pokemon
+	struct StrengthPokemon : public Pokemon
+	{
+		using Pokemon::HealthPoint;
+		using Pokemon::TimeGap;
+
+		// Constructor
+		POKEMONCONSTRUCTOR (StrengthPokemon)
+	};
+
+	struct DefendingPokemon : public Pokemon
+	{
+		using Pokemon::HealthPoint;
+		using Pokemon::TimeGap;
+
+		// Constructor
+		DefendingPokemon (Level level,
+						  ExpPoint expPoint,
+						  HealthPoint atk,
+						  HealthPoint def,
+						  HealthPoint hp,
+						  TimeGap timeGap)
+			: Pokemon (level, expPoint, atk, def, hp, timeGap)
+		{}
+	};
+
+	struct TankPokemon : public Pokemon
+	{
+		using Pokemon::HealthPoint;
+		using Pokemon::TimeGap;
+
+		// Constructor
+		TankPokemon (Level level,
+					 ExpPoint expPoint,
+					 HealthPoint atk,
+					 HealthPoint def,
+					 HealthPoint hp,
+					 TimeGap timeGap)
+			: Pokemon (level, expPoint, atk, def, hp, timeGap)
+		{}
+	};
+
+	struct SwiftPokemon : public Pokemon
+	{
+		using Pokemon::HealthPoint;
+		using Pokemon::TimeGap;
+
+		// Constructor
+		SwiftPokemon (Level level,
+					  ExpPoint expPoint,
+					  HealthPoint atk,
+					  HealthPoint def,
+					  HealthPoint hp,
+					  TimeGap timeGap)
+			: Pokemon (level, expPoint, atk, def, hp, timeGap)
+		{}
+	};
+
+	class Pikachu : public SwiftPokemon
 	{
 	public:
 		Pikachu ()
-			: Pokemon (Type::Swift, "Pikachu",
-					   70, 50, 1000, 10)
+			: SwiftPokemon (70, 50, 1000, 10)
 		{}
 
-		bool Upgrade (ExpPoint exp) override
+		std::string GetName () const
 		{
-			return Pokemon::Upgrade (exp);
-		}
-
-		bool Hurt (HealthPoint damage) override
-		{
-			auto isDead = Pokemon::Hurt (damage);
-			if (isDead)
-				_hp = _fullHP;
-			return isDead;
+			return "Pikachu";
 		}
 
 		bool Attack (Pokemon &opPokemon) override
@@ -121,21 +199,12 @@ namespace PokemonGame
 	{
 	public:
 		Charmander ()
-			: Pokemon (Type::Strength, "Charmander",
-					   100, 40, 1000, 18)
+			: Pokemon (100, 40, 1000, 18)
 		{}
 
-		bool Upgrade (ExpPoint exp) override
+		std::string GetName () const
 		{
-			return Pokemon::Upgrade (exp);
-		}
-
-		bool Hurt (HealthPoint damage) override
-		{
-			auto isDead = Pokemon::Hurt (damage);
-			if (isDead)
-				_hp = _fullHP;
-			return isDead;
+			return "Charmander";
 		}
 
 		bool Attack (Pokemon &opPokemon) override

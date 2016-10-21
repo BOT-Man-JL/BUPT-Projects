@@ -12,12 +12,11 @@ int main (int argc, char *argv[])
 	{
 		std::cout << p1.GetName () << " attacked "
 			<< p2.GetName () << std::endl;
+		auto preLevel = p1.GetLevel ();
 		if (p1.Attack (p2))
 		{
 			std::cout << p1.GetName () << " defeated "
 				<< p2.GetName () << std::endl;
-			auto preLevel = p1.GetLevel ();
-			p1.Upgrade (p2.GetLevel () * 100);
 			auto curLevel = p1.GetLevel ();
 			if (preLevel != curLevel)
 				std::cout << p1.GetName () << " upgraded from "
