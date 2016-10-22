@@ -35,7 +35,7 @@ namespace BOT_LexParser
 			"++", "--", "&", "*", "+", "-", "~", "!",
 			"/", "%", "<<", ">>", "<", ">", "<=", ">=",
 			"==", "!=", "^", "|", "&&", "||",
-			"?", ":", ",", ";",
+			"?", ":", ",", ";", "...",
 			"=", "*=", "/=", "%=", "+=", "-=",
 			"<<=", ">>=", "&=", "^=", "|="
 		};
@@ -97,6 +97,29 @@ namespace BOT_LexParser
 			return (ch == ' ' || ch == '\t' || ch == '\v'
 					|| ch == '\r' || ch == '\n');
 		}
+
+		enum class Token
+		{
+			keyword,
+			identifier,
+			constant,
+			string,
+			punctuator
+		};
+
+		const std::string &GetStrFromToken (Token token)
+		{
+			static const std::unordered_map<Token, std::string>
+				tokenMapper =
+			{
+				{ Token::keyword, "keyword" },
+				{ Token::identifier, "identifier" },
+				{ Token::constant, "constant" },
+				{ Token::string, "string" },
+				{ Token::punctuator, "punctuator" }
+			};
+			return tokenMapper.at (token);
+		}
 	}
 
 	void LexParsing (std::istream &is,
@@ -106,9 +129,9 @@ namespace BOT_LexParser
 
 		size_t cLine = 1;
 		size_t cChar = 0;
-		std::unordered_map<std::string, size_t> wordCount;
+		std::unordered_map<Token, size_t> wordCount;
 		std::set<std::string> symbols;
-		std::vector<std::pair<std::string, std::string>> tokens;
+		std::vector<std::pair<Token, std::string>> tokens;
 		std::vector<std::pair<std::string, size_t>> errors;
 
 		// Assume Not Mac :-(
@@ -128,6 +151,20 @@ namespace BOT_LexParser
 				seg += ch;
 			}
 			cLine++;
+		};
+
+		// Add Token
+		auto addToken = [&symbols, &tokens, &wordCount] (
+			Token token, std::string seg)
+		{
+			if (token == Token::identifier ||
+				token == Token::constant ||
+				token == Token::string)
+				symbols.emplace (seg);
+			if (token != Token::punctuator)
+				wordCount[token]++;
+			tokens.emplace_back (token,
+								 std::move (seg));
 		};
 
 		while (true)
@@ -163,25 +200,14 @@ namespace BOT_LexParser
 				}
 
 				if (isKeyword (seg))
-				{
-					tokens.emplace_back ("keyword", seg);
-					wordCount["keyword"]++;
-				}
+					addToken (Token::keyword, seg);
 				else
-				{
-					symbols.emplace (seg);
-					tokens.emplace_back ("identifier", seg);
-					wordCount["identifier"]++;
-				}
+					addToken (Token::identifier, seg);
 			}
 			// Number or Punc .
 			else if (ch == '.' || isdigit (ch))
 			{
-				// Ignore this Part :-)
-				auto _ = 0.0;
-				_ = _ = 0;
-				_ = .0, 0.;
-				_ = 0.F;
+				bool isInt = false;
 
 				// Decimal
 				if (ch == '.' || ch != '0' || (ch == '0' && nch == '.'))
@@ -190,7 +216,7 @@ namespace BOT_LexParser
 					{
 						auto state = 0;
 						if (ch == '.')
-							state = 2;
+							state = 1;
 
 						while (true)
 						{
@@ -198,25 +224,30 @@ namespace BOT_LexParser
 							char nch = is.peek ();
 							switch (state)
 							{
+							// (digit)+
 							case 0:
 								if (isdigit (nch))
 									;
 								else if (nch == '.')
-									//state = 1;
 									state = 2;
 								else if (nch == 'e' || nch == 'E')
 									state = 3;
 								else
+								{
+									isInt = true;
+									isEnd = true;
+								}
+								break;
+							// .
+							case 1:
+								if (isdigit (nch))
+									state = 2;
+								else if (nch == '.')
+									state = 6;
+								else
 									isEnd = true;
 								break;
-								//case 1:
-								//	if (isdigit (nch))
-								//		state = 2;
-								//	else
-								//		throw std::runtime_error (
-								//			"Bad Fraction: "
-								//			+ seg);
-								//	break;
+							// (digit)* . (digit)+ | (digit)+ . (digit)*
 							case 2:
 								if (isdigit (nch))
 									;
@@ -225,6 +256,7 @@ namespace BOT_LexParser
 								else
 									isEnd = true;
 								break;
+							// num E/e
 							case 3:
 								if (nch == '+' || nch == '-')
 									state = 4;
@@ -235,6 +267,7 @@ namespace BOT_LexParser
 										"Bad Exponential: "
 										+ seg);
 								break;
+							// num E/e +/-
 							case 4:
 								if (isdigit (nch))
 									state = 5;
@@ -243,11 +276,24 @@ namespace BOT_LexParser
 										"Bad Exponential: "
 										+ seg);
 								break;
+							// num E/e (+/-)?
 							case 5:
 								if (isdigit (nch))
 									;
 								else
 									isEnd = true;
+								break;
+							// ..
+							case 6:
+								if (nch == '.')
+									state = 7;
+								else
+									throw std::runtime_error (
+										"Invalid Punctuator: ..");
+								break;
+							// ...
+							case 7:
+								isEnd = true;
 								break;
 							default:
 								throw std::runtime_error (
@@ -261,14 +307,16 @@ namespace BOT_LexParser
 							cChar++;
 						}
 
-						if (seg == ".")
-							tokens.emplace_back ("punctuator", seg);
-						else
-							tokens.emplace_back ("constant", seg);
+						if (state == 1 || state == 7)
+						{
+							addToken (Token::punctuator, seg);
+							continue;
+						}
 					}
 					catch (const std::exception &ex)
 					{
 						errors.emplace_back (ex.what (), cLine);
+						continue;
 					}
 				}
 				// Hexadecimal
@@ -278,6 +326,7 @@ namespace BOT_LexParser
 					seg += (char) is.get ();
 					cChar++;
 
+					isInt = true;
 					while (true)
 					{
 						char nch = is.peek ();
@@ -291,14 +340,16 @@ namespace BOT_LexParser
 						cChar++;
 					}
 
-					if (seg.size () > 2)
-						tokens.emplace_back ("constant", seg);
-					else
+					if (seg.size () <= 2)
+					{
 						errors.emplace_back ("Invalid 0x", cLine);
+						continue;
+					}
 				}
 				// Octal
 				else
 				{
+					isInt = true;
 					while (true)
 					{
 						char nch = is.peek ();
@@ -309,9 +360,48 @@ namespace BOT_LexParser
 						seg += (char) is.get ();
 						cChar++;
 					}
-					tokens.emplace_back ("constant", seg);
 				}
-				wordCount["constant"]++;
+
+				// Handle Suffix
+				char nch = is.peek ();
+				if (isInt)
+				{
+					if (nch == 'u' || nch == 'U')
+					{
+						seg += (char) is.get ();
+						cChar++;
+
+						char nch = is.peek ();
+						if (nch == 'l' || nch == 'L')
+						{
+							seg += (char) is.get ();
+							cChar++;
+						}
+					}
+					else if (nch == 'l' || nch == 'L')
+					{
+						seg += (char) is.get ();
+						cChar++;
+
+						char nch = is.peek ();
+						if (nch == 'u' || nch == 'U')
+						{
+							seg += (char) is.get ();
+							cChar++;
+						}
+					}
+				}
+				else
+				{
+					if (nch == 'f' || nch == 'F' ||
+						nch == 'l' || nch == 'L')
+					{
+						seg += (char) is.get ();
+						cChar++;
+					}
+				}
+
+				addToken (Token::constant, seg);
 			}
 			// Char or String Literal
 			else if (ch == '\'' || ch == '"')
@@ -367,14 +457,10 @@ namespace BOT_LexParser
 						if (seg.size () <= 2)
 							throw std::runtime_error (
 								"Too few chars inside Pair ''");
-						tokens.emplace_back ("constant", seg);
-						wordCount["constant"]++;
+						addToken (Token::constant, seg);
 					}
 					else
-					{
-						tokens.emplace_back ("string", seg);
-						wordCount["string"]++;
-					}
+						addToken (Token::string, seg);
 				}
 				catch (const std::exception &ex)
 				{
@@ -406,25 +492,16 @@ namespace BOT_LexParser
 						break;
 					}
 				}
-#ifdef PRINTCOMMENT
-				tokens.emplace_back ("comment", seg);
-#endif // PRINTCOMMENT
-					}
+			}
 			// Line Comment
 			else if (ch == '/' && nch == '/')
 			{
 				eatLine (seg);
-#ifdef PRINTCOMMENT
-				tokens.emplace_back ("comment", seg);
-#endif // PRINTCOMMENT
-				}
+			}
 			// PreProcessing
 			else if (ch == '#')
 			{
 				eatLine (seg);
-#ifdef PRINTPREPROCESS
-				tokens.emplace_back ("preprocess", seg);
-#endif // PRINTPREPROCESS
 			}
 			// Punc or Err
 			else
@@ -446,7 +523,7 @@ namespace BOT_LexParser
 				}
 
 				if (isPunc)
-					tokens.emplace_back ("punctuator", seg);
+					addToken (Token::punctuator, seg);
 				else
 					errors.emplace_back (
 						"Invalid Punctuator: " + seg, cLine);
@@ -460,7 +537,7 @@ namespace BOT_LexParser
 		os << "\nTotal Words:\n";
 		for (auto &word : wordCount)
 			os << "[" << std::setw (10) << std::right
-			<< word.first << "]:\t"
+			<< GetStrFromToken (word.first) << "]:\t"
 			<< word.second << std::endl;
 
 		os << "\nSymbols:\n";
@@ -470,7 +547,7 @@ namespace BOT_LexParser
 		os << "\nTokens:\n";
 		for (auto &token : tokens)
 			os << "<" << std::setw (10) << std::right
-			<< token.first << ">\t"
+			<< GetStrFromToken (token.first) << ">\t"
 			<< token.second << std::endl;
 
 		if (!errors.empty ())

@@ -64,8 +64,8 @@ Remarks:
 - 每次读入字符时，自动计入**总字符数**
 - 每次读到换行符时，自动计入**总行数**
 - 根据当前字符`ch`判断进入哪种分析自动机
-  - 在分析**十进制整数/浮点数**时，使用**switch型**自动机
-  - **其余**分析均使用**while型**自动机，以增强*可读性*
+  - 在分析**十进制整数/浮点数/./...标点**时，使用**显式状态实现的**自动机
+  - **其余**分析均使用**隐式状态实现的**自动机（由于状态较少）
 
 ### 分析空字符
 
@@ -115,15 +115,19 @@ digit: one of
   0 1 2 3 4 5 6 7 8 9
 ```
 
-### 分析数值常量
+### 分析数值常量/./...标点
 
 - 判断`ch`是否为**数字** 或 `.`
-  - 如果`ch`是`.` 或 不是`0` 或 （`ch`是`0` 且 `nch`是`.`），进入**十进制数**的自动机，**循环超前扫描`nch`**，进入下一轮前读入`nch`
-    - 如果`ch`是`.`，自动机初始状态为 `2`；否则为初始状态为 `0`
+  - 如果`ch`是`.` 或 不是`0` 或 （`ch`是`0` 且 `nch`是`.`），进入**十进制数/./...标点**的自动机，**循环超前扫描`nch`**，进入下一轮前读入`nch`
+    - 如果`ch`是`.`，自动机初始状态为 `1`；否则为初始状态为 `0`
     - 状态0
       - `nch`为**数字**时，不转移
       - `nch`为 `.` 时，转移到状态2
       - `nch`为 `e` 或 `E` 时，转移到状态3
+      - 否则，*退出*
+    - 状态1
+      - `nch`为**数字**时，转移到状态2
+      - `nch`为 `.` 时，转移到状态6
       - 否则，*退出*
     - 状态2
       - `nch`为**数字**时，不转移
@@ -139,8 +143,13 @@ digit: one of
     - 状态5
       - `nch`为**数字**时，不转移
       - 否则，*退出*
-    - 退出前，判断*输出串*是不是 `.`
-      - 如果是，则输出**标点**
+    - 状态6
+      - `nch`为 `.` 时，转移到状态7
+      - 否则，*报错*（非法标点..）
+    - 状态7
+      - *退出*
+    - 退出前，判断终止状态
+      - 如果是 `1` 或 `7`，则输出**标点**
       - 否则，输出**常量**
   - 否则如果`nch`是`X` 或 `x`，进入**十六进制数**的自动机，**循环超前扫描`nch`**
     - 不为*十六进制有效字符*时*退出*
@@ -148,6 +157,9 @@ digit: one of
         - 如果是，则*报错*（无效0x）
   - 否则，进入**八进制数**的自动机，**循环超前扫描`nch`**
     - 不为*八进制有效字符*时*退出*
+- 输出**常量**前，进入**数值常量后缀**的自动机，**超前扫描`nch`**
+  - **整数常量** 判断有没有 `U/u` / `L/l` 组合的**后缀**
+  - **浮点数常量** 判断有没有 `F/f/L/l` **后缀**
 - 识别**文法**
 
 ```
@@ -160,6 +172,9 @@ integer-constant:
   decimal-constant
   octal-constant
   hexadecimal-constant
+  decimal-constant integer-suffix
+  octal-constant integer-suffix
+  hexadecimal-constant integer-suffix
 
 decimal-constant:
   nonzero-digit
@@ -190,10 +205,25 @@ hexadecimal-digit: one of
   a b c d e f
   A B C D E F
 
+integer-suffix:
+  unsigned-suffix
+  unsigned-suffix long-suffix
+  long-suffix
+  long-suffix unsigned-suffix
+
+unsigned-suffix: one of
+  u U
+
+long-suffix: one of
+  l L
+
 floating-constant:
   fractional-constant
   fractional-constant exponent-part
+  fractional-constant floating-suffix
+  fractional-constant exponent-part floating-suffix
   digit-sequence exponent-part
+  digit-sequence exponent-part floating-suffix
 
 fractional-constant:
   . digit-sequence
@@ -210,6 +240,9 @@ exponent-part:
 
 sign: one of
   + -
+
+floating-suffix: one of
+  f l F L
 ```
 
 ### 分析字符常量/字符串文字量
@@ -284,7 +317,7 @@ escape-sequence: one of
 
 - 判断`ch`是否为**标点**
 - **循环扫描`nch`**，判断 `当前串 + nch` 是否为**标点**
-  （基于长为 *n* 的标点一定存在长为 *n-1* 的标点前缀）
+  （基于长为 *n* 的标点一定存在长为 *n-1* 的标点前缀，除了...）
   - 如果是，则当前串加入`nch`
   - 如果不是，则*退出*
 - `当前串`不能构成**标点**，则*报错*
@@ -295,7 +328,7 @@ punctuator: one of
   [ ] ( ) { } . ->
   ++ -- & * + - ~ !
   / % << >> < > <= >= == != ^ | && ||
-  ? : , ;
+  ? : , ; ...
   = *= /= %= += -= <<= >>= &= ^= |=
 ```
 
@@ -324,9 +357,10 @@ int main (int argc, char *argv[])
 		Valid Input
 	*/
 	int a = 10, 0x90, 0070, 0, 00, 0x0;
-	double b = 0.5, 1.5, .0, .1, 0., 1., 56e-3, 0.7e+8;
-	auto c = a +b = a/**//b;;;
-	auto d = dd0.xxx, dd.xx, d1.;
+	double b = 0.5, 1.5, .0, .1e3, 0., 1.e2, 56e-3, 0.7e+8;
+	float c = a +b = a/**//b;;;
+	long d = dd0.xxx, dd.xx, d1.;
+	auto sf = 1lu, 1ul, 02u, 02lu, 0x1l, 0x2u, .3f, 4.l;
 	char ch = '@this is a \'Char\'';
 	const char *str = "$this is a \"String\"",
 		"String\n\r\v\t\
@@ -335,16 +369,16 @@ int main (int argc, char *argv[])
 	[ ] ( ) { } . ->
 	++ -- & * + - ~ !
 	/ % << >> < > <= >= == != ^ | && ||
-	? : , ;
+	? : , ; ...
 	= *= /= %= += -= <<= >>= &= ^= |=
 
 	// Invalid Input
 	int a = 0x;
 	double b = 5.0e, 65e+, 72e-;
-	char ch = '', ';
+	char ch = '', 'hahaha;
 	const char *str = "haha;
 	scanf ("Lex\eT\*e\|s\ht");
-		@ $ `
+		@ $ ` ..
 	return 0;
 }
 
@@ -353,16 +387,43 @@ int main (int argc, char *argv[])
 ### Output : LexTest.c.output.txt
 
 ```
-Total Lines: 33
-Total Chars: 648
+Total Lines: 34
+Total Chars: 720
 
 Total Words:
-[   keyword]:	16
-[identifier]:	24
+[   keyword]:	17
+[identifier]:	25
 [  constant]:	24
 [    string]:	4
 
 Symbols:
+"$this is a \"String\""
+"LexTest"
+"LexTest\n\r\v\t"
+"String\n\r\v\t		2"
+'@this is a \'Char\''
+.0
+.1e3
+.3f
+0
+0.
+0.5
+0.7e+8
+00
+0070
+02lu
+02u
+0x0
+0x1l
+0x2u
+0x90
+1.5
+1.e2
+10
+1lu
+1ul
+4.l
+56e-3
 a
 argc
 argv
@@ -376,6 +437,7 @@ dd0
 main
 printf
 scanf
+sf
 str
 xx
 xxx
@@ -418,17 +480,17 @@ Tokens:
 <punctuator>	,
 <  constant>	.0
 <punctuator>	,
-<  constant>	.1
+<  constant>	.1e3
 <punctuator>	,
 <  constant>	0.
 <punctuator>	,
-<  constant>	1.
+<  constant>	1.e2
 <punctuator>	,
 <  constant>	56e-3
 <punctuator>	,
 <  constant>	0.7e+8
 <punctuator>	;
-<   keyword>	auto
+<   keyword>	float
 <identifier>	c
 <punctuator>	=
 <identifier>	a
@@ -441,7 +503,7 @@ Tokens:
 <punctuator>	;
 <punctuator>	;
 <punctuator>	;
-<   keyword>	auto
+<   keyword>	long
 <identifier>	d
 <punctuator>	=
 <identifier>	dd0
@@ -454,6 +516,25 @@ Tokens:
 <punctuator>	,
 <identifier>	d1
 <punctuator>	.
+<punctuator>	;
+<   keyword>	auto
+<identifier>	sf
+<punctuator>	=
+<  constant>	1lu
+<punctuator>	,
+<  constant>	1ul
+<punctuator>	,
+<  constant>	02u
+<punctuator>	,
+<  constant>	02lu
+<punctuator>	,
+<  constant>	0x1l
+<punctuator>	,
+<  constant>	0x2u
+<punctuator>	,
+<  constant>	.3f
+<punctuator>	,
+<  constant>	4.l
 <punctuator>	;
 <   keyword>	char
 <identifier>	ch
@@ -508,6 +589,7 @@ Tokens:
 <punctuator>	:
 <punctuator>	,
 <punctuator>	;
+<punctuator>	...
 <punctuator>	=
 <punctuator>	*=
 <punctuator>	/=
@@ -549,19 +631,20 @@ Tokens:
 <punctuator>	}
 
 Errors:
-[25]	Invalid 0x
-[26]	Bad Exponential: 5.0e
-[26]	Bad Exponential: 65e+
-[26]	Bad Exponential: 72e-
-[27]	Too few chars inside Pair ''
-[28]	No End Bracket: ';
-[29]	No End Bracket: "haha;
-[29]	Invalid Escape Char: \e
-[29]	Invalid Escape Char: \*
-[29]	Invalid Escape Char: \|
-[29]	Invalid Escape Char: \h
-[30]	Invalid Punctuator: @
-[30]	Invalid Punctuator: $
-[30]	Invalid Punctuator: `
+[26]	Invalid 0x
+[27]	Bad Exponential: 5.0e
+[27]	Bad Exponential: 65e+
+[27]	Bad Exponential: 72e-
+[28]	Too few chars inside Pair ''
+[29]	No End Bracket: 'hahaha;
+[30]	No End Bracket: "haha;
+[30]	Invalid Escape Char: \e
+[30]	Invalid Escape Char: \*
+[30]	Invalid Escape Char: \|
+[30]	Invalid Escape Char: \h
+[31]	Invalid Punctuator: @
+[31]	Invalid Punctuator: $
+[31]	Invalid Punctuator: `
+[31]	Invalid Punctuator: ..
 
 ```
