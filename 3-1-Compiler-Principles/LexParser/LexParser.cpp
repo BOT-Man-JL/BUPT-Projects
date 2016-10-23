@@ -107,9 +107,18 @@ namespace BOT_LexParser
 			punctuator
 		};
 
+		struct TokenHasher
+		{
+			size_t operator()(Token const& obj) const
+			{
+				return std::underlying_type<
+					BOT_LexParser::BOT_LexParser_Impl::Token>::type (obj);
+			}
+		};
+
 		const std::string &GetStrFromToken (Token token)
 		{
-			static const std::unordered_map<Token, std::string>
+			static const std::unordered_map<Token, std::string, TokenHasher>
 				tokenMapper =
 			{
 				{ Token::keyword, "keyword" },
@@ -128,8 +137,8 @@ namespace BOT_LexParser
 		using namespace BOT_LexParser_Impl;
 
 		size_t cLine = 1;
-		size_t cChar = 0;
-		std::unordered_map<Token, size_t> wordCount;
+		size_t cChar = 0;  // Issue: Windows ignore \r :-(
+		std::unordered_map<Token, size_t, TokenHasher> wordCount;
 		std::set<std::string> symbols;
 		std::vector<std::pair<Token, std::string>> tokens;
 		std::vector<std::pair<std::string, size_t>> errors;
