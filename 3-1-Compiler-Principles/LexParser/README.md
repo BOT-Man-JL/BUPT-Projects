@@ -35,7 +35,7 @@ token:
 ```
 
 Remarks:
-- 目前支持*ANSI C*词法的**子集** 😅
+- 目前支持*ANSI C89*词法的**子集** 😅
 - 暂时仅不支持（因为觉得没什么用）
   - 分析预编译词法
   - 分析标点 `<: :> <% %> %: %:%:`
@@ -97,11 +97,10 @@ new-line:
  keyword: one of
   auto      break     case      char      const   continue
   default   do        double    else      enum    extern
-  float     for       goto      if        inline  int     long
+  float     for       goto      if        inline  int      long
   register  restrict  return    short     signed
   sizeof    static    struct    switch    typedef
   union     unsigned  void      volatile  while
-  _Bool     _Complex  _Imaginary
 
 identifier:
   identifier-nondigit
