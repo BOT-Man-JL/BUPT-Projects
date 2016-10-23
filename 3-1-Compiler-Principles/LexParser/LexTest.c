@@ -25,6 +25,7 @@ int main (int argc, char *argv[])
 	// Invalid Input
 	int a = 0x;
 	double b = 5.0e, 65e+, 72e-;
+	auto sf = 1uu, 1ull, 1llu, 1lul, 2lu2, 2ul2, .3fl, .4lf, .5l3l.6l;
 	char ch = '', 'hahaha;
 	const char *str = "haha;
 	scanf ("Lex\eT\*e\|s\ht");

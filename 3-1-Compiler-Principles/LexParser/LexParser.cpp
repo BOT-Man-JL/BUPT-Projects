@@ -216,12 +216,12 @@ namespace BOT_LexParser
 			// Number or Punc .
 			else if (ch == '.' || isdigit (ch))
 			{
-				bool isInt = false;
-
-				// Decimal
-				if (ch == '.' || ch != '0' || (ch == '0' && nch == '.'))
+				bool isInt = false, isFlt = false, isPunc = false;
+				try
 				{
-					try
+					// Decimal or dot
+					if (ch == '.' ||
+						ch != '0' || (ch == '0' && nch == '.'))
 					{
 						auto state = 0;
 						if (ch == '.')
@@ -229,11 +229,10 @@ namespace BOT_LexParser
 
 						while (true)
 						{
-							auto isEnd = false;
 							char nch = is.peek ();
 							switch (state)
 							{
-							// (digit)+
+								// (digit)+
 							case 0:
 								if (isdigit (nch))
 									;
@@ -242,30 +241,27 @@ namespace BOT_LexParser
 								else if (nch == 'e' || nch == 'E')
 									state = 3;
 								else
-								{
 									isInt = true;
-									isEnd = true;
-								}
 								break;
-							// .
+								// .
 							case 1:
 								if (isdigit (nch))
 									state = 2;
 								else if (nch == '.')
 									state = 6;
 								else
-									isEnd = true;
+									isPunc = true;
 								break;
-							// (digit)* . (digit)+ | (digit)+ . (digit)*
+								// (digit)* . (digit)+ | (digit)+ . (digit)*
 							case 2:
 								if (isdigit (nch))
 									;
 								else if (nch == 'e' || nch == 'E')
 									state = 3;
 								else
-									isEnd = true;
+									isFlt = true;
 								break;
-							// num E/e
+								// num E/e
 							case 3:
 								if (nch == '+' || nch == '-')
 									state = 4;
@@ -276,7 +272,7 @@ namespace BOT_LexParser
 										"Bad Exponential: "
 										+ seg);
 								break;
-							// num E/e +/-
+								// num E/e +/-
 							case 4:
 								if (isdigit (nch))
 									state = 5;
@@ -285,14 +281,14 @@ namespace BOT_LexParser
 										"Bad Exponential: "
 										+ seg);
 								break;
-							// num E/e (+/-)?
+								// num E/e (+/-)? num
 							case 5:
 								if (isdigit (nch))
 									;
 								else
-									isEnd = true;
+									isFlt = true;
 								break;
-							// ..
+								// ..
 							case 6:
 								if (nch == '.')
 									state = 7;
@@ -300,117 +296,154 @@ namespace BOT_LexParser
 									throw std::runtime_error (
 										"Invalid Punctuator: ..");
 								break;
-							// ...
+								// ...
 							case 7:
-								isEnd = true;
+								isPunc = true;
 								break;
 							default:
 								throw std::runtime_error (
 									"Intra Automaton Error");
 								break;
 							}
-							if (isEnd) break;
+							if (isPunc || isInt || isFlt)
+								break;
+
+							// Get Char
+							seg += (char) is.get ();
+							cChar++;
+						}
+					}
+					// Hexadecimal
+					else if (nch == 'X' || nch == 'x')
+					{
+						// Eat X
+						seg += (char) is.get ();
+						cChar++;
+
+						isInt = true;
+						while (true)
+						{
+							char nch = is.peek ();
+							if (!isdigit (nch)
+								&& !(nch >= 'A' && nch <= 'F')
+								&& !(nch >= 'a' && nch <= 'f'))
+								break;
 
 							// Get Char
 							seg += (char) is.get ();
 							cChar++;
 						}
 
-						if (state == 1 || state == 7)
+						if (seg.size () <= 2)
+							throw std::runtime_error ("Invalid 0x");
+					}
+					// Octal
+					else
+					{
+						isInt = true;
+						while (true)
 						{
-							addToken (Token::punctuator, seg);
-							continue;
+							char nch = is.peek ();
+							if (nch < '0' || nch > '7')
+								break;
+
+							// Get Char
+							seg += (char) is.get ();
+							cChar++;
 						}
 					}
-					catch (const std::exception &ex)
+
+					// Break if Not Number
+					if (isPunc)
 					{
-						errors.emplace_back (ex.what (), cLine);
+						addToken (Token::punctuator, seg);
 						continue;
 					}
-				}
-				// Hexadecimal
-				else if (nch == 'X' || nch == 'x')
-				{
-					// Eat X
-					seg += (char) is.get ();
-					cChar++;
 
-					isInt = true;
+					// Handle Suffix
+					auto state = 2;
+					if (isInt)
+						state = 3;
+
 					while (true)
 					{
+						auto isEnd = false;
 						char nch = is.peek ();
-						if (!isdigit (nch)
-							&& !(nch >= 'A' && nch <= 'F')
-							&& !(nch >= 'a' && nch <= 'f'))
+						switch (state)
+						{
+						// Invalid
+						case 0:
+							if (isalnum (nch))
+								;
+							else
+								throw std::runtime_error (
+									"Bad Suffix: " + seg);
 							break;
+						// Valid
+						case 1:
+							if (isalnum (nch))
+								state = 0;
+							else
+								isEnd = true;
+							break;
+						// Flt
+						case 2:
+							if (nch == 'f' || nch == 'F' ||
+								nch == 'l' || nch == 'L')
+								state = 1;
+							else if (isalnum (nch))
+								state = 0;
+							else
+								isEnd = true;
+							break;
+						// Int
+						case 3:
+							if (nch == 'u' || nch == 'U')
+								state = 4;
+							else if (nch == 'l' || nch == 'L')
+								state = 5;
+							else if (isalnum (nch))
+								state = 0;
+							else
+								isEnd = true;
+							break;
+						// Int - U/u
+						case 4:
+							if (nch == 'l' || nch == 'L')
+								state = 1;
+							else if (isalnum (nch))
+								state = 0;
+							else
+								isEnd = true;
+							break;
+						// Int - L/l
+						case 5:
+							if (nch == 'u' || nch == 'U')
+								state = 1;
+							else if (isalnum (nch))
+								state = 0;
+							else
+								isEnd = true;
+							break;
+						default:
+							throw std::runtime_error (
+								"Intra Automaton Error");
+							break;
+						}
+
+						if (isEnd) break;
 
 						// Get Char
 						seg += (char) is.get ();
 						cChar++;
 					}
 
-					if (seg.size () <= 2)
-					{
-						errors.emplace_back ("Invalid 0x", cLine);
-						continue;
-					}
+					addToken (Token::constant, seg);
 				}
-				// Octal
-				else
+				catch (const std::exception &ex)
 				{
-					isInt = true;
-					while (true)
-					{
-						char nch = is.peek ();
-						if (nch < '0' || nch > '7')
-							break;
-
-						// Get Char
-						seg += (char) is.get ();
-						cChar++;
-					}
+					errors.emplace_back (ex.what (), cLine);
 				}
-
-				// Handle Suffix
-				char nch = is.peek ();
-				if (isInt)
-				{
-					if (nch == 'u' || nch == 'U')
-					{
-						seg += (char) is.get ();
-						cChar++;
-
-						char nch = is.peek ();
-						if (nch == 'l' || nch == 'L')
-						{
-							seg += (char) is.get ();
-							cChar++;
-						}
-					}
-					else if (nch == 'l' || nch == 'L')
-					{
-						seg += (char) is.get ();
-						cChar++;
-
-						char nch = is.peek ();
-						if (nch == 'u' || nch == 'U')
-						{
-							seg += (char) is.get ();
-							cChar++;
-						}
-					}
-				}
-				else
-				{
-					if (nch == 'f' || nch == 'F' ||
-						nch == 'l' || nch == 'L')
-					{
-						seg += (char) is.get ();
-						cChar++;
-					}
-				}
-
-				addToken (Token::constant, seg);
 			}
 			// Char or String Literal
 			else if (ch == '\'' || ch == '"')

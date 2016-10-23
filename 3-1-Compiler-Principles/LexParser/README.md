@@ -35,7 +35,10 @@ token:
 ```
 
 Remarks:
-- 目前支持*北京邮电大学课堂上讲过的C语言*词法的**超集**，*ANSI C*词法的**子集** 😅
+- 目前支持*ANSI C*词法的**子集** 😅
+- 暂时仅不支持（因为觉得没什么用）
+  - 分析预编译词法
+  - 分析标点 `<: :> <% %> %: %:%:`
 
 ### 输入输出
 
@@ -66,12 +69,12 @@ Remarks:
 - 根据当前字符`ch`判断进入哪种分析自动机
   - 在分析**十进制整数/浮点数/./...标点**时，使用**显式状态实现的**自动机
   - **其余**分析均使用**隐式状态实现的**自动机（由于状态较少）
+- **错误类型** 见 *测试样例*
 
 ### 分析空字符
 
 - 判断`ch`是否为**空字符**
   - 进入**空字符**的自动机，然后*退出*
-- 识别**文法**
 
 ``` C
 white-space: one of
@@ -157,9 +160,31 @@ digit: one of
         - 如果是，则*报错*（无效0x）
   - 否则，进入**八进制数**的自动机，**循环超前扫描`nch`**
     - 不为*八进制有效字符*时*退出*
-- 输出**常量**前，进入**数值常量后缀**的自动机，**超前扫描`nch`**
-  - **整数常量** 判断有没有 `U/u` / `L/l` 组合的**后缀**
-  - **浮点数常量** 判断有没有 `F/f/L/l` **后缀**
+  - 输出**常量**前，进入**数值常量后缀**的自动机，**循环超前扫描`nch`**，进入下一轮前读入`nch`
+    - **整数常量**初始状态为 `3`；**浮点数常量**初始状态为 `2`
+    - 状态0
+      - `nch`为**数字/字母**时，不转移
+      - 否则，*报错*（非法后缀）
+    - 状态1
+      - `nch`为**数字/字母**时，转移到状态0
+      - 否则，*退出*
+    - 状态2
+      - `nch`为 `F f L l`时，转移到状态1
+      - `nch`为**其他数字/字母**时，转移到状态0
+      - 否则，*退出*
+    - 状态3
+      - `nch`为 `U u`时，转移到状态4
+      - `nch`为 `L l`时，转移到状态5
+      - `nch`为**其他数字/字母**时，转移到状态0
+      - 否则，*退出*
+    - 状态4
+      - `nch`为 `L l`时，转移到状态1
+      - `nch`为**其他数字/字母**时，转移到状态0
+      - 否则，*退出*
+    - 状态5
+      - `nch`为 `U u`时，转移到状态1
+      - `nch`为**其他数字/字母**时，转移到状态0
+      - 否则，*退出*
 - 识别**文法**
 
 ```
@@ -332,7 +357,7 @@ punctuator: one of
   = *= /= %= += -= <<= >>= &= ^= |=
 ```
 
-## 运行测试
+## 测试样例
 
 ### Windows MSVC 2015 (Visual Studio 2015)
 
@@ -375,6 +400,7 @@ int main (int argc, char *argv[])
 	// Invalid Input
 	int a = 0x;
 	double b = 5.0e, 65e+, 72e-;
+	auto sf = 1uu, 1ull, 1llu, 1lul, 2lu2, 2ul2, .3fl, .4lf, .5l3l.6l;
 	char ch = '', 'hahaha;
 	const char *str = "haha;
 	scanf ("Lex\eT\*e\|s\ht");
@@ -387,13 +413,13 @@ int main (int argc, char *argv[])
 ### Output : LexTest.c.output.txt
 
 ```
-Total Lines: 34
-Total Chars: 720
+Total Lines: 35
+Total Chars: 788
 
 Total Words:
-[   keyword]:	17
-[identifier]:	25
-[  constant]:	24
+[   keyword]:	18
+[identifier]:	26
+[  constant]:	25
 [    string]:	4
 
 Symbols:
@@ -405,6 +431,7 @@ Symbols:
 .0
 .1e3
 .3f
+.6
 0
 0.
 0.5
@@ -611,6 +638,19 @@ Tokens:
 <punctuator>	,
 <punctuator>	,
 <punctuator>	;
+<   keyword>	auto
+<identifier>	sf
+<punctuator>	=
+<punctuator>	,
+<punctuator>	,
+<punctuator>	,
+<punctuator>	,
+<punctuator>	,
+<punctuator>	,
+<punctuator>	,
+<punctuator>	,
+<  constant>	.6l
+<punctuator>	;
 <   keyword>	char
 <identifier>	ch
 <punctuator>	=
@@ -635,16 +675,25 @@ Errors:
 [27]	Bad Exponential: 5.0e
 [27]	Bad Exponential: 65e+
 [27]	Bad Exponential: 72e-
-[28]	Too few chars inside Pair ''
-[29]	No End Bracket: 'hahaha;
-[30]	No End Bracket: "haha;
-[30]	Invalid Escape Char: \e
-[30]	Invalid Escape Char: \*
-[30]	Invalid Escape Char: \|
-[30]	Invalid Escape Char: \h
-[31]	Invalid Punctuator: @
-[31]	Invalid Punctuator: $
-[31]	Invalid Punctuator: `
-[31]	Invalid Punctuator: ..
+[28]	Bad Suffix: 1uu
+[28]	Bad Suffix: 1ull
+[28]	Bad Suffix: 1llu
+[28]	Bad Suffix: 1lul
+[28]	Bad Suffix: 2lu2
+[28]	Bad Suffix: 2ul2
+[28]	Bad Suffix: .3fl
+[28]	Bad Suffix: .4lf
+[28]	Bad Suffix: .5l3l
+[29]	Too few chars inside Pair ''
+[30]	No End Bracket: 'hahaha;
+[31]	No End Bracket: "haha;
+[31]	Invalid Escape Char: \e
+[31]	Invalid Escape Char: \*
+[31]	Invalid Escape Char: \|
+[31]	Invalid Escape Char: \h
+[32]	Invalid Punctuator: @
+[32]	Invalid Punctuator: $
+[32]	Invalid Punctuator: `
+[32]	Invalid Punctuator: ..
 
 ```
