@@ -21,13 +21,20 @@ namespace PokemonGame_Impl
 		PokemonGame::Pokemon::HealthPoint fullHP;
 		PokemonGame::Pokemon::TimeGap timeGap;
 
+		inline PokemonGame::Pokemon *ToPokemon ()
+		{
+			return PokemonGame::Pokemon::NewPokemon (
+				name, level, expPoint,
+				atk, def, hp, fullHP, timeGap);
+		}
+
 		static PokemonModel *NewFromPokemon (
-			std::string uid,
+			long id, std::string uid,
 			const PokemonGame::Pokemon &pokemon)
 		{
 			return new PokemonModel
 			{
-				0, uid, pokemon.GetName (),
+				id, uid, pokemon.GetName (),
 				pokemon.GetLevel (), pokemon.GetExp (),
 				pokemon.GetAtk (), pokemon.GetDef (),
 				pokemon.GetHP (), pokemon.GetFullHP (),

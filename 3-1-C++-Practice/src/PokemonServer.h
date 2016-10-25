@@ -99,18 +99,17 @@ namespace PokemonGame
 			auto AddPokemon = [&] (const std::string &uid,
 								   const Pokemon &pokemon)
 			{
-				auto newPkm = std::unique_ptr<PokemonModel> (
-					PokemonModel::NewFromPokemon (uid, pokemon));
 				static const auto _pm = PokemonModel ();
-
-				newPkm->id = pokemonMapper
+				auto id = pokemonMapper
 					.Query (_pm)
 					.OrderBy (_pm.level)
 					.Limit (1)
 					.Count ();
+				auto newPkm = std::unique_ptr<PokemonModel> (
+					PokemonModel::NewFromPokemon (id, uid, pokemon));
+
 				if (!pokemonMapper.Insert (*newPkm))
 					return false;
-
 				return true;
 			};
 
@@ -177,7 +176,7 @@ namespace PokemonGame
 				const auto &pwd = args[2];
 
 				UserModel user { uid, pwd, 1, 0,
-					"New Commer\n"
+					"Newcomer\n"
 					"Welcome to Pokemon Game\n"
 					"Hello World" };
 				if (!userMapper.Insert (user))
@@ -192,7 +191,7 @@ namespace PokemonGame
 				for (size_t i = 0; i < initPokemonCount; i++)
 				{
 					auto newPokemon =
-						std::unique_ptr<Pokemon> (NewPokemonRandly ());
+						std::unique_ptr<Pokemon> (Pokemon::NewPokemon ());
 					if (!AddPokemon (uid, *newPokemon))
 						isAddPokemon = false;
 				}
