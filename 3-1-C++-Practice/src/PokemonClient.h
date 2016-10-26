@@ -70,18 +70,6 @@ namespace PokemonGame
 			});
 		}
 
-		bool UsersPokemons (const std::string &uid,
-							std::vector<std::string> &out)
-		{
-			auto response = Request ("UsersPokemons", _sessionID, uid);
-			return HandleResponse<2> (response, [&] ()
-			{
-				response.erase (response.begin ());
-				out = std::move (response);
-				return true;
-			});
-		}
-
 		bool UsersWonRate (const std::string &uid,
 						   double &out)
 		{
@@ -127,6 +115,40 @@ namespace PokemonGame
 			});
 		}
 
+		bool UsersPokemons (const std::string &uid,
+							std::vector<std::unique_ptr<Pokemon>> &out)
+		{
+			auto response = Request ("UsersPokemons", _sessionID, uid);
+			return HandleResponse<2> (response, [&] ()
+			{
+				response.erase (response.begin ());
+				try
+				{
+					for (auto &id : response)
+						out.emplace_back (PokemonFromID (id));
+					return true;
+				}
+				catch (...) { return false; }
+			});
+		}
+
+		bool PokemonAll (
+			std::vector<std::unique_ptr<Pokemon>> &out)
+		{
+			auto response = Request ("PokemonAll", _sessionID);
+			return HandleResponse<2> (response, [&] ()
+			{
+				response.erase (response.begin ());
+				try
+				{
+					for (auto &id : response)
+						out.emplace_back (PokemonFromID (id));
+					return true;
+				}
+				catch (...) { return false; }
+			});
+		}
+
 	private:
 		std::vector<std::string> Request (const std::string &strToken)
 		{
@@ -166,6 +188,29 @@ namespace PokemonGame
 				_errMsg = response[1];
 				return false;
 			}
+		}
+
+		std::unique_ptr<Pokemon> PokemonFromID (std::string id)
+		{
+			auto response = Request ("PokemonInfo", _sessionID, id);
+			std::vector<std::string> info;
+			if (!HandleResponse<9> (response, [&] ()
+			{
+				response.erase (response.begin ());
+				info = std::move (response);
+				return true;
+			})) throw std::runtime_error ("Bad Response");
+
+			return std::unique_ptr<Pokemon> (
+				Pokemon::NewPokemon (info[0],
+									 std::stoul (info[1]),
+									 std::stoul (info[2]),
+									 std::stoul (info[3]),
+									 std::stoul (info[4]),
+									 std::stoul (info[5]),
+									 std::stoul (info[6]),
+									 std::stoul (info[7]))
+				);
 		}
 
 		BOT_Socket::Client _sockClient;

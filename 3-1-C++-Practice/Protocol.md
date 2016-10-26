@@ -1,8 +1,7 @@
 # Pokemon Protocol
 
-**PokemonServer** is the Server who handle Request from Client;
-
-**PokemonClient** is the Client who send Request to Server;
+- **PokemonServer** is the Server who handle Request from Client;
+- **PokemonClient** is the Client who send Request to Server;
 
 ## Session
 
@@ -64,16 +63,7 @@ If Failed:
 >
 > Msg
 
-### User Info
-
-#### UsersPokemons
-
-> Session ID \n
-> User ID
->
-> Pokemon ID 1 \n
-> Pokemon ID 2 \n
-> ...
+### User/Pokemon Info
 
 #### UsersWonRate
 
@@ -107,17 +97,33 @@ If Failed:
 > User ID 2 \n
 > ...
 
-### Pokemon Manager
-
-#### PokemonInfo
+#### UsersPokemons
 
 > Session ID \n
-> Pokemon ID \n
+> User ID
 >
+> Pokemon ID 1 \n
+> Pokemon ID 2 \n
 > ...
 
 #### PokemonsAll
 
 > Session ID \n
 >
+> Pokemon ID 1 \n
+> Pokemon ID 2 \n
 > ...
+
+#### PokemonInfo
+
+> Session ID \n
+> Pokemon ID \n
+>
+> Name \n
+> Level \n
+> Exp Point \n
+> Atk \n
+> Def \n
+> HP \n
+> FullHP \n
+> Time Gap \n

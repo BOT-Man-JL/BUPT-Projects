@@ -4,7 +4,10 @@
 #include <vector>
 #include <exception>
 #include <random>
+#include <algorithm>
 #include <string>
+
+// Scaffold Macros
 
 #define SCAFFOLD_POKEMON_TYPE(CLASSNAME)					\
 protected:													\
@@ -50,34 +53,23 @@ if (name == #CLASSNAME)										\
 
 #define NAMEOF(CLASSNAME) #CLASSNAME
 
+// Helper Function
+namespace Rand
+{
+	int rand (int min, int max)
+	{
+		static std::random_device rand;
+		return rand () % (max - min) + min;
+	};
+}
+
+// class Pokemon
+
 namespace PokemonGame
 {
 	class Pokemon
 	{
 	public:
-		// this Pokemon Attack opPokemon
-		// Return <isKilling, isUpgraded>
-		std::pair<bool, bool> Attack (Pokemon &opPokemon)
-		{
-			auto &thisPokemon = *this;
-			auto damage = thisPokemon._GetDamagePoint (opPokemon);
-			auto isKilling = opPokemon.Hurt (damage);
-			auto isUpgraded = false;
-
-			if (isKilling)
-			{
-				opPokemon._hp = opPokemon._fullHP;
-				opPokemon._OnKilled ();
-			}
-			else
-			{
-				isUpgraded = thisPokemon.Upgrade (opPokemon.GetLevel () * 100);
-				if (isUpgraded) thisPokemon._OnUpgrade ();
-			}
-
-			return std::make_pair (isKilling, isUpgraded);
-		}
-
 		// Attribute
 		typedef unsigned Level;
 		typedef unsigned ExpPoint;
@@ -108,6 +100,39 @@ namespace PokemonGame
 									HealthPoint fullHP,
 									TimeGap timeGap);
 		static const std::vector<std::string> &PokemonNames ();
+
+		// this Pokemon Attack opPokemon
+		// Return <isKilling, isUpgraded>
+		std::pair<bool, bool> Attack (Pokemon &opPokemon)
+		{
+			auto &thisPokemon = *this;
+			auto damage = thisPokemon._GetDamagePoint (opPokemon);
+			auto isKilling = opPokemon.Hurt (damage);
+			auto isUpgraded = false;
+
+			if (isKilling)
+			{
+				opPokemon._OnKilled ();
+				isUpgraded = thisPokemon.Upgrade (
+					opPokemon.GetLevel () * Rand::rand (50, 100));
+			}
+			else
+				isUpgraded = thisPokemon.Upgrade (
+					opPokemon.GetLevel () * Rand::rand (0, 5));
+			if (isUpgraded) thisPokemon._OnUpgrade ();
+
+			return std::make_pair (isKilling, isUpgraded);
+		}
+
+		void Recover (HealthPoint hp = 0)
+		{
+			if (hp)
+				_hp = std::min (_fullHP, hp + _hp);
+			else
+				_hp = _fullHP;
+			_OnRecover (hp);
+		}
+
 	protected:
 		Level _level;
 		ExpPoint _expPoint;
@@ -132,9 +157,10 @@ namespace PokemonGame
 
 		// Abstract Function Members
 
-		virtual HealthPoint _GetDamagePoint (Pokemon &opPokemon) = 0;
+		virtual HealthPoint _GetDamagePoint (Pokemon &opPokemon) const = 0;
 		virtual void _OnBorn () = 0;
 		virtual void _OnKilled () = 0;
+		virtual void _OnRecover (HealthPoint) = 0;
 		virtual void _OnUpgrade () = 0;
 
 	private:
@@ -143,10 +169,12 @@ namespace PokemonGame
 		// Return false otherwise
 		bool Hurt (HealthPoint damage)
 		{
-			_hp -= damage;
-			if (_hp <= 0)
-				return true;
-			return false;
+			if (_hp >= damage)
+				_hp -= damage;
+			else
+				_hp = 0;
+
+			return (_hp == 0);
 		}
 
 		// Upgrade
@@ -174,49 +202,89 @@ namespace PokemonGame
 	{
 		SCAFFOLD_POKEMON_TYPE (StrengthPokemon)
 	public:
-		HealthPoint _GetDamagePoint (Pokemon &opPokemon) override
-		{
-			return HealthPoint (0);
-		}
+		HealthPoint _GetDamagePoint (Pokemon &opPokemon) const override;
 	};
 
 	struct DefendingPokemon : public Pokemon
 	{
 		SCAFFOLD_POKEMON_TYPE (DefendingPokemon)
 	public:
-		HealthPoint _GetDamagePoint (Pokemon &opPokemon) override
-		{
-			return HealthPoint (0);
-		}
+		HealthPoint _GetDamagePoint (Pokemon &opPokemon) const override;
 	};
 
 	struct TankPokemon : public Pokemon
 	{
 		SCAFFOLD_POKEMON_TYPE (TankPokemon)
 	public:
-		HealthPoint _GetDamagePoint (Pokemon &opPokemon) override
-		{
-			return HealthPoint (0);
-		}
+		HealthPoint _GetDamagePoint (Pokemon &opPokemon) const override;
 	};
 
 	struct SwiftPokemon : public Pokemon
 	{
 		SCAFFOLD_POKEMON_TYPE (SwiftPokemon)
 	public:
-		HealthPoint _GetDamagePoint (Pokemon &opPokemon) override
-		{
-			return HealthPoint (0);
-		}
+		HealthPoint _GetDamagePoint (Pokemon &opPokemon) const override;
 	};
 
-	namespace Rand
+	Pokemon::HealthPoint StrengthPokemon::_GetDamagePoint (
+		Pokemon &opPokemon) const
 	{
-		int rand (int min, int max)
-		{
-			static std::random_device rand;
-			return rand () % (max - min) + min;
-		};
+		HealthPoint ret = 0;
+		if (dynamic_cast<TankPokemon *> (&opPokemon))
+			ret = this->GetAtk () - opPokemon.GetDef () * 1.2;
+		else if (dynamic_cast<DefendingPokemon *> (&opPokemon))
+			ret = this->GetAtk () - opPokemon.GetDef () / 2;
+		else if (dynamic_cast<SwiftPokemon *> (&opPokemon))
+			ret = this->GetAtk () - Rand::rand (0, opPokemon.GetDef () * 2);
+		else
+			ret = this->GetAtk () - opPokemon.GetDef ();
+		return std::max (ret, 0u);
+	}
+
+	Pokemon::HealthPoint DefendingPokemon::_GetDamagePoint (
+		Pokemon &opPokemon) const
+	{
+		HealthPoint ret = 0;
+		if (dynamic_cast<StrengthPokemon *> (&opPokemon))
+			ret = this->GetAtk ();
+		else if (dynamic_cast<TankPokemon *> (&opPokemon))
+			ret = this->GetAtk ();
+		else if (dynamic_cast<SwiftPokemon *> (&opPokemon))
+			ret = this->GetAtk () - Rand::rand (
+				opPokemon.GetDef () / 2, opPokemon.GetDef () * 1.5);
+		else
+			ret = this->GetAtk () - opPokemon.GetDef ();
+		return std::max (ret, 0u);
+	}
+
+	Pokemon::HealthPoint TankPokemon::_GetDamagePoint (
+		Pokemon &opPokemon) const
+	{
+		HealthPoint ret = 0;
+		if (dynamic_cast<StrengthPokemon *> (&opPokemon))
+			ret = this->GetAtk () - opPokemon.GetDef () / 2;
+		else if (dynamic_cast<DefendingPokemon *> (&opPokemon))
+			ret = this->GetAtk () - opPokemon.GetDef () * 3;
+		else if (dynamic_cast<SwiftPokemon *> (&opPokemon))
+			ret = this->GetAtk () - opPokemon.GetDef () * 1.5;
+		else
+			ret = this->GetAtk () - opPokemon.GetDef ();
+		return std::max (ret, 0u);
+	}
+
+	Pokemon::HealthPoint SwiftPokemon::_GetDamagePoint (
+		Pokemon &opPokemon) const
+	{
+		HealthPoint ret = 0;
+		if (dynamic_cast<StrengthPokemon *> (&opPokemon))
+			ret = this->GetAtk () - Rand::rand (0, opPokemon.GetDef () * 2);
+		else if (dynamic_cast<TankPokemon *> (&opPokemon))
+			ret = Rand::rand (this->GetAtk (), this->GetAtk () * 2) - opPokemon.GetDef ();
+		else if (dynamic_cast<DefendingPokemon *> (&opPokemon))
+			ret = Rand::rand (this->GetAtk (), this->GetAtk () * 2) - opPokemon.GetDef () / 2;
+		else
+			ret = this->GetAtk () - opPokemon.GetDef ();
+		return std::max (ret, 0u);
 	}
 
 	class Pikachu : public SwiftPokemon
@@ -232,11 +300,11 @@ namespace PokemonGame
 			_timeGap = rand (6, 9);
 		}
 		void _OnKilled () override
-		{
-		}
+		{}
+		void _OnRecover (HealthPoint hp) override
+		{}
 		void _OnUpgrade () override
-		{
-		}
+		{}
 	};
 
 	class Charmander : public StrengthPokemon
@@ -252,11 +320,11 @@ namespace PokemonGame
 			_timeGap = rand (8, 12);
 		}
 		void _OnKilled () override
-		{
-		}
+		{}
+		void _OnRecover (HealthPoint hp) override
+		{}
 		void _OnUpgrade () override
-		{
-		}
+		{}
 	};
 
 	inline const std::vector<std::string> &Pokemon::PokemonNames ()
@@ -286,7 +354,7 @@ namespace PokemonGame
 	Pokemon *Pokemon::NewPokemon (const std::string &name)
 	{
 		auto ret = Pokemon::NewPokemon (name,
-			1, 0, 0, 0, 0, 0, 0);
+										1, 0, 0, 0, 0, 0, 0);
 
 		// Set Init Attr Here
 		ret->_OnBorn ();

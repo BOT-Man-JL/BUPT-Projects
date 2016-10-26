@@ -5,25 +5,29 @@ int main (int argc, char *argv[])
 {
 	using namespace PokemonGame;
 
-	Pikachu pika;
-	Charmander cmd;
+	auto pika = Pokemon::NewPokemon ("Pikachu");
+	auto cmd = Pokemon::NewPokemon ("Charmander");
 
 	auto fnAttack = [&] (Pokemon &p1, Pokemon &p2)
 	{
 		std::cout << p1.GetName () << " attacked "
 			<< p2.GetName () << std::endl;
-		auto preLevel = p1.GetLevel ();
-		if (p1.Attack (p2))
-		{
+		auto result = p1.Attack (p2);
+
+		std::cout << "HP:\t" << p1.GetHP () << "\t"
+			<< p2.GetHP () << std::endl
+			<< "FHP:\t" << p1.GetFullHP () << "\t"
+			<< p2.GetFullHP () << std::endl
+			<< "LV: \t" << p1.GetLevel () << "\t"
+			<< p2.GetLevel () << std::endl;
+
+		if (result.first)
 			std::cout << p1.GetName () << " defeated "
-				<< p2.GetName () << std::endl;
-			auto curLevel = p1.GetLevel ();
-			if (preLevel != curLevel)
-				std::cout << p1.GetName () << " upgraded from "
-				<< preLevel << " to " << curLevel << std::endl;
-			return true;
-		}
-		return false;
+			<< p2.GetName () << std::endl;
+		if (result.second)
+			std::cout << p1.GetName () << " upgraded" << std::endl;
+
+		return result.first;
 	};
 
 	auto fnRound = [&] (Pokemon &p1, Pokemon &p2)
@@ -50,12 +54,14 @@ int main (int argc, char *argv[])
 			}
 			tickP2--;
 		}
+		p1.Recover ();
+		p2.Recover ();
 	};
 
-	fnRound (pika, cmd);
-	fnRound (cmd, pika);
-	fnRound (pika, cmd);
-	fnRound (cmd, pika);
+	fnRound (*pika, *cmd);
+	fnRound (*cmd, *pika);
+	fnRound (*pika, *cmd);
+	fnRound (*cmd, *pika);
 
 	getchar ();
 	return 0;

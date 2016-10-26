@@ -226,40 +226,6 @@ namespace PokemonGame
 					SetResponse (response, false, "Logout Failed");
 			});
 
-			// Handle UsersPokemons
-			// Succeed if Pokemon Found
-			// Fail if No Sid Found / No Pokemon Found / Select Failed
-			SetHandler ("UsersPokemons", [&] (std::string &response,
-											  bool &isKeepAlive,
-											  const std::vector<std::string> &args)
-			{
-				if (!CheckArgAndLogin (response, args, 3, true))
-					return;
-
-				PokemonModel pokemonModel;
-				pokemonModel.uid = args[2];
-
-				auto pokemons =
-					pokemonMapper.Query (pokemonModel)
-					.Where (pokemonModel.uid)
-					.ToList ();
-
-				if (pokemons.empty ())
-				{
-					SetResponse (response, false, "No Pokemon Found");
-					return;
-				}
-
-				std::string ret;
-				for (auto & pokemon : pokemons)
-				{
-					ret += std::move (pokemon.name);
-					ret += '\n';
-				}
-				ret.pop_back ();
-				SetResponse (response, true, ret);
-			});
-
 			// Handle UsersWonRate
 			// Succeed if User Found
 			// Fail if No Sid Found / No User Found / Select Failed
@@ -359,6 +325,107 @@ namespace PokemonGame
 				for (auto & session : sessions)
 				{
 					ret += std::move (session.uid);
+					ret += '\n';
+				}
+				ret.pop_back ();
+				SetResponse (response, true, ret);
+			});
+
+			// Handle PokemonInfo
+			// Succeed if Pokemon Found
+			// Fail if No Sid Found / No Pokemon Found / Select Failed
+			SetHandler ("PokemonInfo", [&] (std::string &response,
+											bool &isKeepAlive,
+											const std::vector<std::string> &args)
+			{
+				if (!CheckArgAndLogin (response, args, 3, true))
+					return;
+
+				PokemonModel pokemonModel;
+				pokemonModel.id = std::stol (args[2]);
+
+				auto pokemons =
+					pokemonMapper.Query (pokemonModel)
+					.Where (pokemonModel.id)
+					.ToVector ();
+
+				if (pokemons.empty ())
+				{
+					SetResponse (response, false, "No Pokemon Found");
+					return;
+				}
+
+				std::string ret;
+				auto pokemon = std::unique_ptr<Pokemon> (pokemons[0].ToPokemon ());
+
+				ret = 
+					pokemon->GetName () + "\n" +
+					std::to_string (pokemon->GetLevel ()) + "\n" +
+					std::to_string (pokemon->GetExp ()) + "\n" +
+					std::to_string (pokemon->GetAtk ()) + "\n" +
+					std::to_string (pokemon->GetDef ()) + "\n" +
+					std::to_string (pokemon->GetHP ()) + "\n" +
+					std::to_string (pokemon->GetFullHP ()) + "\n" +
+					std::to_string (pokemon->GetTimeGap ());
+				SetResponse (response, true, ret);
+			});
+
+			// Handle UsersPokemons
+			// Succeed if Pokemon Found
+			// Fail if No Sid Found / No Pokemon Found / Select Failed
+			SetHandler ("UsersPokemons", [&] (std::string &response,
+											  bool &isKeepAlive,
+											  const std::vector<std::string> &args)
+			{
+				if (!CheckArgAndLogin (response, args, 3, true))
+					return;
+
+				PokemonModel pokemonModel;
+				pokemonModel.uid = args[2];
+
+				auto pokemons =
+					pokemonMapper.Query (pokemonModel)
+					.Where (pokemonModel.uid)
+					.ToList ();
+
+				if (pokemons.empty ())
+				{
+					SetResponse (response, false, "No Pokemon Found");
+					return;
+				}
+
+				std::string ret;
+				for (auto & pokemon : pokemons)
+				{
+					ret += std::to_string (pokemon.id);
+					ret += '\n';
+				}
+				ret.pop_back ();
+				SetResponse (response, true, ret);
+			});
+
+			// Handle PokemonAll
+			// Succeed if Pokemon Found
+			// Fail if No Sid Found / No Pokemon Found / Select Failed
+			SetHandler ("PokemonAll", [&] (std::string &response,
+										   bool &isKeepAlive,
+										   const std::vector<std::string> &args)
+			{
+				if (!CheckArgAndLogin (response, args, 2, true))
+					return;
+
+				auto pokemons = pokemonMapper.Query (PokemonModel ()).ToList ();
+
+				if (pokemons.empty ())
+				{
+					SetResponse (response, false, "No Pokemon Found");
+					return;
+				}
+
+				std::string ret;
+				for (auto & pokemon : pokemons)
+				{
+					ret += std::to_string (pokemon.id);
 					ret += '\n';
 				}
 				ret.pop_back ();
