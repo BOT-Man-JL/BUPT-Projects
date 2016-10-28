@@ -39,8 +39,6 @@ If Failed:
 >
 > Response Params
 
-### Control
-
 ### Accounting
 
 #### Login
@@ -116,6 +114,8 @@ If Failed:
 
 #### PokemonInfo
 
+(From db or ram)
+
 > Session ID \n
 > Pokemon ID \n
 >
@@ -127,3 +127,37 @@ If Failed:
 > HP \n
 > FullHP \n
 > Time Gap \n
+
+### Battle
+
+#### NewFight
+
+> Session ID \n
+> Your Pokemon ID \n
+> Op Pokemon ID \n
+>
+> Msg
+
+#### QuitFight
+
+> Session ID \n
+>
+> Msg
+
+#### Attack
+
+> Session ID \n
+>
+> Msg
+
+#### Defend
+
+> Session ID \n
+>
+> Msg
+
+#### Recover
+
+> Session ID \n
+>
+> Msg
