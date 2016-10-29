@@ -3,6 +3,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <list>
 #include <stack>
 #include <unordered_map>
 #include <unordered_set>
@@ -104,12 +105,61 @@ namespace BOT_PhraseParser
 		{
 			static const std::string epsilon ("epsilon");
 
-			for (auto &rule : productionRules)
+			// Get the definite order
+			std::list<std::string> keys { startSymbol };
+			for (const auto &symbol : nonTerminalSymbols)
+				if (symbol != startSymbol)
+					keys.emplace_back (symbol);
+
+			for (const auto &key : keys)
 			{
-				const auto &key = rule.first;
+				// Replace Symbols
+				for (const auto &preKey : keys)
+				{
+					if (preKey == key)
+						break;
+
+					// A -> B alpha
+					// B -> beta
+					//   => A -> beta alpha
+					while (true)
+					{
+						auto isChanged = false;
+						for (auto p = productionRules[key].begin ();
+							 p != productionRules[key].end (); ++p)
+						{
+							if (p->front () != preKey)
+								continue;
+
+							// A -> B alpha => A -> alpha
+							p->erase (p->begin ());
+
+							// Copy A -> alpha
+							auto statement = *p;
+
+							// Erase A -> alpha
+							productionRules[key].erase (p);
+
+							// Insert A -> beta alpha
+							for (const auto &preKeyStatement : productionRules[preKey])
+							{
+								auto newPreKeyStatement = preKeyStatement;
+								for (const auto &symbol : statement)
+									newPreKeyStatement.emplace_back (symbol);
+								productionRules[key].emplace_back (newPreKeyStatement);
+							}
+
+							isChanged = true;
+							break;
+						}
+						if (!isChanged) break;
+					}
+				}
+
+				// Check Left Recursion
 				auto hasLeftRecursion = false;
 
-				for (const auto &statement : rule.second)
+				for (const auto &statement : productionRules[key])
 					if (statement.front () == key)
 					{
 						hasLeftRecursion = true;
@@ -119,14 +169,18 @@ namespace BOT_PhraseParser
 				if (!hasLeftRecursion)
 					continue;
 
+				// Fix Left Recursion
+				// A -> A alpha | beta =>
+				//   A -> beta A'
+				//   A' -> alpha A' | epsilon
 				auto fixedKey = key + "'";
 
 				// A -> A alpha => A' -> alpha A'
 				while (true)
 				{
 					auto isChanged = false;
-					for (auto p = rule.second.begin ();
-						 p != rule.second.end (); ++p)
+					for (auto p = productionRules[key].begin ();
+						 p != productionRules[key].end (); ++p)
 					{
 						if (p->front () == key)
 						{
@@ -136,7 +190,7 @@ namespace BOT_PhraseParser
 
 							productionRules[fixedKey]
 								.emplace_back (std::move (statement));
-							rule.second.erase (p);
+							productionRules[key].erase (p);
 
 							isChanged = true;
 							break;
@@ -146,12 +200,100 @@ namespace BOT_PhraseParser
 				}
 
 				// A -> beta => A -> beta A'
-				for (auto &statement : rule.second)
+				for (auto &statement : productionRules[key])
 					statement.emplace_back (fixedKey);
 
 				// A' -> epsilon
 				productionRules[fixedKey]
 					.emplace_back (std::vector<std::string> { epsilon });
+			}
+
+			GetSymbols ();
+		}
+
+		void FixLeftCommonFactor ()
+		{
+			static const std::string epsilon ("epsilon");
+
+			while (true)
+			{
+				auto isChanged = false;
+				for (const auto &rule : productionRules)
+				{
+					const auto &key = rule.first;
+
+					// Check Left Common Factor
+					std::unordered_set<std::string> symbolSet;
+					std::string commonSymbol;
+
+					for (const auto &statement : productionRules[key])
+					{
+						const auto &symbol = statement.front ();
+						if (symbol == epsilon)
+							continue;
+
+						if (symbolSet.find (symbol) != symbolSet.end ())
+						{
+							commonSymbol = symbol;
+							break;
+						}
+						symbolSet.emplace (symbol);
+					}
+
+					if (commonSymbol.empty ())
+						continue;
+
+					// A -> X alpha | X beta =>
+					//   A -> X _A
+					//   _A -> alpha | beta [ | epsilon]
+					auto fixedKey = "_" + key;
+					auto hasEpsilon = false;
+
+					// A -> X alpha | X beta => _A -> alpha | beta (or epsilon)
+					while (true)
+					{
+						auto isChanged2 = false;
+						for (auto p = productionRules[key].begin ();
+							 p != productionRules[key].end (); ++p)
+						{
+							if (p->front () == commonSymbol)
+							{
+								auto &statement = *p;
+
+								// A -> X alpha => A -> alpha
+								statement.erase (statement.begin ());
+
+								// Insert _A -> alpha or Epsilon
+								if (!statement.empty ())
+									productionRules[fixedKey]
+									.emplace_back (std::move (statement));
+								else
+									hasEpsilon = true;
+
+								// Remove A -> alpha
+								productionRules[key].erase (p);
+
+								isChanged2 = true;
+								break;
+							}
+						}
+						if (!isChanged2) break;
+					}
+
+					// Insert _A -> epsilon
+					if (hasEpsilon)
+						productionRules[fixedKey]
+						.emplace_back (std::vector<std::string> { epsilon });
+
+					// Insert A -> X _A
+					productionRules[key].emplace_back (
+						std::vector<std::string> { commonSymbol, fixedKey });
+
+					isChanged = true;
+					break;
+				}
+
+				if (!isChanged) break;
 			}
 
 			GetSymbols ();
@@ -450,68 +592,16 @@ namespace BOT_PhraseParser
 	class PhraseParser
 	{
 	public:
-		PhraseParser (std::istream &is)
+		PhraseParser (std::istream &is,
+					  std::ostream &os)
 			: _grammar (is)
 		{
 			_grammar.FixLeftRecursion ();
+			_grammar.FixLeftCommonFactor ();
+			PrintGrammar (os);
+
 			_grammar.GetLL1Table ();
-		}
-
-		void PrintGrammar (std::ostream &os)
-		{
-			os << "\nGrammar:\n";
-
-			os << "Starting Symbol:\n\t" << _grammar.startSymbol;
-
-			os << "\nNon Terminal Symbols:\n\t";
-			for (const auto &symbol : _grammar.nonTerminalSymbols)
-				os << symbol << " ";
-
-			os << "\nTerminal Symbols:\n\t";
-			for (const auto &symbol : _grammar.terminalSymbols)
-				os << symbol << " ";
-
-			os << "\nProduction Rules:\n";
-			for (const auto &rule : _grammar.productionRules)
-			{
-				os << "\t" << rule.first << " -> ";
-				for (size_t i = 0; i < rule.second.size (); i++)
-				{
-					const auto &statement = rule.second[i];
-					for (size_t j = 0; j < statement.size (); j++)
-					{
-						os << statement[j];
-						if (j != statement.size () - 1)
-							os << " ";
-					}
-					if (i != rule.second.size () - 1)
-						os << " | ";
-					else
-						os << std::endl;
-				}
-			}
-		}
-
-		void PrintLL1Table (std::ostream &os)
-		{
-			os << "\nLL1 Table:\n";
-			for (const auto &entry : _grammar.table)
-			{
-				os << std::setw (15) << std::left
-					<< "<" + entry.first.first + ", "
-					+ entry.first.second + ">"
-					<< entry.first.first << " -> ";
-
-				const auto &statement = entry.second;
-				for (size_t j = 0; j < statement.size (); j++)
-				{
-					os << statement[j];
-					if (j != statement.size () - 1)
-						os << " ";
-					else
-						os << std::endl;
-				}
-			}
+			PrintLL1Table (os);
 		}
 
 		void Parse (std::istream &is,
@@ -606,10 +696,10 @@ namespace BOT_PhraseParser
 				}
 				else if (isT (top) || top == dollar)
 				{
-					++pToken;
+					stack.pop ();
 					if (top == token)
 					{
-						stack.pop ();
+						++pToken;
 						if (token == dollar)
 							break;
 
@@ -618,7 +708,7 @@ namespace BOT_PhraseParser
 					}
 					else
 						os << "Err: " << top + " | " + token
-						<< std::setw (20) << "Skip " + token;
+						<< std::setw (20) << "Pop " + top;
 				}
 				else
 					// Fatal Error
@@ -626,6 +716,63 @@ namespace BOT_PhraseParser
 						"Invalid Stack State: " + top);
 
 				os << std::endl;
+			}
+		}
+
+		void PrintGrammar (std::ostream &os)
+		{
+			os << "\nGrammar:\n";
+
+			os << "Starting Symbol:\n\t" << _grammar.startSymbol;
+
+			os << "\nNon Terminal Symbols:\n\t";
+			for (const auto &symbol : _grammar.nonTerminalSymbols)
+				os << symbol << " ";
+
+			os << "\nTerminal Symbols:\n\t";
+			for (const auto &symbol : _grammar.terminalSymbols)
+				os << symbol << " ";
+
+			os << "\nProduction Rules:\n";
+			for (const auto &rule : _grammar.productionRules)
+			{
+				os << "\t" << rule.first << " -> ";
+				for (size_t i = 0; i < rule.second.size (); i++)
+				{
+					const auto &statement = rule.second[i];
+					for (size_t j = 0; j < statement.size (); j++)
+					{
+						os << statement[j];
+						if (j != statement.size () - 1)
+							os << " ";
+					}
+					if (i != rule.second.size () - 1)
+						os << " | ";
+					else
+						os << std::endl;
+				}
+			}
+		}
+
+		void PrintLL1Table (std::ostream &os)
+		{
+			os << "\nLL1 Table:\n";
+			for (const auto &entry : _grammar.table)
+			{
+				os << std::setw (15) << std::left
+					<< "<" + entry.first.first + ", "
+					+ entry.first.second + ">"
+					<< entry.first.first << " -> ";
+
+				const auto &statement = entry.second;
+				for (size_t j = 0; j < statement.size (); j++)
+				{
+					os << statement[j];
+					if (j != statement.size () - 1)
+						os << " ";
+					else
+						os << std::endl;
+				}
 			}
 		}
 	};
@@ -658,12 +805,8 @@ int main (int argc, char *argv[])
 			throw std::runtime_error (std::string ("Unable to Open") +
 									  argv[2] + ".output.txt");
 
-		// Generate parser from ifsGrammar
-		PhraseParser parser (ifsGrammar);
-
-		// Print Parser Rules into ofsGrammar
-		parser.PrintGrammar (ofsGrammar);
-		parser.PrintLL1Table (ofsGrammar);
+		// Generate parser from ifsGrammar into ofsGrammar
+		PhraseParser parser (ifsGrammar, ofsGrammar);
 
 		// Parse ifs into ofs :-)
 		parser.Parse (ifsInput, ofsOutput);
