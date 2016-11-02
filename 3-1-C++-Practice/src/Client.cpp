@@ -89,7 +89,7 @@ int main (int argc, char *argv[])
 	auto fnUsersAll = [] (PokemonGame::PokemonClient &client)
 	{
 		std::vector<std::string> result;
-		std::cout << "All Users\n";
+		std::cout << "All Users:\n";
 		if (client.UsersAll (result))
 			for (const auto user : result)
 				std::cout << '\t' << user << std::endl;
@@ -100,7 +100,7 @@ int main (int argc, char *argv[])
 	auto fnUsersOnline = [] (PokemonGame::PokemonClient &client)
 	{
 		std::vector<std::string> result;
-		std::cout << "Online Users\n";
+		std::cout << "Online Users:\n";
 		if (client.UsersOnline (result))
 			for (const auto user : result)
 				std::cout << '\t' << user << std::endl;
@@ -108,15 +108,23 @@ int main (int argc, char *argv[])
 			std::cerr << client.ErrMsg () << std::endl;
 	};
 
+	auto fnMyPokemons = [&fnPrintPokemon] (
+		PokemonGame::PokemonClient &client)
+	{
+		std::cout << "My Pokemons:" << std::endl;
+		for (const auto &pokemon : client.MyPokemons ())
+			fnPrintPokemon (pokemon.second.get ());
+	};
+
 	auto fnUsersPokemons = [&fnPrintPokemon] (
 		PokemonGame::PokemonClient &client,
 		const std::string &uid)
 	{
-		std::vector<std::unique_ptr<PokemonGame::Pokemon>> result;
+		PokemonGame::Pokemons result;
 		std::cout << "Pokemons of User: " << uid << std::endl;
 		if (client.UsersPokemons (uid, result))
 			for (const auto &pokemon : result)
-				fnPrintPokemon (pokemon.get ());
+				fnPrintPokemon (pokemon.second.get ());
 		else
 			std::cerr << client.ErrMsg () << std::endl;
 	};
@@ -124,13 +132,79 @@ int main (int argc, char *argv[])
 	auto fnPokemonAll = [&fnPrintPokemon] (
 		PokemonGame::PokemonClient &client)
 	{
-		std::vector<std::unique_ptr<PokemonGame::Pokemon>> result;
+		PokemonGame::Pokemons result;
 		std::cout << "All Pokemons: " << std::endl;
 		if (client.PokemonAll (result))
 			for (const auto &pokemon : result)
-				fnPrintPokemon (pokemon.get ());
+				fnPrintPokemon (pokemon.second.get ());
 		else
 			std::cerr << client.ErrMsg () << std::endl;
+	};
+
+	auto fnRoomQuery = [] (PokemonGame::PokemonClient &client)
+	{
+		std::vector<std::string> result;
+		std::cout << "Rooms\n";
+		if (client.RoomQuery (result))
+			for (const auto roomId : result)
+				std::cout << '\t' << roomId << std::endl;
+		else
+			std::cerr << client.ErrMsg () << std::endl;
+	};
+
+	auto fnRoomEnter = [] (
+		PokemonGame::PokemonClient &client,
+		std::string roomId)
+	{
+		std::vector<std::string> pokemonIds;
+		for (const auto &pokemon : client.MyPokemons ())
+		{
+			if (pokemonIds.size () == 3)
+				break;
+			pokemonIds.emplace_back (std::to_string (pokemon.first));
+		}
+
+		if (client.RoomEnter (roomId,
+							  pokemonIds[0], pokemonIds[1], pokemonIds[2]))
+			std::cout << "Entered " << roomId << std::endl;
+		else
+			std::cerr << client.ErrMsg () << std::endl;
+	};
+
+	auto fnRoomLeave = [] (PokemonGame::PokemonClient &client)
+	{
+		if (client.RoomLeave ())
+			std::cout << "Leaved the Room" << std::endl;
+		else
+			std::cerr << client.ErrMsg () << std::endl;
+	};
+
+	auto fnRoomReady = [] (PokemonGame::PokemonClient &client)
+	{
+		if (client.RoomReady ())
+			std::cout << "I'am Ready" << std::endl;
+		else
+			std::cerr << client.ErrMsg () << std::endl;
+	};
+
+	auto fnViewPlayers = [&fnPrintPokemon] (PokemonGame::PokemonClient &client)
+	{
+		const auto &players = client.ViewPlayers ();
+		std::cout << "Players in this Room:\n";
+		for (const auto &player : players)
+		{
+			std::cout << "\t" << player.second.uid << ", "
+				<< std::boolalpha << player.second.isReady << ", "
+				<< player.second.x << ", "
+				<< player.second.y << "\n";
+
+			std::cout << "\t";
+			fnPrintPokemon (player.second.pokemon1.get ());
+			std::cout << "\t";
+			fnPrintPokemon (player.second.pokemon2.get ());
+			std::cout << "\t";
+			fnPrintPokemon (player.second.pokemon3.get ());
+		}
 	};
 
 	std::cout << "Client 1:\n";
@@ -161,8 +235,22 @@ int main (int argc, char *argv[])
 	fnUsersOnline (client3);
 	fnUsersWonRate (client3, "BOT");
 	fnUsersBadges (client3, "BOT");
-	fnUsersPokemons (client3, "BOT");
+	fnMyPokemons (client3);
+	fnUsersPokemons (client3, "John");
 	fnPokemonAll (client2);
+
+	fnRoomEnter (client2, "Hello");
+	fnRoomLeave (client2);
+	fnRoomEnter (client2, "Hello");
+	fnRoomEnter (client2, "Hello2");
+
+	fnRoomEnter (client3, "Hello2");
+	fnRoomQuery (client3);
+	fnRoomLeave (client3);
+	fnRoomEnter (client3, "Hello");
+	fnRoomQuery (client3);
+	fnRoomReady (client3);
+	fnViewPlayers (client3);
 
 	fnLogout (client2);
 	fnLogout (client3);

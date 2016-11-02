@@ -67,8 +67,7 @@ namespace BOT_Socket
 	public:
 		Server (unsigned short port,
 				std::function<void (const std::string &request,
-									std::string &response,
-									bool &isKeepAlive)> callback)
+									std::string &response)> callback)
 		{
 			// Socket
 			auto sock = socket (AF_INET, SOCK_STREAM,
@@ -116,10 +115,8 @@ namespace BOT_Socket
 							<< "> Connected...\n";
 					}
 
-					for (auto isKeepAlive = true; isKeepAlive; )
+					while (true)
 					{
-						isKeepAlive = false;
-
 						// Recv
 						char recvBuf[BUF_SIZE];
 						auto bytesRead = 0;
@@ -144,9 +141,9 @@ namespace BOT_Socket
 						// Callback
 						std::string response;
 						if (callback)
-							callback (recvBuf, response, isKeepAlive);
+							callback (recvBuf, response);
 
-						// Send
+						// Client Close the Connection
 						if (-1 == send (connectSock, response.c_str (),
 										response.size () + 1, 0))
 							break;

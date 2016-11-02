@@ -3,10 +3,6 @@
 - **PokemonServer** is the Server who handle Request from Client;
 - **PokemonClient** is the Client who send Request to Server;
 
-## Session
-
-Keep Alive by Default;
-
 ## Format
 
 ### Request Format
@@ -33,44 +29,38 @@ If Failed:
 > Error Msg
 > \0
 
-## Tokens and Params
+## Accounting
 
-> Request Params
->
-> Response Params
-
-### Accounting
-
-#### Login
-
-> User ID \n
-> User Password
->
-> Session ID
-
-#### Register
+### Register
 
 > User ID \n
 > User Password
 >
 > Msg
 
-#### Logout
+### Login
+
+> User ID \n
+> User Password
+>
+> Session ID
+
+### Logout
 
 > Session ID
 >
 > Msg
 
-### User/Pokemon Info
+## User Info
 
-#### UsersWonRate
+### UsersWonRate
 
 > Session ID \n
 > User ID
 >
 > Won Rate (double)
 
-#### UsersBadges
+### UsersBadges
 
 > Session ID \n
 > User ID
@@ -79,7 +69,7 @@ If Failed:
 > Badge 2 \n
 > ...
 
-#### UsersAll
+### UsersAll
 
 > Session ID \n
 >
@@ -87,7 +77,7 @@ If Failed:
 > User ID 2 \n
 > ...
 
-#### UsersOnline
+### UsersOnline
 
 > Session ID \n
 >
@@ -95,26 +85,9 @@ If Failed:
 > User ID 2 \n
 > ...
 
-#### UsersPokemons
+## Pokemon Info
 
-> Session ID \n
-> User ID
->
-> Pokemon ID 1 \n
-> Pokemon ID 2 \n
-> ...
-
-#### PokemonsAll
-
-> Session ID \n
->
-> Pokemon ID 1 \n
-> Pokemon ID 2 \n
-> ...
-
-#### PokemonInfo
-
-(From db or ram)
+### PokemonInfo
 
 > Session ID \n
 > Pokemon ID \n
@@ -128,36 +101,85 @@ If Failed:
 > FullHP \n
 > Time Gap \n
 
-### Battle
-
-#### NewFight
+### UsersPokemons
 
 > Session ID \n
-> Your Pokemon ID \n
-> Op Pokemon ID \n
+> User ID
 >
-> Msg
+> Pokemon ID 1 \n
+> Pokemon ID 2 \n
+> ...
 
-#### QuitFight
-
-> Session ID \n
->
-> Msg
-
-#### Attack
+### PokemonsAll
 
 > Session ID \n
 >
+> Pokemon ID 1 \n
+> Pokemon ID 2 \n
+> ...
+
+## Room
+
+### RoomQuery
+
+> Session ID \n
+>
+> Room ID 1 \n
+> Room ID 2 \n
+> ...
+
+### RoomEnter
+
+> Session ID \n
+> Room ID \n
+> Pokemon ID 1 \n
+> Pokemon ID 2 \n
+> Pokemon ID 3 \n
+>
 > Msg
 
-#### Defend
+### RoomLeave
 
 > Session ID \n
 >
 > Msg
 
-#### Recover
+### RoomReady
 
 > Session ID \n
 >
-> Msg
+> Timestamp
+> Your Init X \n
+> Your Init Y \n
+> User ID 2 \n
+> Is Ready \n
+> Init X \n
+> Init Y \n
+> Pokemon ID 1 \n
+> Pokemon ID 2 \n
+> Pokemon ID 3 \n
+> ...
+
+## Playing
+
+### Round
+
+> Session ID \n
+> Action \n
+> Timestamp
+>
+> User ID 2 \n
+> Action \n
+> User ID 3 \n
+> Action \n
+> ...
+
+### Action
+
+- None
+- Move
+- Attack
+- Defend
+- Recover
+- Runaway
+- Switch1/2/3

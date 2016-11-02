@@ -2,15 +2,20 @@
 #ifndef POKEMON_MODEL_H
 #define POKEMON_MODEL_H
 
+#include <unordered_map>
+#include <memory>
+
+#include "Shared.h"
 #include "ORM-Lite\ORMLite.h"
 #include "Pokemon.h"
 
 namespace PokemonGame_Impl
 {
+	// SQL Model
 	struct PokemonModel
 	{
-		long id;
-		std::string uid;
+		PokemonID id;
+		UserID uid;
 
 		std::string name;
 		PokemonGame::Pokemon::Level level;
@@ -29,7 +34,7 @@ namespace PokemonGame_Impl
 		}
 
 		static PokemonModel *NewFromPokemon (
-			long id, std::string uid,
+			PokemonID id, std::string uid,
 			const PokemonGame::Pokemon &pokemon)
 		{
 			return new PokemonModel
@@ -47,9 +52,10 @@ namespace PokemonGame_Impl
 			   atk, def, hp, fullHP, timeGap)
 	};
 
+	// User
 	struct UserModel
 	{
-		std::string uid;
+		UserID uid;
 		std::string pwd;
 		size_t won;
 		size_t los;
@@ -59,14 +65,23 @@ namespace PokemonGame_Impl
 		ORMAP (UserModel, uid, pwd, won, los, badge)
 	};
 
+	// Session
 	struct SessionModel
 	{
-		std::string uid;
-		std::string sid;
-
-	private:
-		ORMAP (SessionModel, uid, sid)
+		UserID uid;
+		RoomID rid;
 	};
+	using Sessions = std::unordered_map<SessionID, SessionModel>;
+
+	// Room
+	struct RoomModel
+	{
+		static const size_t maxPlayerPerRoom = 3;
+
+		using Players = std::unordered_map<SessionID, Player>;
+		Players players;
+	};
+	using Rooms = std::unordered_map<RoomID, RoomModel>;
 }
 
 #endif // !POKEMON_MODEL_H

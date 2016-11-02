@@ -54,13 +54,25 @@ if (name == #CLASSNAME)										\
 #define NAMEOF(CLASSNAME) #CLASSNAME
 
 // Helper Function
-namespace Rand
+namespace Math
 {
-	int rand (int min, int max)
+	int Rand (int min, int max)
 	{
 		static std::random_device rand;
 		return rand () % (max - min) + min;
 	};
+
+	template <typename T>
+	T Min (const T &a, const T &b)
+	{
+		return a < b ? a : b;
+	}
+
+	template <typename T>
+	T Max (const T &a, const T &b)
+	{
+		return a > b ? a : b;
+	}
 }
 
 // class Pokemon
@@ -114,11 +126,11 @@ namespace PokemonGame
 			{
 				opPokemon._OnKilled ();
 				isUpgraded = thisPokemon.Upgrade (
-					opPokemon.GetLevel () * Rand::rand (50, 100));
+					opPokemon.GetLevel () * Math::Rand (50, 100));
 			}
 			else
 				isUpgraded = thisPokemon.Upgrade (
-					opPokemon.GetLevel () * Rand::rand (0, 5));
+					opPokemon.GetLevel () * Math::Rand (0, 5));
 			if (isUpgraded) thisPokemon._OnUpgrade ();
 
 			return std::make_pair (isKilling, isUpgraded);
@@ -127,7 +139,7 @@ namespace PokemonGame
 		void Recover (HealthPoint hp = 0)
 		{
 			if (hp)
-				_hp = std::min (_fullHP, hp + _hp);
+				_hp = Math::Min (_fullHP, hp + _hp);
 			else
 				_hp = _fullHP;
 			_OnRecover (hp);
@@ -231,14 +243,14 @@ namespace PokemonGame
 	{
 		HealthPoint ret = 0;
 		if (dynamic_cast<TankPokemon *> (&opPokemon))
-			ret = this->GetAtk () - opPokemon.GetDef () * 1.2;
+			ret = (unsigned) (this->GetAtk () - opPokemon.GetDef () * 1.2);
 		else if (dynamic_cast<DefendingPokemon *> (&opPokemon))
 			ret = this->GetAtk () - opPokemon.GetDef () / 2;
 		else if (dynamic_cast<SwiftPokemon *> (&opPokemon))
-			ret = this->GetAtk () - Rand::rand (0, opPokemon.GetDef () * 2);
+			ret = this->GetAtk () - Math::Rand (0, opPokemon.GetDef () * 2);
 		else
 			ret = this->GetAtk () - opPokemon.GetDef ();
-		return std::max (ret, 0u);
+		return Math::Max (ret, HealthPoint ());
 	}
 
 	Pokemon::HealthPoint DefendingPokemon::_GetDamagePoint (
@@ -250,11 +262,11 @@ namespace PokemonGame
 		else if (dynamic_cast<TankPokemon *> (&opPokemon))
 			ret = this->GetAtk ();
 		else if (dynamic_cast<SwiftPokemon *> (&opPokemon))
-			ret = this->GetAtk () - Rand::rand (
-				opPokemon.GetDef () / 2, opPokemon.GetDef () * 1.5);
+			ret = this->GetAtk () - Math::Rand (
+				opPokemon.GetDef () / 2, (unsigned) (opPokemon.GetDef () * 1.5));
 		else
 			ret = this->GetAtk () - opPokemon.GetDef ();
-		return std::max (ret, 0u);
+		return Math::Max (ret, HealthPoint ());
 	}
 
 	Pokemon::HealthPoint TankPokemon::_GetDamagePoint (
@@ -266,10 +278,10 @@ namespace PokemonGame
 		else if (dynamic_cast<DefendingPokemon *> (&opPokemon))
 			ret = this->GetAtk () - opPokemon.GetDef () * 3;
 		else if (dynamic_cast<SwiftPokemon *> (&opPokemon))
-			ret = this->GetAtk () - opPokemon.GetDef () * 1.5;
+			ret = (unsigned) (this->GetAtk () - (unsigned) (opPokemon.GetDef () * 1.5));
 		else
 			ret = this->GetAtk () - opPokemon.GetDef ();
-		return std::max (ret, 0u);
+		return Math::Max (ret, HealthPoint ());
 	}
 
 	Pokemon::HealthPoint SwiftPokemon::_GetDamagePoint (
@@ -277,14 +289,14 @@ namespace PokemonGame
 	{
 		HealthPoint ret = 0;
 		if (dynamic_cast<StrengthPokemon *> (&opPokemon))
-			ret = this->GetAtk () - Rand::rand (0, opPokemon.GetDef () * 2);
+			ret = this->GetAtk () - Math::Rand (0, opPokemon.GetDef () * 2);
 		else if (dynamic_cast<TankPokemon *> (&opPokemon))
-			ret = Rand::rand (this->GetAtk (), this->GetAtk () * 2) - opPokemon.GetDef ();
+			ret = Math::Rand (this->GetAtk (), this->GetAtk () * 2) - opPokemon.GetDef ();
 		else if (dynamic_cast<DefendingPokemon *> (&opPokemon))
-			ret = Rand::rand (this->GetAtk (), this->GetAtk () * 2) - opPokemon.GetDef () / 2;
+			ret = Math::Rand (this->GetAtk (), this->GetAtk () * 2) - opPokemon.GetDef () / 2;
 		else
 			ret = this->GetAtk () - opPokemon.GetDef ();
-		return std::max (ret, 0u);
+		return Math::Max (ret, HealthPoint ());
 	}
 
 	class Pikachu : public SwiftPokemon
@@ -293,11 +305,11 @@ namespace PokemonGame
 	protected:
 		void _OnBorn () override
 		{
-			using namespace Rand;
-			_atk = rand (8, 12);
-			_def = rand (6, 8);
-			_hp = _fullHP = rand (40, 50);
-			_timeGap = rand (6, 9);
+			using namespace Math;
+			_atk = Rand (8, 12);
+			_def = Rand (6, 8);
+			_hp = _fullHP = Rand (40, 50);
+			_timeGap = Rand (6, 9);
 		}
 		void _OnKilled () override
 		{}
@@ -313,11 +325,11 @@ namespace PokemonGame
 	protected:
 		void _OnBorn () override
 		{
-			using namespace Rand;
-			_atk = rand (10, 15);
-			_def = rand (6, 8);
-			_hp = _fullHP = rand (50, 60);
-			_timeGap = rand (8, 12);
+			using namespace Math;
+			_atk = Rand (10, 15);
+			_def = Rand (6, 8);
+			_hp = _fullHP = Rand (50, 60);
+			_timeGap = Rand (8, 12);
 		}
 		void _OnKilled () override
 		{}

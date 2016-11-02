@@ -3,31 +3,16 @@
 
 #include <vector>
 #include <string>
+#include <tuple>
 #include <unordered_map>
 #include <iostream>
 #include <memory>
+#include <chrono>
 
-#include "Pokemon.h"
 #include "Socket.h"
+#include "Pokemon.h"
+#include "Shared.h"
 #include "Model.h"
-
-namespace PokemonGame_Impl
-{
-	std::vector<std::string> SplitStr (const std::string &input,
-									   const std::string &delimiter)
-	{
-		std::vector<std::string> ret;
-		size_t pos = 0;
-		std::string inputStr = input;
-		while ((pos = inputStr.find (delimiter)) != std::string::npos)
-		{
-			ret.push_back (inputStr.substr (0, pos));
-			inputStr.erase (0, pos + delimiter.length ());
-		}
-		ret.push_back (inputStr);
-		return std::move (ret);
-	}
-}
 
 namespace PokemonGame
 {
@@ -38,10 +23,15 @@ namespace PokemonGame
 		{
 			using namespace PokemonGame_Impl;
 			using namespace BOT_ORM;
-			const auto dbName = "Pokemon.db";
+
+			// Shared Runtime Data
+			Sessions sessions;
+			Rooms rooms;
+
+			// Shared ORMapper
+			constexpr auto dbName = "Pokemon.db";
 			ORMapper<PokemonModel> pokemonMapper (dbName);
 			ORMapper<UserModel> userMapper (dbName);
-			ORMapper<SessionModel> sessionMapper (dbName);
 
 			// Init DB
 			if (pokemonMapper.CreateTbl ())
@@ -54,126 +44,33 @@ namespace PokemonGame
 			else
 				std::cerr << userMapper.ErrMsg () << std::endl;
 
-			if (sessionMapper.CreateTbl ())
-				std::cout << "Created Session\n";
-			else
-				std::cerr << sessionMapper.ErrMsg () << std::endl;
-
-			// Check Args and Login
-			auto CheckArgAndLogin = [&] (std::string &response,
-										 const std::vector<std::string> &args,
-										 size_t argCount,
-										 bool isLoginRequired)
+			auto getPokemonModelById = [&] (const PokemonID &id)
 			{
-				if (args.size () < argCount)
-				{
-					SetResponse (response, false, "Too Few Arguments");
-					return false;
-				}
+				PokemonModel pokemonModel;
+				pokemonModel.id = id;
 
-				if (isLoginRequired)
-				{
-					if (args.size () < 2)
-					{
-						SetResponse (response, false, "Server Error");
-						return false;
-					}
-
-					SessionModel sessionModel;
-					sessionModel.sid = args[1];
-
-					if (!sessionMapper.Query (sessionModel)
-						.Where (sessionModel.sid)
-						.Count ())
-					{
-						SetResponse (response, false, "You haven't Login");
-						return false;
-					}
-				}
-
-				return true;
-			};
-
-			// Allocate Pokemon to User
-			// Return true if Insert New Pokemon Successfully
-			auto AddPokemon = [&] (const std::string &uid,
-								   const Pokemon &pokemon)
-			{
-				static const auto _pm = PokemonModel ();
-				auto id = pokemonMapper
-					.Query (_pm)
-					.OrderBy (_pm.level)
-					.Limit (1)
-					.Count ();
-				auto newPkm = std::unique_ptr<PokemonModel> (
-					PokemonModel::NewFromPokemon (id, uid, pokemon));
-
-				if (!pokemonMapper.Insert (*newPkm))
-					return false;
-				return true;
-			};
-
-			// Handle Login
-			// Succeed if Set Sid / Get Sid is OK
-			// Fail if No Uid Found / Wrong Pwd / Get Sid Failed
-			SetHandler ("Login", [&] (std::string &response,
-									  bool &isKeepAlive,
-									  const std::vector<std::string> &args)
-			{
-				if (!CheckArgAndLogin (response, args, 3, false))
-					return;
-
-				UserModel userModel;
-				userModel.uid = args[1];
-				userModel.pwd = args[2];
-
-				// No User & Password Match
-				if (!userMapper.Query (userModel)
-					.Where (Expr { userModel.uid } && Expr { userModel.pwd })
-					.Count ())
-				{
-					SetResponse (response, false, "Bad Login Attempt");
-					return;
-				}
-
-				SessionModel sessionModel;
-				sessionModel.uid = args[1];
-				sessionModel.sid = (args[1] + std::to_string (time (0)))
-					.substr (0, 32);
-
-				// New Sid
-				if (sessionMapper.Insert (sessionModel))
-				{
-					SetResponse (response, true, sessionModel.sid);
-					return;
-				}
-
-				// Get Sid From Uid
-				auto sessions = sessionMapper.Query (sessionModel)
-					.Where (sessionModel.uid)
+				auto pokemons =
+					pokemonMapper.Query (pokemonModel)
+					.Where (pokemonModel.id)
 					.ToVector ();
 
-				if (!sessions.empty ())
-				{
-					SetResponse (response, true, sessions[0].sid);
-					return;
-				}
+				if (pokemons.empty ())
+					return std::unique_ptr<PokemonModel> (nullptr);
 
-				// No such Logic :-(
-				SetResponse (response, false, "Server Error at Login :-(");
-			});
+				return std::make_unique<PokemonModel> (pokemons[0]);
+			};
+
+#pragma region Accounting
 
 			// Handle Register
 			// Succeed if Set Uid and New Pokemon are OK
 			// Fail if Set Uid / New Pokemon Failed
-			SetHandler ("Register", [&] (std::string &response,
-										 bool &isKeepAlive,
-										 const std::vector<std::string> &args)
+			SetHandler<2, false> ("Register",
+								  [&] (std::string &response,
+									   const std::vector<std::string> &args)
 			{
-				if (!CheckArgAndLogin (response, args, 3, false))
-					return;
-				const auto &uid = args[1];
-				const auto &pwd = args[2];
+				const auto &uid = args[0];
+				const auto &pwd = args[1];
 
 				UserModel user { uid, pwd, 1, 0,
 					"Newcomer\n"
@@ -184,6 +81,25 @@ namespace PokemonGame
 					SetResponse (response, false, "UserID has been Taken");
 					return;
 				}
+
+				// Allocate Pokemon to User
+				// Return true if Insert New Pokemon Successfully
+				auto AddPokemon = [&] (const std::string &uid,
+									   const Pokemon &pokemon)
+				{
+					static const auto _pm = PokemonModel ();
+					auto id = pokemonMapper
+						.Query (_pm)
+						.OrderBy (_pm.level)
+						.Limit (1)
+						.Count () + 1;
+					auto newPkm = std::unique_ptr<PokemonModel> (
+						PokemonModel::NewFromPokemon (id, uid, pokemon));
+
+					if (!pokemonMapper.Insert (*newPkm))
+						return false;
+					return true;
+				};
 
 				// Seed 3 Init Pokemon
 				const auto initPokemonCount = 3;
@@ -205,39 +121,66 @@ namespace PokemonGame
 								 "Allocate Pokemon Failed :-(");
 			});
 
+			// Handle Login
+			// Succeed if Set Sid / Get Sid is OK
+			// Fail if No Uid Found / Wrong Pwd / Get Sid Failed
+			SetHandler<2, false> ("Login",
+								  [&] (std::string &response,
+									   const std::vector<std::string> &args)
+			{
+				UserModel userModel;
+				userModel.uid = args[0];
+				userModel.pwd = args[1];
+
+				// No User & Password Match
+				if (!userMapper.Query (userModel)
+					.Where (Expr { userModel.uid } && Expr { userModel.pwd })
+					.Count ())
+				{
+					SetResponse (response, false, "Bad Login Attempt");
+					return;
+				}
+
+				// Login Already
+				for (const auto &session : sessions)
+					if (session.second.uid == userModel.uid)
+					{
+						SetResponse (response, true, session.first);
+						return;
+					}
+
+				// New Session
+				auto sid = userModel.uid +
+					TimePointToStr (std::chrono::system_clock::now ());
+				sessions[sid] = SessionModel { userModel.uid, RoomID () };
+				SetResponse (response, true, sid);
+			});
+
 			// Handle Logout
 			// Succeed if Delete Sid is OK
 			// Fail if Delete Sid Failed
-			SetHandler ("Logout", [&] (std::string &response,
-									   bool &isKeepAlive,
-									   const std::vector<std::string> &args)
+			SetHandler<1> ("Logout",
+						   [&] (std::string &response,
+								const std::vector<std::string> &args)
 			{
-				if (!CheckArgAndLogin (response, args, 2, true))
-					return;
-
-				SessionModel sessionModel;
-				sessionModel.sid = args[1];
-
-				if (sessionMapper.Query (sessionModel)
-					.Where (sessionModel.sid)
-					.Delete ())
-					SetResponse (response, true, "Logout Successfully");
-				else
-					SetResponse (response, false, "Logout Failed");
+				const auto &sid = args[0];
+				sessions.erase (sid);
+				SetResponse (response, true, "Logout Successfully");
 			});
+
+#pragma endregion
+
+#pragma region User Info
 
 			// Handle UsersWonRate
 			// Succeed if User Found
-			// Fail if No Sid Found / No User Found / Select Failed
-			SetHandler ("UsersWonRate", [&] (std::string &response,
-											 bool &isKeepAlive,
-											 const std::vector<std::string> &args)
+			// Fail if No User Found / Select Failed
+			SetHandler<2> ("UsersWonRate",
+						   [&] (std::string &response,
+								const std::vector<std::string> &args)
 			{
-				if (!CheckArgAndLogin (response, args, 3, true))
-					return;
-
 				UserModel userModel;
-				userModel.uid = args[2];
+				userModel.uid = args[1];
 				auto users =
 					userMapper.Query (userModel)
 					.Where (userModel.uid)
@@ -254,16 +197,13 @@ namespace PokemonGame
 
 			// Handle UsersBadges
 			// Succeed if Badges Found
-			// Fail if No Sid Found / No User Found / Select Failed
-			SetHandler ("UsersBadges", [&] (std::string &response,
-											bool &isKeepAlive,
-											const std::vector<std::string> &args)
+			// Fail if No User Found / Select Failed
+			SetHandler<2> ("UsersBadges",
+						   [&] (std::string &response,
+								const std::vector<std::string> &args)
 			{
-				if (!CheckArgAndLogin (response, args, 3, true))
-					return;
-
 				UserModel userModel;
-				userModel.uid = args[2];
+				userModel.uid = args[1];
 				auto users =
 					userMapper.Query (userModel)
 					.Where (userModel.uid)
@@ -277,14 +217,11 @@ namespace PokemonGame
 
 			// Handle UsersAll
 			// Succeed if User Found
-			// Fail if No Sid Found / No User Found / Select Failed
-			SetHandler ("UsersAll", [&] (std::string &response,
-										 bool &isKeepAlive,
-										 const std::vector<std::string> &args)
+			// Fail if No User Found / Select Failed
+			SetHandler<1> ("UsersAll",
+						   [&] (std::string &response,
+								const std::vector<std::string> &args)
 			{
-				if (!CheckArgAndLogin (response, args, 2, true))
-					return;
-
 				auto users = userMapper.Query (UserModel ()).ToList ();
 
 				if (users.empty ())
@@ -305,16 +242,11 @@ namespace PokemonGame
 
 			// Handle UsersOnline
 			// Succeed if User Found
-			// Fail if No Sid Found / No User Found / Select Failed
-			SetHandler ("UsersOnline", [&] (std::string &response,
-											bool &isKeepAlive,
-											const std::vector<std::string> &args)
+			// Fail if No User Found
+			SetHandler<1> ("UsersOnline",
+						   [&] (std::string &response,
+								const std::vector<std::string> &args)
 			{
-				if (!CheckArgAndLogin (response, args, 2, true))
-					return;
-
-				auto sessions = sessionMapper.Query (SessionModel ()).ToList ();
-
 				if (sessions.empty ())
 				{
 					SetResponse (response, false, "No User Online");
@@ -324,64 +256,53 @@ namespace PokemonGame
 				std::string ret;
 				for (auto & session : sessions)
 				{
-					ret += std::move (session.uid);
+					ret += std::move (session.second.uid);
 					ret += '\n';
 				}
 				ret.pop_back ();
 				SetResponse (response, true, ret);
 			});
 
+#pragma endregion
+
+#pragma region Pokemon Info
+
 			// Handle PokemonInfo
 			// Succeed if Pokemon Found
-			// Fail if No Sid Found / No Pokemon Found / Select Failed
-			SetHandler ("PokemonInfo", [&] (std::string &response,
-											bool &isKeepAlive,
-											const std::vector<std::string> &args)
+			// Fail if No Pokemon Found / Select Failed
+			SetHandler<2> ("PokemonInfo",
+						   [&] (std::string &response,
+								const std::vector<std::string> &args)
 			{
-				if (!CheckArgAndLogin (response, args, 3, true))
-					return;
+				const auto &pokemonId = (PokemonID) std::stoull (args[1]);
+				auto pokemonModel = getPokemonModelById (pokemonId);
 
-				PokemonModel pokemonModel;
-				pokemonModel.id = std::stol (args[2]);
-
-				auto pokemons =
-					pokemonMapper.Query (pokemonModel)
-					.Where (pokemonModel.id)
-					.ToVector ();
-
-				if (pokemons.empty ())
+				if (pokemonModel == nullptr)
 				{
-					SetResponse (response, false, "No Pokemon Found");
+					SetResponse (response, false, "No such Pokemon");
 					return;
 				}
 
-				std::string ret;
-				auto pokemon = std::unique_ptr<Pokemon> (pokemons[0].ToPokemon ());
-
-				ret = 
-					pokemon->GetName () + "\n" +
-					std::to_string (pokemon->GetLevel ()) + "\n" +
-					std::to_string (pokemon->GetExp ()) + "\n" +
-					std::to_string (pokemon->GetAtk ()) + "\n" +
-					std::to_string (pokemon->GetDef ()) + "\n" +
-					std::to_string (pokemon->GetHP ()) + "\n" +
-					std::to_string (pokemon->GetFullHP ()) + "\n" +
-					std::to_string (pokemon->GetTimeGap ());
-				SetResponse (response, true, ret);
+				SetResponse (response, true,
+							 pokemonModel->name,
+							 std::to_string (pokemonModel->level),
+							 std::to_string (pokemonModel->expPoint),
+							 std::to_string (pokemonModel->atk),
+							 std::to_string (pokemonModel->def),
+							 std::to_string (pokemonModel->hp),
+							 std::to_string (pokemonModel->fullHP),
+							 std::to_string (pokemonModel->timeGap));
 			});
 
 			// Handle UsersPokemons
 			// Succeed if Pokemon Found
-			// Fail if No Sid Found / No Pokemon Found / Select Failed
-			SetHandler ("UsersPokemons", [&] (std::string &response,
-											  bool &isKeepAlive,
-											  const std::vector<std::string> &args)
+			// Fail if No Pokemon Found / Select Failed
+			SetHandler<2> ("UsersPokemons",
+						   [&] (std::string &response,
+								const std::vector<std::string> &args)
 			{
-				if (!CheckArgAndLogin (response, args, 3, true))
-					return;
-
 				PokemonModel pokemonModel;
-				pokemonModel.uid = args[2];
+				pokemonModel.uid = args[1];
 
 				auto pokemons =
 					pokemonMapper.Query (pokemonModel)
@@ -406,15 +327,13 @@ namespace PokemonGame
 
 			// Handle PokemonAll
 			// Succeed if Pokemon Found
-			// Fail if No Sid Found / No Pokemon Found / Select Failed
-			SetHandler ("PokemonAll", [&] (std::string &response,
-										   bool &isKeepAlive,
-										   const std::vector<std::string> &args)
+			// Fail if No Pokemon Found / Select Failed
+			SetHandler<1> ("PokemonAll",
+						   [&] (std::string &response,
+								const std::vector<std::string> &args)
 			{
-				if (!CheckArgAndLogin (response, args, 2, true))
-					return;
-
-				auto pokemons = pokemonMapper.Query (PokemonModel ()).ToList ();
+				auto pokemons = pokemonMapper
+					.Query (PokemonModel ()).ToList ();
 
 				if (pokemons.empty ())
 				{
@@ -432,45 +351,236 @@ namespace PokemonGame
 				SetResponse (response, true, ret);
 			});
 
+#pragma endregion
+
+#pragma region Room
+
+			// Handle RoomQuery
+			// Succeed if Any Room
+			// Fail if Not any Room
+			SetHandler<1> ("RoomQuery",
+						   [&] (std::string &response,
+								const std::vector<std::string> &args)
+			{
+				if (rooms.empty ())
+				{
+					SetResponse (response, false, "No Room");
+					return;
+				}
+
+				std::string ret;
+				for (auto & room : rooms)
+				{
+					ret += std::move (room.first);
+					ret += '\n';
+				}
+				ret.pop_back ();
+				SetResponse (response, true, ret);
+			});
+
+			// Handle RoomEnter
+			// Succeed if Room is not full
+			// Fail if Room is full or already in this Room
+			SetHandler<5> ("RoomEnter",
+						   [&] (std::string &response,
+								const std::vector<std::string> &args)
+			{
+				const auto &sid = args[0];
+				const auto &rid = args[1];
+				auto &room = rooms[rid];
+
+				if (room.players.size () == RoomModel::maxPlayerPerRoom)
+				{
+					SetResponse (response, false, "Room is Full");
+					return;
+				}
+
+				if (sessions[sid].rid != RoomID ())
+				{
+					SetResponse (response, false, "Already in a Room");
+					return;
+				}
+
+				std::random_device rand;
+				auto initX = rand () % Player::maxX;
+				auto initY = rand () % Player::maxY;
+
+				const auto &pid1 = (PokemonID) std::stoull (args[2]);
+				const auto &pid2 = (PokemonID) std::stoull (args[3]);
+				const auto &pid3 = (PokemonID) std::stoull (args[4]);
+
+				room.players[sid] = Player
+				{
+					sessions[sid].uid, false,
+					initX, initY,
+					pid1, pid2, pid3,
+					std::unique_ptr<Pokemon> (
+						getPokemonModelById (pid1)->ToPokemon ()),
+					std::unique_ptr<Pokemon> (
+						getPokemonModelById (pid2)->ToPokemon ()),
+					std::unique_ptr<Pokemon> (
+						getPokemonModelById (pid3)->ToPokemon ())
+				};
+				sessions[sid].rid = rid;
+				SetResponse (response, true, "Entered this Room");
+			});
+
+			// Handle RoomLeave
+			// Succeed if in a Room
+			// Fail if Not in a Room
+			SetHandler<1> ("RoomLeave",
+						   [&] (std::string &response,
+								const std::vector<std::string> &args)
+			{
+				const auto &sid = args[0];
+
+				if (sessions[sid].rid == RoomID ())
+				{
+					SetResponse (response, false, "Not in a Room");
+					return;
+				}
+
+				auto &rid = sessions[sid].rid;
+				rooms[rid].players.erase (sid);
+
+				// Empty Room
+				if (rooms[rid].players.empty ())
+					rooms.erase (rid);
+
+				rid = RoomID ();
+				SetResponse (response, true, "Left the Room");
+			});
+
+			// Handle RoomReady
+			// Succeed if in a Room
+			// Fail if Not in a Room
+			SetHandler<1> ("RoomReady",
+						   [&] (std::string &response,
+								const std::vector<std::string> &args)
+			{
+				const auto &sid = args[0];
+
+				if (sessions[sid].rid == RoomID ())
+				{
+					SetResponse (response, false, "Not in a Room");
+					return;
+				}
+
+				const auto &rid = sessions[sid].rid;
+				auto &room = rooms[rid];
+				auto &you = room.players[sid];
+
+				// Set me Ready
+				you.isReady = true;
+
+				std::string ret =
+					TimePointToStr (std::chrono::system_clock::now ()) + "\n"
+					+ std::to_string (you.x) + "\n"
+					+ std::to_string (you.y) + "\n";
+				for (const auto &player : room.players)
+				{
+					if (player.first == sid)
+						continue;
+					ret += player.second.uid + "\n"
+						+ (player.second.isReady ? "1\n" : "0\n")
+						+ std::to_string (player.second.x) + "\n"
+						+ std::to_string (player.second.y) + "\n"
+						+ std::to_string (player.second.pid1) + "\n"
+						+ std::to_string (player.second.pid2) + "\n"
+						+ std::to_string (player.second.pid3) + "\n";
+				}
+				ret.pop_back ();
+				SetResponse (response, true, ret);
+			});
+
+#pragma endregion
+
 			// Run
 			BOT_Socket::Server (port, [&] (const std::string &request,
-										   std::string &response,
-										   bool &isKeepAlive)
+										   std::string &response)
 			{
-				// Keep Alive by Default
-				isKeepAlive = true;
-
 				auto args = SplitStr (request, "\n");
 				if (args.size () < 1)
+				{
 					SetResponse (response, false, "No Arguments");
-				else if (_handlers.find (args[0]) == _handlers.end ())
+					return;
+				}
+
+				const auto event = std::move (args.front ());
+				args.erase (args.begin ());
+
+				// Find Handler
+				if (_handlers.find (event) == _handlers.end ())
+				{
 					SetResponse (response, false, "No Handler Found");
-				else
-					_handlers[args[0]] (response, isKeepAlive, args);
+					return;
+				}
+
+				const auto &handler = _handlers[event];
+				const auto expectedArgs = std::get <0> (handler);
+				const auto isLoginRequired = std::get <1> (handler);
+				const auto &handlerFn = std::get <2> (handler);
+
+				// Check Login
+				if (isLoginRequired &&
+					sessions.find (args[0]) == sessions.end ())
+				{
+					SetResponse (response, false, "You haven't Login");
+					return;
+				}
+
+				// Check Args Count
+				if (args.size () < expectedArgs)
+				{
+					SetResponse (response, false, "Too Few Arguments");
+					return;
+				}
+
+				// Delegated to Handler
+				handlerFn (response, args);
 			});
 		}
 
 	private:
-		static void SetResponse (std::string &response,
-								 bool isSucceeded,
-								 const std::string &param)
+		inline static void SetResponse (std::string &response,
+										bool isSucceeded,
+										std::string arg1)
 		{
-			response = (isSucceeded ? "1\n" : "0\n") + param;
+			response = (isSucceeded ? "1\n" : "0\n") + std::move (arg1);
 		}
 
-		void SetHandler (std::string cmd,
-						 std::function<void (std::string &response,
-											 bool &isKeepAlive,
-											 const std::vector<std::string>
-											 &fullCmd)> handler)
+		template<typename... Args>
+		inline static void SetResponse (std::string &response,
+										bool isSucceeded,
+										std::string arg1,
+										std::string arg2,
+										Args & ... args)
 		{
-			_handlers.emplace (std::move (cmd), std::move (handler));
+			return SetResponse (response, isSucceeded,
+								std::move (arg1) + "\n" + std::move (arg2),
+								args...);
 		}
 
+		using Handler = std::function<
+			void (std::string &response,
+				  const std::vector<std::string> &args)
+		>;
+
+		// Event -> <expectedArgs, isLoginRequired, Handler>
 		std::unordered_map<std::string,
-			std::function<void (std::string &, bool &,
-								const std::vector<std::string> &)>>
-			_handlers;
+			std::tuple<size_t, bool, Handler>
+		> _handlers;
+
+		template <size_t expectedArgs = 0, bool isLoginRequired = true>
+		void SetHandler (std::string event, Handler handler)
+		{
+			static_assert (!isLoginRequired || expectedArgs > 0,
+						   "Session ID is the first Argument of Request");
+			_handlers.emplace (std::move (event),
+							   std::make_tuple (expectedArgs,
+												isLoginRequired,
+												std::move (handler)));
+		}
 	};
 
 }
