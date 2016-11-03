@@ -171,6 +171,7 @@ namespace PokemonGame
 				posY = (size_t) std::stoull (response[2]);
 				response.erase (response.begin (), response.begin () + 3);
 
+				_players.clear ();
 				while (response.size () >= 7)
 				{
 					_players[response[0]] = PlayerFromResponse (response);
@@ -260,10 +261,26 @@ namespace PokemonGame
 				);
 		}
 
-		inline PokemonGame_Impl::Player PlayerFromResponse (
+		PokemonGame_Impl::Player PlayerFromResponse (
 			const std::vector<std::string> &response)
 		{
-			return PokemonGame_Impl::Player
+			using namespace PokemonGame_Impl;
+
+			std::vector<std::string> pids
+			{
+				response[4],
+				response[5],
+				response[6]
+			};
+			const auto defaultPid = std::to_string (PokemonID ());
+
+			PokemonsOfPlayer pokemons;
+			for (const auto &pid : pids)
+				pokemons.emplace_back (
+				(PokemonID) std::stoull (pid), 
+					pid != defaultPid ? PokemonFromID (pid) : nullptr);
+
+			return Player
 			{
 				// Uid
 				response[0],
@@ -273,12 +290,7 @@ namespace PokemonGame
 				(size_t) std::stoull (response[2]),
 				(size_t) std::stoull (response[3]),
 				// Pokemon
-				(PokemonGame_Impl::PokemonID) std::stoull (response[4]),
-				(PokemonGame_Impl::PokemonID) std::stoull (response[5]),
-				(PokemonGame_Impl::PokemonID) std::stoull (response[6]),
-				PokemonFromID (response[4]),
-				PokemonFromID (response[5]),
-				PokemonFromID (response[6])
+				std::move (pokemons)
 			};
 		}
 

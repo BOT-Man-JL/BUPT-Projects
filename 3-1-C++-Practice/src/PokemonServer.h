@@ -72,6 +72,12 @@ namespace PokemonGame
 				const auto &uid = args[0];
 				const auto &pwd = args[1];
 
+				if (uid.empty () || pwd.size () < 6)
+				{
+					SetResponse (response, false, "Empty UID or Pwd's Size < 6");
+					return;
+				}
+
 				UserModel user { uid, pwd, 1, 0,
 					"Newcomer\n"
 					"Welcome to Pokemon Game\n"
@@ -405,21 +411,25 @@ namespace PokemonGame
 				auto initX = rand () % Player::maxX;
 				auto initY = rand () % Player::maxY;
 
-				const auto &pid1 = (PokemonID) std::stoull (args[2]);
-				const auto &pid2 = (PokemonID) std::stoull (args[3]);
-				const auto &pid3 = (PokemonID) std::stoull (args[4]);
+				std::vector<PokemonID> pids
+				{
+					(PokemonID) std::stoull (args[2]),
+					(PokemonID) std::stoull (args[3]),
+					(PokemonID) std::stoull (args[4])
+				};
+
+				PokemonsOfPlayer pokemons;
+				for (const auto &pid : pids)
+					pokemons.emplace_back (pid,
+										   pid != PokemonID () ?
+										   std::unique_ptr<Pokemon> (
+											   getPokemonModelById (pid)->ToPokemon ())
+										   : nullptr);
 
 				room.players[sid] = Player
 				{
 					sessions[sid].uid, false,
-					initX, initY,
-					pid1, pid2, pid3,
-					std::unique_ptr<Pokemon> (
-						getPokemonModelById (pid1)->ToPokemon ()),
-					std::unique_ptr<Pokemon> (
-						getPokemonModelById (pid2)->ToPokemon ()),
-					std::unique_ptr<Pokemon> (
-						getPokemonModelById (pid3)->ToPokemon ())
+					initX, initY, std::move (pokemons)
 				};
 				sessions[sid].rid = rid;
 				SetResponse (response, true, "Entered this Room");
@@ -481,13 +491,14 @@ namespace PokemonGame
 				{
 					if (player.first == sid)
 						continue;
+
 					ret += player.second.uid + "\n"
 						+ (player.second.isReady ? "1\n" : "0\n")
 						+ std::to_string (player.second.x) + "\n"
-						+ std::to_string (player.second.y) + "\n"
-						+ std::to_string (player.second.pid1) + "\n"
-						+ std::to_string (player.second.pid2) + "\n"
-						+ std::to_string (player.second.pid3) + "\n";
+						+ std::to_string (player.second.y) + "\n";
+
+					for (const auto &pokemon : player.second.pokemons)
+						ret += std::to_string (pokemon.first) + "\n";
 				}
 				ret.pop_back ();
 				SetResponse (response, true, ret);

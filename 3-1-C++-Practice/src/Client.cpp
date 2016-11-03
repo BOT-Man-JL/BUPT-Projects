@@ -4,6 +4,9 @@
 #include <iomanip>
 
 #include "PokemonClient.h"
+#include "GUIGame.h"
+#include "GUIAccounting.h"
+
 #define IPADDR "127.0.0.1"
 #define PORT 5768
 
@@ -179,58 +182,101 @@ int main (int argc, char *argv[])
 			std::cerr << client.ErrMsg () << std::endl;
 	};
 
-	auto fnRoomReady = [] (PokemonGame::PokemonClient &client)
+	auto fnRoomReady = [&fnPrintPokemon] (PokemonGame::PokemonClient &client)
 	{
 		if (client.RoomReady ())
-			std::cout << "I'am Ready" << std::endl;
+		{
+			const auto &players = client.ViewPlayers ();
+			if (players.empty ())
+			{
+				std::cout << "No Player in this Room\n";
+				return;
+			}
+
+			std::cout << "Players in this Room:\n";
+			for (const auto &player : players)
+			{
+				std::cout << "\t" << player.second.uid << ", "
+					<< std::boolalpha << player.second.isReady << ", "
+					<< player.second.x << ", "
+					<< player.second.y << "\n";
+
+				for (const auto &pokemon : player.second.pokemons)
+				{
+					std::cout << "\t";
+					fnPrintPokemon (pokemon.second.get ());
+				}
+			}
+		}
 		else
 			std::cerr << client.ErrMsg () << std::endl;
 	};
 
-	auto fnViewPlayers = [&fnPrintPokemon] (PokemonGame::PokemonClient &client)
-	{
-		const auto &players = client.ViewPlayers ();
-		std::cout << "Players in this Room:\n";
-		for (const auto &player : players)
-		{
-			std::cout << "\t" << player.second.uid << ", "
-				<< std::boolalpha << player.second.isReady << ", "
-				<< player.second.x << ", "
-				<< player.second.y << "\n";
+	//// GUI thread
+	//std::thread ([] ()
+	//{
+	//	PokemonGameGUI::GameWindow wnd;
+	//	wnd.Join ();
 
-			std::cout << "\t";
-			fnPrintPokemon (player.second.pokemon1.get ());
-			std::cout << "\t";
-			fnPrintPokemon (player.second.pokemon2.get ());
-			std::cout << "\t";
-			fnPrintPokemon (player.second.pokemon3.get ());
-		}
-	};
+	//}).detach ();
+
+	auto isDone = false;
+	PokemonGame::PokemonClient client_gui (IPADDR, PORT);
+	{
+		PokemonGameGUI::AccountingWindow aWnd;
+
+		aWnd.OnLogin ([&aWnd, &client_gui, &isDone] (const std::string &uid, const std::string &pwd)
+		{
+			aWnd.Prompt ("Loging in...");
+			if (client_gui.Login (uid, pwd))
+			{
+				aWnd.Prompt ("Login Successfully");
+				isDone = true;
+			}
+			else
+				aWnd.Prompt (client_gui.ErrMsg ());
+		});
+		aWnd.OnRegister ([&aWnd, &client_gui, &isDone] (const std::string &uid, const std::string &pwd)
+		{
+			aWnd.Prompt ("Registering...");
+			if (client_gui.Register (uid, pwd))
+			{
+				aWnd.Prompt ("Registered Successfully");
+				isDone = true;
+			}
+			else
+				aWnd.Prompt (client_gui.ErrMsg ());
+		});
+
+		while (!aWnd.IsClosed ())
+			std::this_thread::sleep_for (std::chrono::milliseconds (200));
+	}
 
 	std::cout << "Client 1:\n";
 	auto client = fnConnect ();
-	fnRegister (client, "Xuzhu", "xuzhu");
-	fnRegister (client, "Xuzhu", "xuzhu");
-	fnLogin (client, "Xuzhu", "xuzhu");
-	fnLogin (client, "Xuzhu", "xuzhu");
-	fnLogin (client, "Xuzhu", "Hack");
+	fnRegister (client, "Johnny", "John");
+	fnRegister (client, "Johnny", "Johnny");
+	fnRegister (client, "Johnny", "Johnny");
+	fnLogin (client, "Johnny", "Johnny");
+	fnLogin (client, "Johnny", "Johnny");
+	fnLogin (client, "Johnny", "Hack");
 	fnLogout (client);
 	fnLogout (client);
 	fnUsersAll (client);
 	fnUsersOnline (client);
-	fnUsersPokemons (client, "Xuzhu");
-	fnUsersPokemons (client, "xuzhu");
+	fnUsersPokemons (client, "Johnny");
+	fnUsersPokemons (client, "Johnny");
 
 	std::cout << "Client 2:\n";
 	auto client2 = fnConnect ();
-	fnRegister (client2, "John", "Lee");
-	fnLogin (client2, "John", "Lee");
+	fnRegister (client2, "John", "LeeLee");
+	fnLogin (client2, "John", "LeeLee");
 	fnPokemonAll (client2);
 
 	std::cout << "Client 3:\n";
 	auto client3 = fnConnect ();
-	fnRegister (client3, "BOT", "Man");
-	fnLogin (client3, "BOT", "Man");
+	fnRegister (client3, "BOT", "ManMan");
+	fnLogin (client3, "BOT", "ManMan");
 	fnUsersAll (client3);
 	fnUsersOnline (client3);
 	fnUsersWonRate (client3, "BOT");
@@ -247,10 +293,14 @@ int main (int argc, char *argv[])
 	fnRoomEnter (client3, "Hello2");
 	fnRoomQuery (client3);
 	fnRoomLeave (client3);
+	fnRoomLeave (client3);
 	fnRoomEnter (client3, "Hello");
 	fnRoomQuery (client3);
+
 	fnRoomReady (client3);
-	fnViewPlayers (client3);
+	fnRoomReady (client2);
+	fnRoomLeave (client2);
+	fnRoomReady (client3);
 
 	fnLogout (client2);
 	fnLogout (client3);

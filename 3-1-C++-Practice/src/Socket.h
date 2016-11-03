@@ -1,6 +1,9 @@
 #ifndef BOT_SOCKET_H
 #define BOT_SOCKET_H
 
+// is Logging
+#define LOGGING
+
 // Protocol Defined Buf Size
 #define BUF_SIZE 1024
 
@@ -107,6 +110,7 @@ namespace BOT_Socket
 				std::thread ([&ioLock, &clientCount, &callback, connectSock] ()
 				{
 					auto curClientCount = 0;
+#ifdef LOGGING
 					// Log
 					{
 						std::lock_guard<std::mutex> lck (ioLock);
@@ -114,7 +118,7 @@ namespace BOT_Socket
 						std::cout << "\n<" << curClientCount
 							<< "> Connected...\n";
 					}
-
+#endif
 					while (true)
 					{
 						// Recv
@@ -147,14 +151,15 @@ namespace BOT_Socket
 						if (-1 == send (connectSock, response.c_str (),
 										response.size () + 1, 0))
 							break;
-
+#ifdef LOGGING
 						// Log
 						{
 							std::lock_guard<std::mutex> lck (ioLock);
 							std::cout << "\n<" << curClientCount
-								<< ">\nRequest:\n" << recvBuf <<
-								"\nResponse:\n" << response << "\n";
+								<< ">\n  <Request>\n" << recvBuf <<
+								"\n  <Response>\n" << response << "\n";
 						}
+#endif
 					}
 
 					// Shutdown Conncetion
@@ -163,13 +168,14 @@ namespace BOT_Socket
 
 					// Close
 					CloseSocket (connectSock);
-
+#ifdef LOGGING
 					// Log
 					{
 						std::lock_guard<std::mutex> lck (ioLock);
 						std::cout << "\n<" << curClientCount
 							<< "> Disconnected...\n";
 					}
+#endif
 				}).detach ();
 			}
 

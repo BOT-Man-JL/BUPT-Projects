@@ -8,6 +8,7 @@
 
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 #include "Pokemon.h"
 
@@ -19,6 +20,9 @@ namespace PokemonGame_Impl
 	using UserID = std::string;
 	using SessionID = std::string;
 	using RoomID = std::string;
+	using PokemonsOfPlayer =
+		std::vector<std::pair
+		<PokemonID, std::unique_ptr<PokemonGame::Pokemon>> >;
 
 	struct Player
 	{
@@ -27,9 +31,7 @@ namespace PokemonGame_Impl
 		UserID uid;
 		bool isReady;
 		size_t x, y;
-		PokemonID pid1, pid2, pid3;
-		std::unique_ptr<PokemonGame::Pokemon>
-			pokemon1, pokemon2, pokemon3;
+		PokemonsOfPlayer pokemons;
 	};
 
 	// Timestamp
