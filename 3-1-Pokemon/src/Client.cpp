@@ -6,6 +6,7 @@
 #include "PokemonClient.h"
 #include "GUIGame.h"
 #include "GUIAccounting.h"
+#include "GUIRoom.h"
 
 #define IPADDR "127.0.0.1"
 #define PORT 5768
@@ -159,15 +160,16 @@ int main (int argc, char *argv[])
 		PokemonGame::PokemonClient &client,
 		std::string roomId)
 	{
-		std::vector<std::string> pokemonIds;
+		std::vector<PokemonGame::PokemonID> pokemonIds;
 		for (const auto &pokemon : client.MyPokemons ())
 		{
 			if (pokemonIds.size () == 3)
 				break;
-			pokemonIds.emplace_back (std::to_string (pokemon.first));
+			pokemonIds.emplace_back (pokemon.first);
 		}
 
-		if (client.RoomEnter (roomId,
+		if (pokemonIds.size () >= 3 &&
+			client.RoomEnter (roomId,
 							  pokemonIds[0], pokemonIds[1], pokemonIds[2]))
 			std::cout << "Entered " << roomId << std::endl;
 		else
@@ -182,7 +184,8 @@ int main (int argc, char *argv[])
 			std::cerr << client.ErrMsg () << std::endl;
 	};
 
-	auto fnRoomReady = [&fnPrintPokemon] (PokemonGame::PokemonClient &client)
+	auto fnRoomReady = [&fnPrintPokemon] (
+		PokemonGame::PokemonClient &client)
 	{
 		if (client.RoomReady ())
 		{
@@ -196,12 +199,12 @@ int main (int argc, char *argv[])
 			std::cout << "Players in this Room:\n";
 			for (const auto &player : players)
 			{
-				std::cout << "\t" << player.second.uid << ", "
-					<< std::boolalpha << player.second.isReady << ", "
-					<< player.second.x << ", "
-					<< player.second.y << "\n";
+				std::cout << "\t" << player.uid << ", "
+					<< std::boolalpha << player.isReady << ", "
+					<< player.x << ", "
+					<< player.y << "\n";
 
-				for (const auto &pokemon : player.second.pokemons)
+				for (const auto &pokemon : player.pokemons)
 				{
 					std::cout << "\t";
 					fnPrintPokemon (pokemon.second.get ());
@@ -212,60 +215,114 @@ int main (int argc, char *argv[])
 			std::cerr << client.ErrMsg () << std::endl;
 	};
 
-	//// GUI thread
-	//std::thread ([] ()
-	//{
-	//	PokemonGameGUI::GameWindow wnd;
-	//	wnd.Join ();
-
-	//}).detach ();
-
-	auto isDone = false;
-	PokemonGame::PokemonClient client_gui (IPADDR, PORT);
+	auto guiLogin = [] (PokemonGame::PokemonClient &client)
 	{
-		PokemonGameGUI::AccountingWindow aWnd;
+		auto hasLogin = false;
+		PokemonGameGUI::AccountingWindow wnd;
 
-		aWnd.OnLogin ([&aWnd, &client_gui, &isDone] (const std::string &uid, const std::string &pwd)
+		wnd.OnLogin ([&wnd, &client, &hasLogin] (
+			const std::string &uid, const std::string &pwd)
 		{
-			aWnd.Prompt ("Loging in...");
-			if (client_gui.Login (uid, pwd))
+			wnd.Prompt ("Loging in...");
+			if (client.Login (uid, pwd))
 			{
-				aWnd.Prompt ("Login Successfully");
-				isDone = true;
+				wnd.Prompt ("Login Successfully");
+				hasLogin = true;
 			}
 			else
-				aWnd.Prompt (client_gui.ErrMsg ());
-		});
-		aWnd.OnRegister ([&aWnd, &client_gui, &isDone] (const std::string &uid, const std::string &pwd)
-		{
-			aWnd.Prompt ("Registering...");
-			if (client_gui.Register (uid, pwd))
-			{
-				aWnd.Prompt ("Registered Successfully");
-				isDone = true;
-			}
-			else
-				aWnd.Prompt (client_gui.ErrMsg ());
+				wnd.Prompt (client.ErrMsg ());
 		});
 
-		while (!aWnd.IsClosed ())
-			std::this_thread::sleep_for (std::chrono::milliseconds (200));
-	}
+		wnd.OnRegister ([&wnd, &client] (
+			const std::string &uid, const std::string &pwd)
+		{
+			wnd.Prompt ("Registering...");
+			if (client.Register (uid, pwd))
+				wnd.Prompt ("Registered Successfully");
+			else
+				wnd.Prompt (client.ErrMsg ());
+		});
+
+		while (!wnd.IsClosed () && !hasLogin)
+			std::this_thread::sleep_for (
+				std::chrono::milliseconds (200));
+
+		return hasLogin;
+	};
+
+	auto guiSelectRoom = [] (PokemonGame::PokemonClient &client)
+	{
+		auto hasEntered = false;
+		auto isReady = false;
+		PokemonGameGUI::RoomWindow wnd;
+
+		std::vector<PokemonGame::PokemonID> pokemonIds;
+		for (const auto &pokemon : client.MyPokemons ())
+		{
+			if (pokemonIds.size () == 3)
+				break;
+			pokemonIds.emplace_back (pokemon.first);
+		}
+
+		wnd.OnSelectRoom ([&wnd, &client, &hasEntered, &pokemonIds] (
+			const std::string &roomId)
+		{
+			if (pokemonIds.size () >= 3 &&
+				client.RoomEnter (roomId,
+								  pokemonIds[0], pokemonIds[1], pokemonIds[2]))
+			{
+				wnd.Prompt ("You Entered " + roomId);
+				hasEntered = true;
+			}
+			else
+				wnd.Prompt (client.ErrMsg ());
+		});
+
+		while (!wnd.IsClosed () && !isReady)
+		{
+			std::vector<std::string> roomList;
+			if (!hasEntered)
+			{
+				if (client.RoomQuery (roomList))
+					wnd.SetRooms (std::move (roomList));
+				else
+					wnd.Prompt (client.ErrMsg ());
+			}
+			else
+			{
+				if (client.RoomReady ())
+				{
+					isReady = true;
+					const auto &players = client.ViewPlayers ();
+					for (const auto &player : players)
+						isReady = isReady && player.isReady;
+					wnd.SetPlayers (players);
+				}
+				else
+					wnd.Prompt (client.ErrMsg ());
+			}
+			std::this_thread::sleep_for (std::chrono::seconds (1));
+		}
+
+		return hasEntered;
+	};
+
+	// Test
 
 	std::cout << "Client 1:\n";
-	auto client = fnConnect ();
-	fnRegister (client, "Johnny", "John");
-	fnRegister (client, "Johnny", "Johnny");
-	fnRegister (client, "Johnny", "Johnny");
-	fnLogin (client, "Johnny", "Johnny");
-	fnLogin (client, "Johnny", "Johnny");
-	fnLogin (client, "Johnny", "Hack");
-	fnLogout (client);
-	fnLogout (client);
-	fnUsersAll (client);
-	fnUsersOnline (client);
-	fnUsersPokemons (client, "Johnny");
-	fnUsersPokemons (client, "Johnny");
+	auto client1 = fnConnect ();
+	fnRegister (client1, "Johnny", "John");
+	fnRegister (client1, "Johnny", "Johnny");
+	fnRegister (client1, "Johnny", "Johnny");
+	fnLogin (client1, "Johnny", "Johnny");
+	fnLogin (client1, "Johnny", "Johnny");
+	fnLogin (client1, "Johnny", "Hack");
+	fnLogout (client1);
+	fnLogout (client1);
+	fnUsersAll (client1);
+	fnUsersOnline (client1);
+	fnUsersPokemons (client1, "Johnny");
+	fnUsersPokemons (client1, "Johnny");
 
 	std::cout << "Client 2:\n";
 	auto client2 = fnConnect ();
@@ -302,8 +359,36 @@ int main (int argc, char *argv[])
 	fnRoomLeave (client2);
 	fnRoomReady (client3);
 
+	PokemonGame::PokemonClient client_gui (IPADDR, PORT);
+
+	if (!guiLogin (client_gui))
+	{
+		PokemonGameGUI::MsgBox ("You haven't Login in GUI\n");
+		return 0;
+	}
+
+	// Simulate multi-players
+	fnRoomEnter (client2, "Hello");
+	std::thread thd ([&] ()
+	{
+		getchar ();
+		fnRoomReady (client2);
+		getchar ();
+	});
+
+	if (!guiSelectRoom (client_gui))
+		PokemonGameGUI::MsgBox ("You haven't Entered a Room\n");
+
+	if (thd.joinable ())
+		thd.join ();
+
+	fnRoomLeave (client2);
+	fnRoomLeave (client3);
+	fnRoomLeave (client_gui);
+
 	fnLogout (client2);
 	fnLogout (client3);
+	fnLogout (client_gui);
 
 	getchar ();
 	return 0;

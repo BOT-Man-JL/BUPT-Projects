@@ -1,4 +1,5 @@
 ﻿#ifndef POKEMON_GUI_GAME_H
+#define POKEMON_GUI_GAME_H
 
 #include <memory>
 #include <thread>

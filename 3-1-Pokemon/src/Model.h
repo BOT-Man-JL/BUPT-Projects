@@ -14,8 +14,8 @@ namespace PokemonGame_Impl
 	// SQL Model
 	struct PokemonModel
 	{
-		PokemonID id;
-		UserID uid;
+		PokemonGame::PokemonID id;
+		PokemonGame::UserID uid;
 
 		std::string name;
 		PokemonGame::Pokemon::Level level;
@@ -34,7 +34,7 @@ namespace PokemonGame_Impl
 		}
 
 		static PokemonModel *NewFromPokemon (
-			PokemonID id, std::string uid,
+			PokemonGame::PokemonID id, std::string uid,
 			const PokemonGame::Pokemon &pokemon)
 		{
 			return new PokemonModel
@@ -55,7 +55,7 @@ namespace PokemonGame_Impl
 	// User
 	struct UserModel
 	{
-		UserID uid;
+		PokemonGame::UserID uid;
 		std::string pwd;
 		size_t won;
 		size_t los;
@@ -68,20 +68,20 @@ namespace PokemonGame_Impl
 	// Session
 	struct SessionModel
 	{
-		UserID uid;
-		RoomID rid;
+		PokemonGame::UserID uid;
+		PokemonGame::RoomID rid;
 	};
-	using Sessions = std::unordered_map<SessionID, SessionModel>;
+	using Sessions = std::unordered_map<PokemonGame::SessionID, SessionModel>;
 
 	// Room
 	struct RoomModel
 	{
 		static const size_t maxPlayerPerRoom = 3;
 
-		using Players = std::unordered_map<SessionID, Player>;
+		using Players = std::unordered_map<PokemonGame::SessionID, PokemonGame::Player>;
 		Players players;
 	};
-	using Rooms = std::unordered_map<RoomID, RoomModel>;
+	using Rooms = std::unordered_map<PokemonGame::RoomID, RoomModel>;
 }
 
 #endif // !POKEMON_MODEL_H

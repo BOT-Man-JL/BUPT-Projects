@@ -151,7 +151,8 @@ namespace PokemonGame
 				for (const auto &session : sessions)
 					if (session.second.uid == userModel.uid)
 					{
-						SetResponse (response, true, session.first);
+						//SetResponse (response, true, session.first);
+						SetResponse (response, false, "Login already");
 						return;
 					}
 

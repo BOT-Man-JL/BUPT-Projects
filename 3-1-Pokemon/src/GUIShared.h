@@ -1,14 +1,35 @@
-﻿#ifndef POKEMON_GUI_ACCOUNTING_H
+﻿#ifndef POKEMON_GUI_SHARED_H
+#define POKEMON_GUI_SHARED_H
 
 #include "EggAche\EggAche.h"
 
 namespace PokemonGameGUI
 {
-	struct Rect
+	namespace PokemonGameGUI_Impl
 	{
-		size_t x, y;
-		size_t w, h;
-	};
+		template <typename T>
+		T Min (const T &a, const T &b)
+		{
+			return a < b ? a : b;
+		}
+
+		template <typename T>
+		T Max (const T &a, const T &b)
+		{
+			return a > b ? a : b;
+		}
+
+		struct Rect
+		{
+			size_t x, y;
+			size_t w, h;
+		};
+	}
+
+	void MsgBox (const char *str)
+	{
+		EggAche::MsgBox (str, "Pokemon Game");
+	}
 
 	class Button
 	{
@@ -20,7 +41,8 @@ namespace PokemonGameGUI
 			: _rect { x, y, w, h }
 		{
 			canvas.DrawTxt (_rect.x + _rect.w / 2,
-							_rect.y, text.c_str ());
+							_rect.y + (_rect.h - 18) / 2,
+							text.c_str ());
 
 			_rect.w += canvas.GetTxtWidth (text.c_str ());
 			canvas.DrawRdRt (_rect.x, _rect.y,
@@ -37,7 +59,7 @@ namespace PokemonGameGUI
 		}
 
 	private:
-		Rect _rect;
+		PokemonGameGUI_Impl::Rect _rect;
 	};
 
 	class Input
@@ -84,7 +106,7 @@ namespace PokemonGameGUI
 
 			if (ch == '\x08' && !_text.empty ())
 				_text.pop_back ();
-			else if (isalnum (ch) || ch == '_')
+			else if ((isalnum (ch) || ch == '_') && _text.size () < 16)
 				_text.push_back (ch);
 
 			ReDraw ();
@@ -92,7 +114,7 @@ namespace PokemonGameGUI
 
 	private:
 		EggAche::Canvas &_canvas;
-		Rect _rect;
+		PokemonGameGUI_Impl::Rect _rect;
 		std::string _hintText;
 		bool _isActivated;
 		std::string _text;
@@ -125,4 +147,4 @@ namespace PokemonGameGUI
 
 }
 
-#endif // !POKEMON_GUI_ACCOUNTING_H
+#endif // !POKEMON_GUI_SHARED_H

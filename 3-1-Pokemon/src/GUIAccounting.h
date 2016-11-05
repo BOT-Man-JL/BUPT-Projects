@@ -1,5 +1,7 @@
 ﻿#ifndef POKEMON_GUI_ACCOUNTING_H
+#define POKEMON_GUI_ACCOUNTING_H
 
+#include <cctype>
 #include <memory>
 #include <thread>
 #include <functional>
@@ -16,11 +18,9 @@ namespace PokemonGameGUI
 	public:
 		AccountingWindow (size_t width = 480, size_t height = 360)
 			: _width (width), _height (height),
-			_wnd (width, height, "Pokemon Game")
+			_wnd (width, height, "Pokemon Welcome")
 		{
 			InitLayout ();
-			Prompt ("Welcome to Pokemon Game");
-			_wnd.Refresh ();
 
 			_wnd.OnResized ([this] (EggAche::Window *, size_t x, size_t y)
 			{
@@ -34,8 +34,8 @@ namespace PokemonGameGUI
 				if (ch == '\t')
 				{
 					if ((
-							!_uidInput->isActivated () &&
-							!_pwdInput->isActivated ()
+						!_uidInput->isActivated () &&
+						!_pwdInput->isActivated ()
 						) || _pwdInput->isActivated ())
 					{
 						_uidInput->Activate (true);
@@ -50,12 +50,12 @@ namespace PokemonGameGUI
 				else if (ch == '\r')
 				{
 					if (_onLogin)
-						_onLogin (_uidInput->GetText (), _pwdInput->GetText ());
+						_onLogin (_strUid, _strPwd);
 				}
 				else if (ch == '\n')
 				{
 					if (_onRegister)
-						_onRegister (_uidInput->GetText (), _pwdInput->GetText ());
+						_onRegister (_strUid, _strPwd);
 				}
 				else if (ch != '\x08' && !isalnum (ch) && ch != '_')
 					Prompt ("Please Input _/Alpha/Number...");
@@ -63,6 +63,9 @@ namespace PokemonGameGUI
 				{
 					_uidInput->InputKey (ch);
 					_pwdInput->InputKey (ch);
+
+					_strUid = _uidInput->GetText ();
+					_strPwd = _pwdInput->GetText ();
 				}
 
 				_wnd.Refresh ();
@@ -79,10 +82,10 @@ namespace PokemonGameGUI
 					_pwdInput->Activate (true);
 
 				if (_loginBtn->TestClick (x, y) && _onLogin)
-					_onLogin (_uidInput->GetText (), _pwdInput->GetText ());
+					_onLogin (_strUid, _strPwd);
 
 				if (_registerBtn->TestClick (x, y) && _onRegister)
-					_onRegister (_uidInput->GetText (), _pwdInput->GetText ());
+					_onRegister (_strUid, _strPwd);
 
 				_wnd.Refresh ();
 			});
@@ -131,12 +134,14 @@ namespace PokemonGameGUI
 			_bg = std::make_unique<EggAche::Canvas> (_width, _height);
 			_wnd.SetBackground (_bg.get ());
 
+			// Prompt
 			if (_prompt.get () != nullptr)
 				(*_bg) -= _prompt.get ();
 			_prompt = std::make_unique<EggAche::Canvas> (
 				_width / 2, _height / 2,
 				_width * 3 / 10, _height * 2 / 10);
 			(*_bg) += _prompt.get ();
+			Prompt ("Welcome to Pokemon Game");
 
 			// Button
 			_loginBtn = std::make_unique<Button> (
@@ -147,13 +152,17 @@ namespace PokemonGameGUI
 				_width * 5 / 10, _height * 7 / 10);
 
 			// Input
-			auto inputWidth = _width * 4 / 10;
+			using namespace PokemonGameGUI_Impl;
+			static const auto minInputWidth =
+				_bg->GetTxtWidth ("<Input your Password>");
+			auto inputWidth = Max (_width * 4 / 10, minInputWidth);
+
 			_uidInput = std::make_unique<Input> (
 				*_bg, _strUid, "<Input your User ID>",
-				_width * 3 / 10, _height * 3 / 10, inputWidth);
+				(_width - inputWidth) / 2, _height * 3 / 10, inputWidth);
 			_pwdInput = std::make_unique<Input> (
 				*_bg, _strPwd, "<Input your Password>",
-				_width * 3 / 10, _height * 5 / 10, inputWidth);
+				(_width - inputWidth) / 2, _height * 5 / 10, inputWidth);
 
 			_wnd.Refresh ();
 		}

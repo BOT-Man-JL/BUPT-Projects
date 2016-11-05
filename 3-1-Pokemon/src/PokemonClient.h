@@ -12,11 +12,10 @@
 namespace PokemonGame
 {
 	using Pokemons = std::unordered_map<
-		PokemonGame_Impl::PokemonID,
-		std::unique_ptr<Pokemon> >;
-	using Players = std::unordered_map<
-		PokemonGame_Impl::UserID,
-		PokemonGame_Impl::Player>;
+		PokemonID,
+		std::unique_ptr<Pokemon>
+	>;
+	using Players = std::vector<Player>;
 
 	class PokemonClient
 	{
@@ -116,7 +115,7 @@ namespace PokemonGame
 			return HandleResponse (response, [&] ()
 			{
 				for (const auto &id : response)
-					out[(PokemonGame_Impl::PokemonID)std::stoull (id)]
+					out[(PokemonID) std::stoull (id)]
 					= PokemonFromID (id);
 			});
 		}
@@ -127,7 +126,7 @@ namespace PokemonGame
 			return HandleResponse (response, [&] ()
 			{
 				for (const auto &id : response)
-					out[(PokemonGame_Impl::PokemonID)std::stoull (id)]
+					out[(PokemonID) std::stoull (id)]
 					= PokemonFromID (id);
 			});
 		}
@@ -146,12 +145,14 @@ namespace PokemonGame
 		}
 
 		bool RoomEnter (const std::string &roomId,
-						const std::string &pokemon1,
-						const std::string &pokemon2,
-						const std::string &pokemon3)
+						PokemonID pokemon1,
+						PokemonID pokemon2,
+						PokemonID pokemon3)
 		{
 			auto response = Request ("RoomEnter", _sessionID, roomId,
-									 pokemon1, pokemon2, pokemon3);
+									 std::to_string (pokemon1),
+									 std::to_string (pokemon2),
+									 std::to_string (pokemon3));
 			return HandleResponse (response);
 		}
 
@@ -174,7 +175,7 @@ namespace PokemonGame
 				_players.clear ();
 				while (response.size () >= 7)
 				{
-					_players[response[0]] = PlayerFromResponse (response);
+					_players.emplace_back (PlayerFromResponse (response));
 					response.erase (response.begin (), response.begin () + 7);
 				}
 			});
@@ -261,7 +262,7 @@ namespace PokemonGame
 				);
 		}
 
-		PokemonGame_Impl::Player PlayerFromResponse (
+		Player PlayerFromResponse (
 			const std::vector<std::string> &response)
 		{
 			using namespace PokemonGame_Impl;
@@ -277,7 +278,7 @@ namespace PokemonGame
 			PokemonsOfPlayer pokemons;
 			for (const auto &pid : pids)
 				pokemons.emplace_back (
-				(PokemonID) std::stoull (pid), 
+				(PokemonID) std::stoull (pid),
 					pid != defaultPid ? PokemonFromID (pid) : nullptr);
 
 			return Player
@@ -297,8 +298,8 @@ namespace PokemonGame
 		BOT_Socket::Client _sockClient;
 		std::string _errMsg;
 
-		PokemonGame_Impl::UserID _userID;
-		PokemonGame_Impl::SessionID _sessionID;
+		UserID _userID;
+		SessionID _sessionID;
 		Pokemons _myPokemons;
 
 		// Room

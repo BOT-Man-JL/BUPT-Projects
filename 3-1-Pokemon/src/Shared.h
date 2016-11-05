@@ -12,7 +12,7 @@
 
 #include "Pokemon.h"
 
-namespace PokemonGame_Impl
+namespace PokemonGame
 {
 	// Data Types
 
@@ -22,7 +22,7 @@ namespace PokemonGame_Impl
 	using RoomID = std::string;
 	using PokemonsOfPlayer =
 		std::vector<std::pair
-		<PokemonID, std::unique_ptr<PokemonGame::Pokemon>> >;
+		<PokemonGame::PokemonID, std::unique_ptr<PokemonGame::Pokemon>> >;
 
 	struct Player
 	{
@@ -33,7 +33,10 @@ namespace PokemonGame_Impl
 		size_t x, y;
 		PokemonsOfPlayer pokemons;
 	};
+}
 
+namespace PokemonGame_Impl
+{
 	// Timestamp
 
 	using TimePoint = std::chrono::time_point<std::chrono::system_clock>;
