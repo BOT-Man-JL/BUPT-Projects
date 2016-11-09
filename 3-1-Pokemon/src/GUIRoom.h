@@ -19,10 +19,11 @@ namespace PokemonGameGUI
 	class RoomWindow
 	{
 	public:
-		using Players = std::vector<PokemonGame::Player>;
 
-		RoomWindow (size_t width = 480, size_t height = 360)
+		RoomWindow (size_t width = 640, size_t height = 640)
 			: _width (width), _height (height),
+			_isEntered (false), _isReady (false),
+			_promptStr ("Enter a Room to Play"),
 			_wnd (width, height, "Pokemon Room")
 		{
 			InitLayout ();
@@ -31,16 +32,39 @@ namespace PokemonGameGUI
 			{
 				_width = x;
 				_height = y;
-				InitLayout ();
+
+				// Thread-unsafe
+				//InitLayout ();
 			});
 
 			_wnd.OnPress ([this] (EggAche::Window *, char ch)
 			{
 				if (ch == '\r')
 				{
-					if (_onSelectRoom)
-						_onSelectRoom (_roomSelected);
+					if (!_isEntered)
+					{
+						// Enter
+						if (_onClickBtn)
+							_onClickBtn (_roomSelected);
+					}
+					else
+					{
+						// Ready
+						if (_onClickReadyBtn)
+							_onClickReadyBtn ();
+					}
 				}
+				else if (ch == '\n')
+				{
+					if (_isEntered)
+					{
+						// Leave
+						if (_onClickBtn)
+							_onClickBtn (_roomSelected);
+					}
+				}
+				else if (ch == '\t')
+					_idInput->Activate (true);
 				else if (ch != '\x08' && !isalnum (ch) && ch != '_')
 					Prompt ("Please Input _/Alpha/Number...");
 				else
@@ -49,7 +73,7 @@ namespace PokemonGameGUI
 					_roomSelected = _idInput->GetText ();
 				}
 
-				_wnd.Refresh ();
+				InitLayout ();
 			});
 
 			_wnd.OnClick ([this] (EggAche::Window *, size_t x, size_t y)
@@ -58,36 +82,37 @@ namespace PokemonGameGUI
 				if (_idInput->TestClick (x, y))
 					_idInput->Activate (true);
 
-				if (_enterBtn->TestClick (x, y) && _onSelectRoom)
-					_onSelectRoom (_roomSelected);
+				if (_enterBtn->TestClick (x, y) && _onClickBtn)
+					_onClickBtn (_roomSelected);
+				if (_readyBtn.get () != nullptr &&
+					_readyBtn->TestClick (x, y) && _onClickReadyBtn)
+					_onClickReadyBtn ();
 
 				for (size_t i = 0; i < _roomList.size (); i++)
 					if (_roomBtns[i]->TestClick (x, y))
 					{
 						_roomSelected = _roomList[i];
-						_onSelectRoom (_roomSelected);
+						_onClickBtn (_roomSelected);
 						break;
 					}
 
-				_wnd.Refresh ();
+				InitLayout ();
 			});
 		}
 
 		using SelectCallback =
 			std::function<void (const std::string &)>;
+		using SignalCallback =
+			std::function<void ()>;
 
-		void OnSelectRoom (SelectCallback fn)
+		void OnClickReadyBtn (SignalCallback fn)
 		{
-			_onSelectRoom = std::move (fn);
+			_onClickReadyBtn = std::move (fn);
 		}
 
-		void Prompt (const std::string &prompt)
+		void OnClickBtn (SelectCallback fn)
 		{
-			if (_prompt != nullptr)
-			{
-				_prompt->Clear ();
-				_prompt->DrawTxt (0, 0, prompt.c_str ());
-			}
+			_onClickBtn = std::move (fn);
 		}
 
 		bool IsClosed () const
@@ -95,28 +120,52 @@ namespace PokemonGameGUI
 			return _wnd.IsClosed ();
 		}
 
-		void SetRooms (std::vector<std::string> roomList)
+		void SetState (bool isEntered, bool isReady)
 		{
-			_roomList = std::move (roomList);
+			_isEntered = isEntered;
+			_isReady = isReady;
+		}
+
+		void Prompt (std::string prompt)
+		{
+			_promptStr = std::move (prompt);
 			InitLayout ();
 		}
 
-		void SetPlayers (const Players &players)
+		void SetRooms (std::vector<std::string> roomList)
 		{
-			// Todo
+			_roomList = std::move (roomList);
+			_playerList.clear ();
+			InitLayout ();
+		}
+
+		void SetTexts (std::vector<std::string> textList)
+		{
+			_playerList = std::move (textList);
+			_roomList.clear ();
+			InitLayout ();
 		}
 
 	private:
 		EggAche::Window _wnd;
-		std::unique_ptr<EggAche::Canvas> _bg, _prompt;
+		std::unique_ptr<EggAche::Canvas> _bg;
 		size_t _width, _height;
 
-		SelectCallback _onSelectRoom;
+		SelectCallback _onClickBtn;
+		SignalCallback _onClickReadyBtn;
+
+		std::string _promptStr;
 		std::string _roomSelected;
+		bool _isEntered, _isReady;
+
+		// For Room Selection
 		std::vector<std::string> _roomList;
 
+		// For User States
+		std::vector<std::string> _playerList;
+
 		std::vector<std::unique_ptr<Button>> _roomBtns;
-		std::unique_ptr<Button> _enterBtn;
+		std::unique_ptr<Button> _enterBtn, _readyBtn;
 		std::unique_ptr<Input> _idInput;
 
 		void InitLayout ()
@@ -128,13 +177,10 @@ namespace PokemonGameGUI
 			_wnd.SetBackground (_bg.get ());
 
 			// Prompt
-			if (_prompt.get () != nullptr)
-				(*_bg) -= _prompt.get ();
-			_prompt = std::make_unique<EggAche::Canvas> (
-				_width / 2, _height / 2,
-				_width * 3 / 10, _height * 1 / 10);
-			(*_bg) += _prompt.get ();
-			Prompt ("Enter a Room to Play");
+			_bg->DrawTxt (
+				(_width - _bg->GetTxtWidth (_promptStr.c_str ())) / 2,
+				_height / 10,
+				_promptStr.c_str ());
 
 			// Input
 			auto isFocused = false;
@@ -152,17 +198,51 @@ namespace PokemonGameGUI
 			_idInput->Activate (isFocused);
 
 			// Btn
-			_enterBtn = std::make_unique<Button> (
-				*_bg, "Enter",
-				_width * 7 / 10, _height * 2 / 10);
-
-			auto index = 0;
-			for (const auto &roomId : _roomList)
+			if (!_isEntered)
 			{
-				_roomBtns.emplace_back (std::make_unique<Button> (
-					*_bg, roomId,
-					_width * 3 / 10,
-					_height * 3 / 10 + index * 30));
+				_enterBtn = std::make_unique<Button> (
+					*_bg, "Enter",
+					_width * 7 / 10, _height * 2 / 10);
+			}
+			else
+			{
+				_enterBtn = std::make_unique<Button> (
+					*_bg, "Leave",
+					_width * 7 / 10, _height * 2 / 10 - 18);
+
+				if (!_isReady)
+					_readyBtn = std::make_unique<Button> (
+						*_bg, "Ready",
+						_width * 7 / 10, _height * 2 / 10 + 18);
+				else
+					_readyBtn = std::make_unique<Button> (
+						*_bg, "Unready",
+						_width * 7 / 10, _height * 2 / 10 + 18);
+			}
+
+			// Room List
+			if (!_roomList.empty ())
+			{
+				auto index = 0;
+				for (const auto &roomId : _roomList)
+				{
+					_roomBtns.emplace_back (std::make_unique<Button> (
+						*_bg, roomId,
+						10, _height * 3 / 10 + index * 30,
+						_width - _bg->GetTxtWidth (roomId.c_str ()) - 20));
+					index++;
+				}
+			}
+			else if (!_playerList.empty ())
+			{
+				auto index = 0;
+				for (const auto &playerInfo : _playerList)
+				{
+					_bg->DrawTxt ((_width - _bg->GetTxtWidth (playerInfo.c_str ())) / 2,
+								  _height * 3 / 10 + index * 30,
+								  playerInfo.c_str ());
+					index++;
+				}
 			}
 
 			_wnd.Refresh ();

@@ -1,7 +1,9 @@
 ﻿
 #include <thread>
 #include <iostream>
+#include <sstream>
 #include <iomanip>
+#include <mutex>
 
 #include "PokemonClient.h"
 #include "GUIGame.h"
@@ -15,14 +17,10 @@ int main (int argc, char *argv[])
 {
 	std::cout << "Pokemon Client\n";
 
-	auto fnConnect = [] ()
+	auto fnPrintPokemon = [] (std::ostream &os,
+							  const PokemonGame::Pokemon *pokemon)
 	{
-		return PokemonGame::PokemonClient (IPADDR, PORT);
-	};
-
-	auto fnPrintPokemon = [] (const PokemonGame::Pokemon *pokemon)
-	{
-		std::cout << "\t" << std::setw (10)
+		os << "\t" << std::setw (10)
 			<< pokemon->GetName ()
 			<< ": [LV:"
 			<< pokemon->GetLevel ()
@@ -39,6 +37,21 @@ int main (int argc, char *argv[])
 			<< ", Gap:"
 			<< pokemon->GetTimeGap ()
 			<< "]\n";
+	};
+
+	auto fnPrintPlayer = [&fnPrintPokemon] (std::ostream &os,
+											const PokemonGame::Player &player)
+	{
+		os << "\t" << player.uid << ", "
+			<< std::boolalpha << player.isReady << ", "
+			<< player.x << ", "
+			<< player.y << "\n";
+
+		for (const auto &pokemon : player.pokemons)
+		{
+			os << "\t";
+			fnPrintPokemon (os, pokemon.second.get ());
+		}
 	};
 
 	auto fnLogin = [] (PokemonGame::PokemonClient &client,
@@ -117,18 +130,18 @@ int main (int argc, char *argv[])
 	{
 		std::cout << "My Pokemons:" << std::endl;
 		for (const auto &pokemon : client.MyPokemons ())
-			fnPrintPokemon (pokemon.second.get ());
+			fnPrintPokemon (std::cout, pokemon.second.get ());
 	};
 
 	auto fnUsersPokemons = [&fnPrintPokemon] (
 		PokemonGame::PokemonClient &client,
 		const std::string &uid)
 	{
-		PokemonGame::Pokemons result;
+		PokemonGame::PokemonsWithID result;
 		std::cout << "Pokemons of User: " << uid << std::endl;
 		if (client.UsersPokemons (uid, result))
 			for (const auto &pokemon : result)
-				fnPrintPokemon (pokemon.second.get ());
+				fnPrintPokemon (std::cout, pokemon.second.get ());
 		else
 			std::cerr << client.ErrMsg () << std::endl;
 	};
@@ -136,11 +149,11 @@ int main (int argc, char *argv[])
 	auto fnPokemonAll = [&fnPrintPokemon] (
 		PokemonGame::PokemonClient &client)
 	{
-		PokemonGame::Pokemons result;
+		PokemonGame::PokemonsWithID result;
 		std::cout << "All Pokemons: " << std::endl;
 		if (client.PokemonAll (result))
 			for (const auto &pokemon : result)
-				fnPrintPokemon (pokemon.second.get ());
+				fnPrintPokemon (std::cout, pokemon.second.get ());
 		else
 			std::cerr << client.ErrMsg () << std::endl;
 	};
@@ -160,17 +173,17 @@ int main (int argc, char *argv[])
 		PokemonGame::PokemonClient &client,
 		std::string roomId)
 	{
-		std::vector<PokemonGame::PokemonID> pokemonIds;
+		std::array<PokemonGame::PokemonID, 3>
+			pokemonIds { PokemonGame::PokemonID () };
+
+		auto index = 0;
 		for (const auto &pokemon : client.MyPokemons ())
 		{
-			if (pokemonIds.size () == 3)
-				break;
-			pokemonIds.emplace_back (pokemon.first);
+			if (index == pokemonIds.size ()) break;
+			pokemonIds[index++] = pokemon.first;
 		}
 
-		if (pokemonIds.size () >= 3 &&
-			client.RoomEnter (roomId,
-							  pokemonIds[0], pokemonIds[1], pokemonIds[2]))
+		if (client.RoomEnter (roomId, pokemonIds))
 			std::cout << "Entered " << roomId << std::endl;
 		else
 			std::cerr << client.ErrMsg () << std::endl;
@@ -184,10 +197,10 @@ int main (int argc, char *argv[])
 			std::cerr << client.ErrMsg () << std::endl;
 	};
 
-	auto fnRoomReady = [&fnPrintPokemon] (
+	auto fnRoomReady = [&fnPrintPlayer] (
 		PokemonGame::PokemonClient &client)
 	{
-		if (client.RoomReady ())
+		if (client.RoomReady () && client.RoomState ())
 		{
 			const auto &players = client.ViewPlayers ();
 			if (players.empty ())
@@ -196,33 +209,52 @@ int main (int argc, char *argv[])
 				return;
 			}
 
+			std::cout << "I'am :" << client.MyUID () << std::endl;
 			std::cout << "Players in this Room:\n";
-			for (const auto &player : players)
-			{
-				std::cout << "\t" << player.uid << ", "
-					<< std::boolalpha << player.isReady << ", "
-					<< player.x << ", "
-					<< player.y << "\n";
-
-				for (const auto &pokemon : player.pokemons)
-				{
-					std::cout << "\t";
-					fnPrintPokemon (pokemon.second.get ());
-				}
-			}
+			for (const auto &playerPair : players)
+				fnPrintPlayer (std::cout, playerPair.second);
 		}
 		else
 			std::cerr << client.ErrMsg () << std::endl;
 	};
+
+	auto fnLockStep = [&fnPrintPlayer] (
+		PokemonGame::PokemonClient &client,
+		PokemonGame::Player::Action &action)
+	{
+		using namespace PokemonGame;
+
+		if (client.Lockstep (action))
+		{
+			const auto &players = client.ViewPlayers ();
+			if (players.empty ())
+			{
+				std::cout << "No Player in this Room\n";
+				return;
+			}
+
+			std::cout << "I'am :" << client.MyUID () << std::endl;
+			std::cout << "Players' State:\n";
+			for (const auto &playerPair : players)
+				fnPrintPlayer (std::cout, playerPair.second);
+		}
+		else
+			std::cerr << client.ErrMsg () << std::endl;
+	};
+
+	// GUI Logic
 
 	auto guiLogin = [] (PokemonGame::PokemonClient &client)
 	{
 		auto hasLogin = false;
 		PokemonGameGUI::AccountingWindow wnd;
 
-		wnd.OnLogin ([&wnd, &client, &hasLogin] (
+		std::mutex mtx;
+
+		wnd.OnLogin ([&wnd, &client, &mtx, &hasLogin] (
 			const std::string &uid, const std::string &pwd)
 		{
+			std::lock_guard<std::mutex> lg (mtx);
 			wnd.Prompt ("Loging in...");
 			if (client.Login (uid, pwd))
 			{
@@ -233,9 +265,10 @@ int main (int argc, char *argv[])
 				wnd.Prompt (client.ErrMsg ());
 		});
 
-		wnd.OnRegister ([&wnd, &client] (
+		wnd.OnRegister ([&wnd, &client, &mtx] (
 			const std::string &uid, const std::string &pwd)
 		{
+			std::lock_guard<std::mutex> lg (mtx);
 			wnd.Prompt ("Registering...");
 			if (client.Register (uid, pwd))
 				wnd.Prompt ("Registered Successfully");
@@ -250,145 +283,244 @@ int main (int argc, char *argv[])
 		return hasLogin;
 	};
 
-	auto guiSelectRoom = [] (PokemonGame::PokemonClient &client)
+	auto guiSelectRoom = [&fnPrintPlayer] (
+		PokemonGame::PokemonClient &client)
 	{
 		auto hasEntered = false;
 		auto isReady = false;
+		auto isAllReady = false;
 		PokemonGameGUI::RoomWindow wnd;
 
-		std::vector<PokemonGame::PokemonID> pokemonIds;
+		std::array<PokemonGame::PokemonID, 3>
+			pokemonIds { PokemonGame::PokemonID () };
+
+		auto index = 0;
 		for (const auto &pokemon : client.MyPokemons ())
 		{
-			if (pokemonIds.size () == 3)
-				break;
-			pokemonIds.emplace_back (pokemon.first);
+			if (index == pokemonIds.size ()) break;
+			pokemonIds[index++] = pokemon.first;
 		}
 
-		wnd.OnSelectRoom ([&wnd, &client, &hasEntered, &pokemonIds] (
-			const std::string &roomId)
+		std::mutex mtx;
+
+		wnd.SetState (hasEntered, isReady);
+		wnd.OnClickBtn (
+			[&wnd, &client, &mtx, &hasEntered, &isReady, &pokemonIds] (
+				const std::string &roomId)
 		{
-			if (pokemonIds.size () >= 3 &&
-				client.RoomEnter (roomId,
-								  pokemonIds[0], pokemonIds[1], pokemonIds[2]))
+			std::lock_guard<std::mutex> lg (mtx);
+			if (!hasEntered)
 			{
-				wnd.Prompt ("You Entered " + roomId);
-				hasEntered = true;
+				if (client.RoomEnter (roomId, pokemonIds))
+				{
+					wnd.SetState (hasEntered = true, isReady);
+					wnd.Prompt ("You Entered " + roomId);
+				}
+				else
+					wnd.Prompt (client.ErrMsg ());
+			}
+			else
+			{
+				if (client.RoomLeave ())
+				{
+					wnd.SetState (hasEntered = false, isReady = false);
+					wnd.Prompt ("You Left the Room");
+				}
+				else
+					wnd.Prompt (client.ErrMsg ());
+			}
+		});
+		wnd.OnClickReadyBtn (
+			[&wnd, &client, &mtx, &hasEntered, &isReady] ()
+		{
+			std::lock_guard<std::mutex> lg (mtx);
+			if (!hasEntered)
+				return;
+
+			if (client.RoomReady ())
+			{
+				if (!isReady)
+				{
+					wnd.SetState (hasEntered, isReady = true);
+					wnd.Prompt ("You are Ready");
+				}
+				else
+				{
+					wnd.SetState (hasEntered, isReady = false);
+					wnd.Prompt ("You are Unready");
+				}
 			}
 			else
 				wnd.Prompt (client.ErrMsg ());
 		});
 
-		while (!wnd.IsClosed () && !isReady)
+
+		while (!wnd.IsClosed () && !isAllReady)
 		{
-			std::vector<std::string> roomList;
+			auto tBeg = std::chrono::system_clock::now ();
 			if (!hasEntered)
 			{
-				if (client.RoomQuery (roomList))
-					wnd.SetRooms (std::move (roomList));
-				else
+				std::lock_guard<std::mutex> lg (mtx);
+				std::vector<std::string> roomList;
+
+				if (!client.RoomQuery (roomList))
 					wnd.Prompt (client.ErrMsg ());
+				wnd.SetRooms (std::move (roomList));
 			}
 			else
 			{
-				if (client.RoomReady ())
+				std::lock_guard<std::mutex> lg (mtx);
+				if (client.RoomState ())
 				{
-					isReady = true;
 					const auto &players = client.ViewPlayers ();
-					for (const auto &player : players)
-						isReady = isReady && player.isReady;
-					wnd.SetPlayers (players);
+
+					isAllReady = true;
+					std::stringstream playerInfo;
+
+					for (const auto &playerPair : players)
+					{
+						const auto &player = playerPair.second;
+						isAllReady = isAllReady && player.isReady;
+						fnPrintPlayer (playerInfo, player);
+					}
+					wnd.SetTexts (PokemonGame_Impl::SplitStr (playerInfo.str (), "\n"));
 				}
 				else
+				{
 					wnd.Prompt (client.ErrMsg ());
+					wnd.SetTexts ({});
+				}
 			}
-			std::this_thread::sleep_for (std::chrono::seconds (1));
+
+			std::this_thread::sleep_for (
+				std::chrono::milliseconds (200) -
+				(std::chrono::system_clock::now () - tBeg)
+			);
 		}
 
 		return hasEntered;
 	};
 
+	PokemonGame::PokemonClient client1 (IPADDR, PORT);
+	PokemonGame::PokemonClient client2 (IPADDR, PORT);
+	PokemonGame::PokemonClient client3 (IPADDR, PORT);
+
 	// Test
+	if (true)
+	{
+		std::cout << "Client 1:\n";
+		fnRegister (client1, "Johnny", "John");
+		fnRegister (client1, "Johnny", "Johnny");
+		fnRegister (client1, "Johnny", "Johnny");
+		fnLogin (client1, "Johnny", "Johnny");
+		fnLogin (client1, "Johnny", "Johnny");
+		fnLogin (client1, "Johnny", "Hack");
+		fnLogout (client1);
+		fnLogout (client1);
+		fnUsersAll (client1);
+		fnUsersOnline (client1);
+		fnUsersPokemons (client1, "Johnny");
+		fnUsersPokemons (client1, "Johnny");
 
-	std::cout << "Client 1:\n";
-	auto client1 = fnConnect ();
-	fnRegister (client1, "Johnny", "John");
-	fnRegister (client1, "Johnny", "Johnny");
-	fnRegister (client1, "Johnny", "Johnny");
-	fnLogin (client1, "Johnny", "Johnny");
-	fnLogin (client1, "Johnny", "Johnny");
-	fnLogin (client1, "Johnny", "Hack");
-	fnLogout (client1);
-	fnLogout (client1);
-	fnUsersAll (client1);
-	fnUsersOnline (client1);
-	fnUsersPokemons (client1, "Johnny");
-	fnUsersPokemons (client1, "Johnny");
+		std::cout << "Client 2:\n";
+		fnRegister (client2, "John", "LeeLee");
+		fnLogin (client2, "John", "LeeLee");
 
-	std::cout << "Client 2:\n";
-	auto client2 = fnConnect ();
-	fnRegister (client2, "John", "LeeLee");
-	fnLogin (client2, "John", "LeeLee");
-	fnPokemonAll (client2);
+		std::cout << "Client 3:\n";
+		fnRegister (client3, "BOT", "ManMan");
+		fnLogin (client3, "BOT", "ManMan");
+	}
 
-	std::cout << "Client 3:\n";
-	auto client3 = fnConnect ();
-	fnRegister (client3, "BOT", "ManMan");
-	fnLogin (client3, "BOT", "ManMan");
-	fnUsersAll (client3);
-	fnUsersOnline (client3);
-	fnUsersWonRate (client3, "BOT");
-	fnUsersBadges (client3, "BOT");
-	fnMyPokemons (client3);
-	fnUsersPokemons (client3, "John");
-	fnPokemonAll (client2);
+	// Test
+	if (false)
+	{
+		fnPokemonAll (client2);
+		fnUsersAll (client3);
+		fnUsersOnline (client3);
+		fnUsersWonRate (client3, "BOT");
+		fnUsersBadges (client3, "BOT");
+		fnMyPokemons (client3);
+		fnUsersPokemons (client3, "John");
+		fnPokemonAll (client2);
+	}
 
-	fnRoomEnter (client2, "Hello");
-	fnRoomLeave (client2);
-	fnRoomEnter (client2, "Hello");
-	fnRoomEnter (client2, "Hello2");
+	// Test
+	if (true)
+	{
+		fnRoomEnter (client2, "Hello");
+		fnRoomLeave (client2);
+		fnRoomEnter (client2, "Hello");
+		fnRoomEnter (client2, "Hello2");
 
-	fnRoomEnter (client3, "Hello2");
-	fnRoomQuery (client3);
-	fnRoomLeave (client3);
-	fnRoomLeave (client3);
-	fnRoomEnter (client3, "Hello");
-	fnRoomQuery (client3);
+		fnRoomEnter (client3, "Hello2");
+		fnRoomQuery (client3);
+		fnRoomLeave (client3);
+		fnRoomLeave (client3);
+		fnRoomEnter (client3, "Hello");
+		fnRoomQuery (client3);
 
-	fnRoomReady (client3);
-	fnRoomReady (client2);
-	fnRoomLeave (client2);
-	fnRoomReady (client3);
+		fnRoomReady (client3);
+		fnRoomReady (client2);
+		fnRoomLeave (client2);
+		fnRoomEnter (client2, "Hello");
+	}
 
 	PokemonGame::PokemonClient client_gui (IPADDR, PORT);
 
-	if (!guiLogin (client_gui))
+	if (true)
 	{
-		PokemonGameGUI::MsgBox ("You haven't Login in GUI\n");
-		return 0;
+		if (!guiLogin (client_gui))
+		{
+			PokemonGameGUI::MsgBox ("You haven't Login in GUI\n");
+			return 0;
+		}
 	}
 
-	// Simulate multi-players
-	fnRoomEnter (client2, "Hello");
-	std::thread thd ([&] ()
+	// Test
+	if (true)
 	{
-		getchar ();
+		// Simulate multi-players
+		std::thread thd ([&] ()
+		{
+			getchar ();
+			fnRoomReady (client2);
+		});
+
+		if (!guiSelectRoom (client_gui))
+			PokemonGameGUI::MsgBox ("You haven't Entered a Room\n");
+
+		if (thd.joinable ())
+			thd.join ();
+
+		fnRoomReady (client3);
 		fnRoomReady (client2);
-		getchar ();
-	});
+	}
 
-	if (!guiSelectRoom (client_gui))
-		PokemonGameGUI::MsgBox ("You haven't Entered a Room\n");
+	// Test
+	if (true)
+	{
+		using namespace PokemonGame;
+		using Action = Player::Action;
 
-	if (thd.joinable ())
-		thd.join ();
+		for (size_t i = 0; i < 10; i++)
+		{
+			fnLockStep (client2, Action { ActionType::Move, MoveDir::A });
+			fnLockStep (client3, Action { ActionType::Move, MoveDir::W });
+			fnLockStep (client_gui, Action { ActionType::Move, MoveDir::S });
+		}
+	}
 
-	fnRoomLeave (client2);
-	fnRoomLeave (client3);
-	fnRoomLeave (client_gui);
+	// Test
+	if (true)
+	{
+		fnRoomLeave (client2);
+		fnRoomLeave (client3);
+		fnRoomLeave (client_gui);
 
-	fnLogout (client2);
-	fnLogout (client3);
-	fnLogout (client_gui);
+		fnLogout (client2);
+		fnLogout (client3);
+		fnLogout (client_gui);
+	}
 
 	getchar ();
 	return 0;

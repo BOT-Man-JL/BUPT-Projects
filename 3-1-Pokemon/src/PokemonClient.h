@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <array>
 #include <unordered_map>
 
 #include "Socket.h"
@@ -11,11 +12,10 @@
 
 namespace PokemonGame
 {
-	using Pokemons = std::unordered_map<
+	using PokemonsWithID = std::unordered_map<
 		PokemonID,
 		std::unique_ptr<Pokemon>
 	>;
-	using Players = std::vector<Player>;
 
 	class PokemonClient
 	{
@@ -26,9 +26,16 @@ namespace PokemonGame
 		{}
 
 		const std::string &ErrMsg () const
-		{
-			return _errMsg;
-		}
+		{ return _errMsg; }
+
+		const PokemonGame::UserID &MyUID () const
+		{ return _userID; }
+
+		const PokemonsWithID &MyPokemons () const
+		{ return _myPokemons; }
+
+		const std::unordered_map<UserID, Player> &ViewPlayers () const
+		{ return _players; }
 
 #pragma region Accounting
 
@@ -103,31 +110,26 @@ namespace PokemonGame
 
 #pragma region Pokemon Info
 
-		Pokemons &MyPokemons ()
-		{
-			return _myPokemons;
-		}
-
 		bool UsersPokemons (const std::string &uid,
-							Pokemons &out)
+							PokemonsWithID &out)
 		{
 			auto response = Request ("UsersPokemons", _sessionID, uid);
 			return HandleResponse (response, [&] ()
 			{
 				for (const auto &id : response)
-					out[(PokemonID) std::stoull (id)]
-					= PokemonFromID (id);
+					out[(PokemonID) std::stoull (id)] =
+					std::unique_ptr<Pokemon> (PokemonFromID (id));
 			});
 		}
 
-		bool PokemonAll (Pokemons &out)
+		bool PokemonAll (PokemonsWithID &out)
 		{
 			auto response = Request ("PokemonAll", _sessionID);
 			return HandleResponse (response, [&] ()
 			{
 				for (const auto &id : response)
-					out[(PokemonID) std::stoull (id)]
-					= PokemonFromID (id);
+					out[(PokemonID) std::stoull (id)] =
+					std::unique_ptr<Pokemon> (PokemonFromID (id));
 			});
 		}
 
@@ -145,14 +147,12 @@ namespace PokemonGame
 		}
 
 		bool RoomEnter (const std::string &roomId,
-						PokemonID pokemon1,
-						PokemonID pokemon2,
-						PokemonID pokemon3)
+						const std::array<PokemonID, 3> &pokemonIds)
 		{
 			auto response = Request ("RoomEnter", _sessionID, roomId,
-									 std::to_string (pokemon1),
-									 std::to_string (pokemon2),
-									 std::to_string (pokemon3));
+									 std::to_string (pokemonIds[0]),
+									 std::to_string (pokemonIds[1]),
+									 std::to_string (pokemonIds[2]));
 			return HandleResponse (response);
 		}
 
@@ -165,25 +165,68 @@ namespace PokemonGame
 		bool RoomReady ()
 		{
 			auto response = Request ("RoomReady", _sessionID);
-			return HandleResponse<3> (response, [&] ()
+			return HandleResponse (response);
+		}
+
+		bool RoomState ()
+		{
+			auto response = Request ("RoomState", _sessionID);
+			if ((response.size () - 2) % 7)
 			{
-				_tEnterRoom = PokemonGame_Impl::TimePointFromStr (response[0]);
-				posX = (size_t) std::stoull (response[1]);
-				posY = (size_t) std::stoull (response[2]);
-				response.erase (response.begin (), response.begin () + 3);
+				_errMsg = "Invalid Response size";
+				return false;
+			}
+
+			return HandleResponse<8> (response, [&] ()
+			{
+				_tSync = PokemonGame_Impl::TimePointFromStr (response[0]);
+				_tLocal = std::chrono::system_clock::now ();
+				response.erase (response.begin ());
 
 				_players.clear ();
-				while (response.size () >= 7)
+				while (!response.empty ())
 				{
-					_players.emplace_back (PlayerFromResponse (response));
+					_players[response[0]] = PlayerFromResponse (response);
 					response.erase (response.begin (), response.begin () + 7);
 				}
 			});
 		}
 
-		Players &ViewPlayers ()
+#pragma endregion
+
+#pragma region Gaming
+
+		bool Lockstep (Player::Action action)
 		{
-			return _players;
+			using namespace PokemonGame_Impl;
+
+			auto actionStr = ActionToStr (action);
+			action.timestamp =
+				(std::chrono::system_clock::now () - _tLocal) + _tSync;
+
+			auto response = Request ("Lockstep", _sessionID, actionStr);
+			if ((response.size () - 2) % 2)
+			{
+				_errMsg = "Invalid Response size";
+				return false;
+			}
+
+			return HandleResponse<1> (response, [&] ()
+			{
+				_tSync = TimePointFromStr (response[0]);
+				_tLocal = std::chrono::system_clock::now ();
+				response.erase (response.begin ());
+
+				while (!response.empty ())
+				{
+					_players[response[0]].actions.emplace_back (
+						ActionFromStr (response[1]));
+					response.erase (response.begin (), response.begin () + 2);
+				}
+
+				_players[_userID].actions.emplace_back (std::move (action));
+				LockstepUpdate ();
+			});
 		}
 
 #pragma endregion
@@ -243,23 +286,22 @@ namespace PokemonGame
 			}
 		}
 
-		std::unique_ptr<Pokemon> PokemonFromID (const std::string &id)
+		Pokemon* PokemonFromID (const std::string &id)
 		{
 			auto response = Request ("PokemonInfo", _sessionID, id);
 			if (!HandleResponse<8> (response))
 				throw std::runtime_error (
 					_errMsg + ": Loading Pokemon Info Failed");
 
-			return std::unique_ptr<Pokemon> (
-				Pokemon::NewPokemon (response[0],
-									 std::stoul (response[1]),
-									 std::stoul (response[2]),
-									 std::stoul (response[3]),
-									 std::stoul (response[4]),
-									 std::stoul (response[5]),
-									 std::stoul (response[6]),
-									 std::stoul (response[7]))
-				);
+			return Pokemon::NewPokemon (
+				response[0],
+				std::stoul (response[1]),
+				std::stoul (response[2]),
+				std::stoul (response[3]),
+				std::stoul (response[4]),
+				std::stoul (response[5]),
+				std::stoul (response[6]),
+				std::stoul (response[7]));
 		}
 
 		Player PlayerFromResponse (
@@ -267,19 +309,25 @@ namespace PokemonGame
 		{
 			using namespace PokemonGame_Impl;
 
-			std::vector<std::string> pids
+			std::vector<std::string> pidStrs
 			{
-				response[4],
-				response[5],
-				response[6]
+				response[4], response[5], response[6]
 			};
-			const auto defaultPid = std::to_string (PokemonID ());
+			std::vector<PokemonID> pids;
+			for (const auto &pidStr : pidStrs)
+				pids.emplace_back ((PokemonID) std::stoull (pidStr));
 
 			PokemonsOfPlayer pokemons;
-			for (const auto &pid : pids)
+			for (size_t i = 0; i < pids.size (); i++)
+			{
+				if (pids[i] == PokemonID ())
+					continue;
+
 				pokemons.emplace_back (
-				(PokemonID) std::stoull (pid),
-					pid != defaultPid ? PokemonFromID (pid) : nullptr);
+					pids[i],
+					std::unique_ptr<Pokemon> (PokemonFromID (pidStrs[i]))
+				);
+			}
 
 			return Player
 			{
@@ -295,17 +343,70 @@ namespace PokemonGame
 			};
 		}
 
+		void LockstepUpdate ()
+		{
+			for (auto &playerPair : _players)
+			{
+				auto &player = playerPair.second;
+				auto &pokemon = *(player.pokemons.front ().second);
+				const auto &action = player.actions.back ();
+
+				const auto maxX = Player::maxX;
+				const auto maxY = Player::maxY;
+
+				switch (action.action)
+				{
+				case ActionType::None:
+					// Do nothing
+					break;
+
+				case ActionType::Move:
+					switch (action.param)
+					{
+					case MoveDir::A:
+						if (player.x > 0) player.x--;
+						break;
+					case MoveDir::D:
+						if (player.x < maxX) player.x++;
+						break;
+					case MoveDir::W:
+						if (player.y > 0) player.y--;
+						break;
+					case MoveDir::S:
+						if (player.y < maxY) player.y++;
+						break;
+					default:
+						throw std::runtime_error ("Wrong Param");
+						break;
+					}
+					break;
+
+				case ActionType::Attack:
+					break;
+				case ActionType::Defend:
+					break;
+				case ActionType::Recover:
+					break;
+				case ActionType::Switch:
+					break;
+
+				default:
+					throw std::runtime_error ("WTF? (Will not hit)");
+					break;
+				}
+			}
+		}
+
 		BOT_Socket::Client _sockClient;
 		std::string _errMsg;
 
 		UserID _userID;
 		SessionID _sessionID;
-		Pokemons _myPokemons;
+		PokemonsWithID _myPokemons;
 
-		// Room
-		PokemonGame_Impl::TimePoint _tEnterRoom;
-		size_t posX, posY;
-		Players _players;
+		// Gaming
+		TimePoint _tSync, _tLocal;
+		std::unordered_map<UserID, Player> _players;
 	};
 
 }

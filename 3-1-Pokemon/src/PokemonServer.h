@@ -323,7 +323,7 @@ namespace PokemonGame
 				}
 
 				std::string ret;
-				for (auto & pokemon : pokemons)
+				for (const auto &pokemon : pokemons)
 				{
 					ret += std::to_string (pokemon.id);
 					ret += '\n';
@@ -349,7 +349,7 @@ namespace PokemonGame
 				}
 
 				std::string ret;
-				for (auto & pokemon : pokemons)
+				for (const auto &pokemon : pokemons)
 				{
 					ret += std::to_string (pokemon.id);
 					ret += '\n';
@@ -394,6 +394,13 @@ namespace PokemonGame
 			{
 				const auto &sid = args[0];
 				const auto &rid = args[1];
+
+				if (rid.empty ())
+				{
+					SetResponse (response, false, "Empty Room ID");
+					return;
+				}
+
 				auto &room = rooms[rid];
 
 				if (room.players.size () == RoomModel::maxPlayerPerRoom)
@@ -412,20 +419,26 @@ namespace PokemonGame
 				auto initX = rand () % Player::maxX;
 				auto initY = rand () % Player::maxY;
 
-				std::vector<PokemonID> pids
+				std::vector<std::string> pidStrs
 				{
-					(PokemonID) std::stoull (args[2]),
-					(PokemonID) std::stoull (args[3]),
-					(PokemonID) std::stoull (args[4])
+					args[2], args[3], args[4]
 				};
+				std::vector<PokemonID> pids;
+				for (const auto &pidStr : pidStrs)
+					pids.emplace_back ((PokemonID) std::stoull (pidStr));
 
 				PokemonsOfPlayer pokemons;
-				for (const auto &pid : pids)
-					pokemons.emplace_back (pid,
-										   pid != PokemonID () ?
-										   std::unique_ptr<Pokemon> (
-											   getPokemonModelById (pid)->ToPokemon ())
-										   : nullptr);
+				for (size_t i = 0; i < pids.size (); i++)
+				{
+					if (pids[i] == PokemonID ())
+						continue;
+
+					pokemons.emplace_back (
+						pids[i],
+						std::unique_ptr<Pokemon> (
+							getPokemonModelById (pids[i])->ToPokemon ())
+					);
+				}
 
 				room.players[sid] = Player
 				{
@@ -477,22 +490,38 @@ namespace PokemonGame
 					return;
 				}
 
-				const auto &rid = sessions[sid].rid;
-				auto &room = rooms[rid];
+				auto &room = rooms[sessions[sid].rid];
 				auto &you = room.players[sid];
 
 				// Set me Ready
-				you.isReady = true;
+				you.isReady = !you.isReady;
+				you.actions.emplace_back (Player::Action { ActionType::None });
+
+				SetResponse (response, true, "You are Ready Now ~");
+			});
+
+			// Handle RoomState
+			// Succeed if in a Room
+			// Fail if Not in a Room
+			SetHandler<1> ("RoomState",
+						   [&] (std::string &response,
+								const std::vector<std::string> &args)
+			{
+				const auto &sid = args[0];
+
+				if (sessions[sid].rid == RoomID ())
+				{
+					SetResponse (response, false, "Not in a Room");
+					return;
+				}
+
+				auto &room = rooms[sessions[sid].rid];
+				auto &you = room.players[sid];
 
 				std::string ret =
-					TimePointToStr (std::chrono::system_clock::now ()) + "\n"
-					+ std::to_string (you.x) + "\n"
-					+ std::to_string (you.y) + "\n";
+					TimePointToStr (std::chrono::system_clock::now ()) + "\n";
 				for (const auto &player : room.players)
 				{
-					if (player.first == sid)
-						continue;
-
 					ret += player.second.uid + "\n"
 						+ (player.second.isReady ? "1\n" : "0\n")
 						+ std::to_string (player.second.x) + "\n"
@@ -500,6 +529,44 @@ namespace PokemonGame
 
 					for (const auto &pokemon : player.second.pokemons)
 						ret += std::to_string (pokemon.first) + "\n";
+				}
+				ret.pop_back ();
+				SetResponse (response, true, ret);
+			});
+
+#pragma endregion
+
+#pragma region Gaming
+
+			// Handle Lockstep
+			SetHandler<2> ("Lockstep",
+						   [&] (std::string &response,
+								const std::vector<std::string> &args)
+			{
+				const auto timeSlot = std::chrono::milliseconds (50);
+
+				const auto &sid = args[0];
+				if (sessions[sid].rid == RoomID ())
+				{
+					SetResponse (response, false, "Not in a Room");
+					return;
+				}
+
+				const auto action = ActionFromStr (args[1]);
+				auto &room = rooms[sessions[sid].rid];
+				auto &you = room.players[sid];
+
+				you.actions.emplace_back (action);
+
+				std::string ret =
+					TimePointToStr (std::chrono::system_clock::now ()) + "\n";
+				for (const auto &player : room.players)
+				{
+					if (player.first == sid)
+						continue;
+
+					ret += player.second.uid + "\n"
+						+ ActionToStr (player.second.actions.back ()) + "\n";
 				}
 				ret.pop_back ();
 				SetResponse (response, true, ret);

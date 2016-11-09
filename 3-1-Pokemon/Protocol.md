@@ -148,10 +148,14 @@ If Failed:
 
 > Session ID \n
 >
+> Msg
+
+### RoomState
+
+> Session ID \n
+>
 > Timestamp
-> Your Init X \n
-> Your Init Y \n
-> User ID 2 \n
+> User ID \n
 > Is Ready \n
 > Init X \n
 > Init Y \n
@@ -162,24 +166,28 @@ If Failed:
 
 ## Playing
 
-### Round
+### Lockstep
 
 > Session ID \n
-> Action \n
-> Timestamp
+> Action
 >
-> User ID 2 \n
-> Action \n
-> User ID 3 \n
+> Timestamp \n
+> User ID (other) \n
 > Action \n
 > ...
 
-### Action
+#### Action
+
+> Action Type \t
+> Param \t
+> Timestamp
+
+#### Action Type
 
 - None
 - Move
+  - w/a/s/d
 - Attack
 - Defend
 - Recover
-- Runaway
-- Switch1/2/3
+- Switch
