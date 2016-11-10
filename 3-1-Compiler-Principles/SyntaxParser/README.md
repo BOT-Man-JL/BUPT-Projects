@@ -3,7 +3,7 @@
 > 2014211306 2014211288
 > 李俊宁
 
-> 2016/10/21
+> 2016/11/10
 
 ## 实验目的
 
@@ -101,7 +101,7 @@ F -> ( E ) | num
 
 ## 架构设计
 
-### PhraseParser
+### SyntaxParser
 
 函数成员：
 
@@ -155,9 +155,9 @@ F -> ( E ) | num
   - `argv[1]` 为语法定义文件
   - `argv[2]` 为待识别文件
 - 打开输入/输出文件，并判断释放成功
-- 将**语法定义文件输入流**传入`PhraseParser`，生成语法分析器
+- 将**语法定义文件输入流**传入`SyntaxParser`，生成语法分析器
 - 将**语法输出流**用于打印**语法**及**LL(1)分析表**
-- 将**待识别文件 输入/输出 流**传入`PhraseParser.Parse`进行分析
+- 将**待识别文件 输入/输出 流**传入`SyntaxParser.Parse`进行分析
 
 ### 输入格式
 
@@ -202,18 +202,39 @@ E -> E + T | E - T | T
 
 每一个**待分析表达式**的 **最左推导/错误处理** 结果
 
-## 测试样例
+## 运行样例
 
 ### Windows MSVC 2015 (Visual Studio 2015)
 
-运行 `PhraseParser.vcxproj`, 并使用参数 `Grammar.txt Input.txt`
+运行 `SyntaxParser.vcxproj`, 并使用参数 `Grammar.txt Input.txt`
+
+也可以编译为 `SyntaxParser.exe` 之后
+
+- 在该目录下，打开命令提示符
+![Console](How-to-Run/Console.png)
+- 在命令提示符输入 `SyntaxParser Grammar.txt Input.txt`
+![Run](How-to-Run/Run.png)
+- 在该目录下，得到输出文件
+![Output](How-to-Run/Output.png)
+
+Remarks:
+
+- Grammar.txt 为文法输入
+- Input.txt 为表达式输入
 
 ### Unix/Unix-like
 
+在终端中输入
+
 ``` bash
-g++ PhraseParser.cpp -std=c++11 -o PhraseParser
-./PhraseParser Grammar.txt Input.txt
+g++ SyntaxParser.cpp -std=c++11 -o SyntaxParser
+./SyntaxParser Grammar.txt Input.txt
 ```
+
+Remarks:
+
+- Grammar.txt 为文法输入
+- Input.txt 为表达式输入
 
 ### Input
 

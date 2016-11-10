@@ -11,7 +11,7 @@
 #include <iomanip>
 #include <cstring>
 
-namespace BOT_PhraseParser
+namespace BOT_SyntaxParser
 {
 	// Helper
 	std::string SplitStr (std::string &inputStr,
@@ -122,37 +122,37 @@ namespace BOT_PhraseParser
 					// A -> B alpha
 					// B -> beta
 					//   => A -> beta alpha
-					while (true)
+					for (auto p = productionRules[key].begin ();
+						 p != productionRules[key].end ();)
 					{
-						auto isChanged = false;
-						for (auto p = productionRules[key].begin ();
-							 p != productionRules[key].end (); ++p)
+						if (p->front () != preKey)
 						{
-							if (p->front () != preKey)
-								continue;
+							++p;
+							continue;
+						}
 
-							// A -> B alpha => A -> alpha
-							p->erase (p->begin ());
+						auto &statement = *p;
 
-							// Copy A -> alpha
-							auto statement = *p;
+						// A -> B alpha => A -> alpha
+						statement.erase (statement.begin ());
 
-							// Erase A -> alpha
-							productionRules[key].erase (p);
+						// Insert A -> beta alpha
+						for (const auto &preKeyStatement : productionRules[preKey])
+						{
+							// Copy B -> beta
+							auto newPreKeyStatement = preKeyStatement;
+
+							// beta => beta alpha
+							for (const auto &symbol : statement)
+								newPreKeyStatement.emplace_back (symbol);
 
 							// Insert A -> beta alpha
-							for (const auto &preKeyStatement : productionRules[preKey])
-							{
-								auto newPreKeyStatement = preKeyStatement;
-								for (const auto &symbol : statement)
-									newPreKeyStatement.emplace_back (symbol);
-								productionRules[key].emplace_back (newPreKeyStatement);
-							}
-
-							isChanged = true;
-							break;
+							productionRules[key].emplace_back (
+								std::move (newPreKeyStatement));
 						}
-						if (!isChanged) break;
+
+						// Erase A -> alpha
+						p = productionRules[key].erase (p);
 					}
 				}
 
@@ -176,27 +176,27 @@ namespace BOT_PhraseParser
 				auto fixedKey = key + "'";
 
 				// A -> A alpha => A' -> alpha A'
-				while (true)
+				for (auto p = productionRules[key].begin ();
+					 p != productionRules[key].end ();)
 				{
-					auto isChanged = false;
-					for (auto p = productionRules[key].begin ();
-						 p != productionRules[key].end (); ++p)
+					if (p->front () != key)
 					{
-						if (p->front () == key)
-						{
-							auto &statement = *p;
-							statement.erase (statement.begin ());
-							statement.push_back (fixedKey);
-
-							productionRules[fixedKey]
-								.emplace_back (std::move (statement));
-							productionRules[key].erase (p);
-
-							isChanged = true;
-							break;
-						}
+						++p;
+						continue;
 					}
-					if (!isChanged) break;
+
+					auto &statement = *p;
+
+					// A -> A alpha => A -> alpha
+					statement.erase (statement.begin ());
+
+					// A -> alpha => A -> alpha A'
+					statement.push_back (fixedKey);
+
+					// A -> alpha A' => A' -> alpha A'
+					productionRules[fixedKey]
+						.emplace_back (std::move (statement));
+					p = productionRules[key].erase (p);
 				}
 
 				// A -> beta => A -> beta A'
@@ -250,34 +250,29 @@ namespace BOT_PhraseParser
 					auto hasEpsilon = false;
 
 					// A -> X alpha | X beta => _A -> alpha | beta (or epsilon)
-					while (true)
+					for (auto p = productionRules[key].begin ();
+						 p != productionRules[key].end ();)
 					{
-						auto isChanged2 = false;
-						for (auto p = productionRules[key].begin ();
-							 p != productionRules[key].end (); ++p)
+						if (p->front () != commonSymbol)
 						{
-							if (p->front () == commonSymbol)
-							{
-								auto &statement = *p;
-
-								// A -> X alpha => A -> alpha
-								statement.erase (statement.begin ());
-
-								// Insert _A -> alpha or Epsilon
-								if (!statement.empty ())
-									productionRules[fixedKey]
-									.emplace_back (std::move (statement));
-								else
-									hasEpsilon = true;
-
-								// Remove A -> alpha
-								productionRules[key].erase (p);
-
-								isChanged2 = true;
-								break;
-							}
+							++p;
+							continue;
 						}
-						if (!isChanged2) break;
+
+						auto &statement = *p;
+
+						// A -> X alpha => A -> alpha
+						statement.erase (statement.begin ());
+
+						// Insert _A -> alpha or Epsilon
+						if (!statement.empty ())
+							productionRules[fixedKey]
+							.emplace_back (std::move (statement));
+						else
+							hasEpsilon = true;
+
+						// Remove A -> alpha
+						p = productionRules[key].erase (p);
 					}
 
 					// Insert _A -> epsilon
@@ -589,10 +584,10 @@ namespace BOT_PhraseParser
 		}
 	};
 
-	class PhraseParser
+	class SyntaxParser
 	{
 	public:
-		PhraseParser (std::istream &is,
+		SyntaxParser (std::istream &is,
 					  std::ostream &os)
 			: _grammar (is)
 		{
@@ -782,7 +777,7 @@ int main (int argc, char *argv[])
 {
 	try
 	{
-		using namespace BOT_PhraseParser;
+		using namespace BOT_SyntaxParser;
 
 		if (argc < 3)
 			throw std::runtime_error ("Too few Arguments");
@@ -806,7 +801,7 @@ int main (int argc, char *argv[])
 									  argv[2] + ".output.txt");
 
 		// Generate parser from ifsGrammar into ofsGrammar
-		PhraseParser parser (ifsGrammar, ofsGrammar);
+		SyntaxParser parser (ifsGrammar, ofsGrammar);
 
 		// Parse ifs into ofs :-)
 		parser.Parse (ifsInput, ofsOutput);
