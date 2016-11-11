@@ -39,6 +39,8 @@ namespace PokemonGameGUI
 
 			_wnd.OnPress ([this] (EggAche::Window *, char ch)
 			{
+				std::lock_guard<std::mutex> lg (mtx);
+
 				if (ch == '\r')
 				{
 					if (!_isEntered)
@@ -46,6 +48,7 @@ namespace PokemonGameGUI
 						// Enter
 						if (_onClickBtn)
 							_onClickBtn (_roomSelected);
+						// Todo
 					}
 					else
 					{
@@ -66,7 +69,7 @@ namespace PokemonGameGUI
 				else if (ch == '\t')
 					_idInput->Activate (true);
 				else if (ch != '\x08' && !isalnum (ch) && ch != '_')
-					Prompt ("Please Input _/Alpha/Number...");
+					_promptStr = "Please Input _/Alpha/Number...";
 				else
 				{
 					_idInput->InputKey (ch);
@@ -78,6 +81,8 @@ namespace PokemonGameGUI
 
 			_wnd.OnClick ([this] (EggAche::Window *, size_t x, size_t y)
 			{
+				std::lock_guard<std::mutex> lg (mtx);
+
 				_idInput->Activate (false);
 				if (_idInput->TestClick (x, y))
 					_idInput->Activate (true);
@@ -128,21 +133,28 @@ namespace PokemonGameGUI
 
 		void Prompt (std::string prompt)
 		{
+			// Todo
+			//std::lock_guard<std::mutex> lg (mtx);
 			_promptStr = std::move (prompt);
-			InitLayout ();
 		}
 
 		void SetRooms (std::vector<std::string> roomList)
 		{
+			std::lock_guard<std::mutex> lg (mtx);
 			_roomList = std::move (roomList);
 			_playerList.clear ();
-			InitLayout ();
 		}
 
 		void SetTexts (std::vector<std::string> textList)
 		{
+			std::lock_guard<std::mutex> lg (mtx);
 			_playerList = std::move (textList);
 			_roomList.clear ();
+		}
+
+		void Refresh ()
+		{
+			std::lock_guard<std::mutex> lg (mtx);
 			InitLayout ();
 		}
 
@@ -168,11 +180,11 @@ namespace PokemonGameGUI
 		std::unique_ptr<Button> _enterBtn, _readyBtn;
 		std::unique_ptr<Input> _idInput;
 
+		// Sync
+		std::mutex mtx;
+
 		void InitLayout ()
 		{
-			static std::mutex mtx;
-			std::lock_guard<std::mutex> lg (mtx);
-
 			_bg = std::make_unique<EggAche::Canvas> (_width, _height);
 			_wnd.SetBackground (_bg.get ());
 

@@ -17,8 +17,9 @@ int main (int argc, char *argv[])
 {
 	std::cout << "Pokemon Client\n";
 
-	auto fnPrintPokemon = [] (std::ostream &os,
-							  const PokemonGame::Pokemon *pokemon)
+	auto fnPrintPokemon = [] (
+		std::ostream &os,
+		const PokemonGame::Pokemon *pokemon)
 	{
 		os << "\t" << std::setw (10)
 			<< pokemon->GetName ()
@@ -39,10 +40,12 @@ int main (int argc, char *argv[])
 			<< "]\n";
 	};
 
-	auto fnPrintPlayer = [&fnPrintPokemon] (std::ostream &os,
-											const PokemonGame::Player &player)
+	auto fnPrintPlayer = [&fnPrintPokemon] (
+		std::ostream &os,
+		const PokemonGame::UserID &uid,
+		const PokemonGame::Player &player)
 	{
-		os << "\t" << player.uid << ", "
+		os << "\t" << uid << ", "
 			<< std::boolalpha << player.isReady << ", "
 			<< player.x << ", "
 			<< player.y << "\n";
@@ -202,17 +205,10 @@ int main (int argc, char *argv[])
 	{
 		if (client.RoomReady () && client.RoomState ())
 		{
-			const auto &players = client.ViewPlayers ();
-			if (players.empty ())
-			{
-				std::cout << "No Player in this Room\n";
-				return;
-			}
-
 			std::cout << "I'am :" << client.MyUID () << std::endl;
 			std::cout << "Players in this Room:\n";
-			for (const auto &playerPair : players)
-				fnPrintPlayer (std::cout, playerPair.second);
+			for (const auto &player : client.GetPlayers ())
+				fnPrintPlayer (std::cout, player.first, player.second);
 		}
 		else
 			std::cerr << client.ErrMsg () << std::endl;
@@ -220,23 +216,14 @@ int main (int argc, char *argv[])
 
 	auto fnLockStep = [&fnPrintPlayer] (
 		PokemonGame::PokemonClient &client,
-		PokemonGame::Player::Action &action)
+		PokemonGame::Action &action)
 	{
-		using namespace PokemonGame;
-
 		if (client.Lockstep (action))
 		{
-			const auto &players = client.ViewPlayers ();
-			if (players.empty ())
-			{
-				std::cout << "No Player in this Room\n";
-				return;
-			}
-
 			std::cout << "I'am :" << client.MyUID () << std::endl;
 			std::cout << "Players' State:\n";
-			for (const auto &playerPair : players)
-				fnPrintPlayer (std::cout, playerPair.second);
+			for (const auto &player : client.GetPlayers ())
+				fnPrintPlayer (std::cout, player.first, player.second);
 		}
 		else
 			std::cerr << client.ErrMsg () << std::endl;
@@ -331,7 +318,7 @@ int main (int argc, char *argv[])
 			}
 		});
 		wnd.OnClickReadyBtn (
-			[&wnd, &client, &mtx, &hasEntered, &isReady] ()
+			[&wnd, &client, &mtx, &hasEntered, &isReady, &isAllReady] ()
 		{
 			std::lock_guard<std::mutex> lg (mtx);
 			if (!hasEntered)
@@ -346,7 +333,7 @@ int main (int argc, char *argv[])
 				}
 				else
 				{
-					wnd.SetState (hasEntered, isReady = false);
+					wnd.SetState (hasEntered, isAllReady = isReady = false);
 					wnd.Prompt ("You are Unready");
 				}
 			}
@@ -354,43 +341,54 @@ int main (int argc, char *argv[])
 				wnd.Prompt (client.ErrMsg ());
 		});
 
-
 		while (!wnd.IsClosed () && !isAllReady)
 		{
 			auto tBeg = std::chrono::system_clock::now ();
 			if (!hasEntered)
 			{
-				std::lock_guard<std::mutex> lg (mtx);
 				std::vector<std::string> roomList;
+				auto isErr = false;
 
-				if (!client.RoomQuery (roomList))
+				// Lock Client
+				{
+					std::lock_guard<std::mutex> lg (mtx);
+					isErr = !client.RoomQuery (roomList);
+				}
+
+				if (isErr)
 					wnd.Prompt (client.ErrMsg ());
 				wnd.SetRooms (std::move (roomList));
 			}
 			else
 			{
-				std::lock_guard<std::mutex> lg (mtx);
-				if (client.RoomState ())
+				std::stringstream playerInfo;
+				auto isErr = false;
+
+				// Lock Client
 				{
-					const auto &players = client.ViewPlayers ();
+					std::lock_guard<std::mutex> lg (mtx);
+					isErr = !client.RoomState ();
 
-					isAllReady = true;
-					std::stringstream playerInfo;
-
-					for (const auto &playerPair : players)
+					if (!isErr)
 					{
-						const auto &player = playerPair.second;
-						isAllReady = isAllReady && player.isReady;
-						fnPrintPlayer (playerInfo, player);
+						const auto &players = client.GetPlayers ();
+
+						isAllReady = true;
+						for (const auto &player : players)
+						{
+							isAllReady = isAllReady && player.second.isReady;
+							fnPrintPlayer (playerInfo, player.first, player.second);
+						}
 					}
-					wnd.SetTexts (PokemonGame_Impl::SplitStr (playerInfo.str (), "\n"));
 				}
-				else
-				{
+
+				if (isErr)
 					wnd.Prompt (client.ErrMsg ());
-					wnd.SetTexts ({});
-				}
+				wnd.SetTexts (PokemonGame_Impl::SplitStr (playerInfo.str (), "\n"));
 			}
+
+			// Avoid Deadlock
+			wnd.Refresh ();
 
 			std::this_thread::sleep_for (
 				std::chrono::milliseconds (200) -
@@ -398,7 +396,164 @@ int main (int argc, char *argv[])
 			);
 		}
 
-		return hasEntered;
+		return isAllReady;
+	};
+
+	auto fnPlay = [] (PokemonGame::PokemonClient &client)
+	{
+		using ActionType = PokemonGame::ActionType;
+
+		PokemonGameGUI::GameWindow wnd (PokemonGame::Player::maxX,
+										PokemonGame::Player::maxY);
+
+		auto &players = client.GetPlayers ();
+		auto &actionQueue = client.GetActionQueue ();
+		PokemonGame::GamePhysics gamePhysics (players, actionQueue);
+
+		std::mutex mtx;
+
+		// Key Input
+		auto cA = 0, cD = 0, cW = 0, cS = 0;
+		constexpr auto cMax = 100;
+
+		// Mouse Input
+		auto isMouseDown = false;
+		auto mosX = 0, mosY = 0;
+
+		// Position
+		auto posX = 0, posY = 0;
+		auto getPos = [&] ()
+		{
+			const auto &rect = gamePhysics.playersPhysics
+				.at (client.MyUID ()).GetRect ();
+			posX = wnd.XX (rect.x + rect.w / 2);
+			posY = wnd.YY (rect.y + rect.h / 2);
+		};
+		getPos ();
+
+		wnd.GetWindow ().OnLButtonDown ([&] (EggAche::Window *, int x, int y)
+		{
+			isMouseDown = true;
+			mosX = x;
+			mosY = y;
+		});
+
+		wnd.GetWindow ().OnLButtonUp ([&] (EggAche::Window *, int x, int y)
+		{
+			isMouseDown = false;
+		});
+
+		wnd.GetWindow ().OnMouseMove ([&] (EggAche::Window *, int x, int y)
+		{
+			mosX = x;
+			mosY = y;
+		});
+
+		wnd.GetWindow ().OnKeyDown ([&] (EggAche::Window *, char ch)
+		{
+			switch (ch)
+			{
+			case 'A':
+				cA++;
+				break;
+			case 'D':
+				cD++;
+				break;
+			case 'W':
+				cW++;
+				break;
+			case 'S':
+				cS++;
+				break;
+			default:
+				break;
+			}
+
+			if (cA) cA++;
+			if (cD) cD++;
+			if (cW) cW++;
+			if (cS) cS++;
+
+			if (cA > cMax) cA = cMax;
+			if (cD > cMax) cD = cMax;
+			if (cW > cMax) cW = cMax;
+			if (cS > cMax) cS = cMax;
+		});
+
+		wnd.GetWindow ().OnKeyUp ([&] (EggAche::Window *, char ch)
+		{
+			switch (ch)
+			{
+			case 'A':
+				cA = 0;
+				break;
+			case 'D':
+				cD = 0;
+				break;
+			case 'W':
+				cW = 0;
+				break;
+			case 'S':
+				cS = 0;
+				break;
+			default:
+				break;
+			}
+		});
+
+		constexpr auto Lps = 10;
+		constexpr auto Fps = 30;
+		constexpr auto Fpl = (double) Fps / Lps;
+		constexpr auto tSleep = std::chrono::milliseconds (1000) / Fps;
+
+		auto cLock = 0;
+		auto cFrame = 0;
+
+		// Game Loop
+		while (!wnd.IsClosed ())
+		{
+			auto tBeg = std::chrono::system_clock::now ();
+
+			// Render
+			wnd.Render (gamePhysics, (double) cFrame / Fpl);
+
+			// Frame Control
+			if (cFrame < Fpl)
+				cFrame++;
+			else
+				cFrame = 0;
+
+			auto tElapse = std::chrono::system_clock::now () - tBeg;
+			if (tSleep > tElapse)
+				std::this_thread::sleep_for (tSleep - tElapse);
+
+			// Lockstep action
+			if (cFrame == 0)
+			{
+				PokemonGame::Action action { ActionType::None };
+				if (isMouseDown)
+				{
+					getPos ();
+					action.type = ActionType::Move;
+					action.x = mosX - posX;
+					action.y = mosY - posY;
+				}
+				else if (cA || cD || cW || cS)
+				{
+					action.type = ActionType::Move;
+					action.x = cD - cA;
+					action.y = cS - cW;
+				}
+				else
+				{
+					action.type = ActionType::Move;
+					action.x = action.y = 0;
+				}
+
+				client.Lockstep (action);
+				gamePhysics.Update ();
+			}
+		}
 	};
 
 	PokemonGame::PokemonClient client1 (IPADDR, PORT);
@@ -499,15 +654,7 @@ int main (int argc, char *argv[])
 	// Test
 	if (true)
 	{
-		using namespace PokemonGame;
-		using Action = Player::Action;
-
-		for (size_t i = 0; i < 10; i++)
-		{
-			fnLockStep (client2, Action { ActionType::Move, MoveDir::A });
-			fnLockStep (client3, Action { ActionType::Move, MoveDir::W });
-			fnLockStep (client_gui, Action { ActionType::Move, MoveDir::S });
-		}
+		fnPlay (client_gui);
 	}
 
 	// Test

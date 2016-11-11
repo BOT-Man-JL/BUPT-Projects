@@ -4,10 +4,11 @@
 
 #include <unordered_map>
 #include <memory>
+#include <mutex>
 
-#include "Shared.h"
 #include "ORM-Lite\ORMLite.h"
 #include "Pokemon.h"
+#include "Shared.h"
 
 namespace PokemonGame_Impl
 {
@@ -77,9 +78,13 @@ namespace PokemonGame_Impl
 	struct RoomModel
 	{
 		static const size_t maxPlayerPerRoom = 3;
+		PokemonGame::Players players;
+		
+		using ActionQueues =
+			std::unordered_map<PokemonGame::UserID, PokemonGame::ActionQueue>;
+		ActionQueues actionQueues;
 
-		using Players = std::unordered_map<PokemonGame::SessionID, PokemonGame::Player>;
-		Players players;
+		std::mutex mtxSync;
 	};
 	using Rooms = std::unordered_map<PokemonGame::RoomID, RoomModel>;
 }

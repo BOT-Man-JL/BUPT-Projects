@@ -8,6 +8,7 @@
 
 #include <string>
 #include <vector>
+#include <queue>
 #include <unordered_map>
 
 #include "Pokemon.h"
@@ -23,7 +24,18 @@ namespace PokemonGame
 
 	using PokemonsOfPlayer =
 		std::vector<std::pair
-		<PokemonGame::PokemonID, std::unique_ptr<PokemonGame::Pokemon>> >;
+		<PokemonGame::PokemonID, std::unique_ptr<PokemonGame::Pokemon>>>;
+
+	struct Player
+	{
+		static constexpr size_t maxX = 300, maxY = 200;
+
+		bool isReady;
+		size_t x, y;
+		PokemonsOfPlayer pokemons;
+	};
+
+	using Players = std::unordered_map<UserID, Player>;
 
 	using TimePoint = std::chrono::time_point<std::chrono::system_clock>;
 
@@ -37,45 +49,39 @@ namespace PokemonGame
 		Switch
 	};
 
-	enum MoveDir
+	struct Action
 	{
-		W, A, S, D
-	};
-
-	enum SwitchNo
-	{
-		First, Second, Third
-	};
-
-	struct Player
-	{
-		static const size_t maxX = 300, maxY = 200;
-
-		struct Action
-		{
-			ActionType action;
-			int param;
-			TimePoint timestamp;
-		};
-
+		ActionType type;
+		int x;
+		int y;
 		UserID uid;
-		bool isReady;
-		size_t x, y;
-		PokemonsOfPlayer pokemons;
-		std::vector<Action> actions;
+		TimePoint timestamp;
 	};
+
+	struct ActionCmp
+	{
+		bool operator () (const Action &a, const Action &b)
+		{
+			return a.timestamp < b.timestamp;
+		}
+	};
+
+	using ActionQueue =
+		std::priority_queue<Action, std::deque<Action>, ActionCmp>;
 }
 
-#define _HANDLE_ACTION_CASE(actionType, param, timestamp) \
-case actionType:                                          \
-return #actionType +                                      \
-("\t" + std::to_string (param)) +                         \
-("\t" + TimePointToStr (timestamp))                       \
+#define _HANDLE_ACTION_CASE(actionType, x, y, uid, timestamp)  \
+case actionType:                                               \
+return #actionType +                                           \
+("\t" + std::to_string (x)) +                                  \
+("\t" + std::to_string (y)) +                                  \
+("\t" + uid) +                                                 \
+("\t" + TimePointToStr (timestamp))                            \
 
-#define _HANDLE_ACTION_STR(actionType, actionStr, param, timestamp)  \
-if (actionStr == #actionType)                                        \
-return PokemonGame::Player::Action                                   \
-{ actionType, param, std::move (timestamp) }                         \
+#define _HANDLE_ACTION_STR(actionType, actionStr, x, y, uid, timestamp)   \
+if (actionStr == #actionType)                                             \
+return PokemonGame::Action                                                \
+{ actionType, x, y, std::move (uid), std::move (timestamp) }              \
 
 namespace PokemonGame_Impl
 {
@@ -100,57 +106,66 @@ namespace PokemonGame_Impl
 
 	std::string TimePointToStr (const PokemonGame::TimePoint &timePoint)
 	{
-		auto now_c = std::chrono::system_clock::to_time_t (timePoint);
-		std::ostringstream ss;
-		ss << std::put_time (std::gmtime (&now_c), "%F %T");
-		return ss.str ();
+		//auto now_c = std::chrono::system_clock::to_time_t (timePoint);
+		//std::ostringstream ss;
+		//ss << std::put_time (std::gmtime (&now_c), "%Y_%m_%d_%H_%M_%S");
+		//return ss.str ();
+
+		auto msCount = std::chrono::duration_cast<
+			std::chrono::milliseconds>(timePoint.time_since_epoch ()).count ();
+		return std::to_string (msCount);
 	}
 
 	PokemonGame::TimePoint TimePointFromStr (const std::string &str)
 	{
-		std::tm t;
-		std::istringstream ss (str);
-		ss >> std::get_time (&t, "%F %T");
-		auto tt = std::mktime (&t);
-		return std::chrono::system_clock::from_time_t (tt);
+		//std::tm t;
+		//std::istringstream ss (str);
+		//ss >> std::get_time (&t, "%Y_%m_%d_%H_%M_%S");
+		//auto tt = std::mktime (&t);
+		//return std::chrono::system_clock::from_time_t (tt);
+
+		auto msCount = std::stoll (str);
+		return PokemonGame::TimePoint (std::chrono::milliseconds (msCount));
 	}
 
 	// Action
 
-	std::string ActionToStr (const PokemonGame::Player::Action &action)
+	std::string ActionToStr (const PokemonGame::Action &action)
 	{
 		using ActionType = PokemonGame::ActionType;
 
-		switch (action.action)
+		switch (action.type)
 		{
-			_HANDLE_ACTION_CASE (ActionType::None, action.param, action.timestamp);
-			_HANDLE_ACTION_CASE (ActionType::Move, action.param, action.timestamp);
-			_HANDLE_ACTION_CASE (ActionType::Attack, action.param, action.timestamp);
-			_HANDLE_ACTION_CASE (ActionType::Defend, action.param, action.timestamp);
-			_HANDLE_ACTION_CASE (ActionType::Recover, action.param, action.timestamp);
-			_HANDLE_ACTION_CASE (ActionType::Switch, action.param, action.timestamp);
+			_HANDLE_ACTION_CASE (ActionType::None, action.x, action.y, action.uid, action.timestamp);
+			_HANDLE_ACTION_CASE (ActionType::Move, action.x, action.y, action.uid, action.timestamp);
+			_HANDLE_ACTION_CASE (ActionType::Attack, action.x, action.y, action.uid, action.timestamp);
+			_HANDLE_ACTION_CASE (ActionType::Defend, action.x, action.y, action.uid, action.timestamp);
+			_HANDLE_ACTION_CASE (ActionType::Recover, action.x, action.y, action.uid, action.timestamp);
+			_HANDLE_ACTION_CASE (ActionType::Switch, action.x, action.y, action.uid, action.timestamp);
 		default:
 			throw std::runtime_error ("WTF? (Will not hit)");
 			break;
 		}
 	}
 
-	PokemonGame::Player::Action ActionFromStr (const std::string &str)
+	PokemonGame::Action ActionFromStr (const std::string &str)
 	{
 		using ActionType = PokemonGame::ActionType;
 
 		auto args = SplitStr (str, "\t");
-		if (args.size () < 3)
+		if (args.size () < 5)
 			throw std::runtime_error ("Bad Action String: " + str);
-		auto param = std::stoi (args[1]);
-		auto timestamp = TimePointFromStr (args[2]);
+		auto x = std::stoi (args[1]);
+		auto y = std::stoi (args[2]);
+		auto &uid = args[3];
+		auto timestamp = TimePointFromStr (args[4]);
 
-		_HANDLE_ACTION_STR (ActionType::None, args[0], param, timestamp);
-		_HANDLE_ACTION_STR (ActionType::Move, args[0], param, timestamp);
-		_HANDLE_ACTION_STR (ActionType::Attack, args[0], param, timestamp);
-		_HANDLE_ACTION_STR (ActionType::Defend, args[0], param, timestamp);
-		_HANDLE_ACTION_STR (ActionType::Recover, args[0], param, timestamp);
-		_HANDLE_ACTION_STR (ActionType::Switch, args[0], param, timestamp);
+		_HANDLE_ACTION_STR (ActionType::None, args[0], x, y, uid, timestamp);
+		_HANDLE_ACTION_STR (ActionType::Move, args[0], x, y, uid, timestamp);
+		_HANDLE_ACTION_STR (ActionType::Attack, args[0], x, y, uid, timestamp);
+		_HANDLE_ACTION_STR (ActionType::Defend, args[0], x, y, uid, timestamp);
+		_HANDLE_ACTION_STR (ActionType::Recover, args[0], x, y, uid, timestamp);
+		_HANDLE_ACTION_STR (ActionType::Switch, args[0], x, y, uid, timestamp);
 
 		throw std::runtime_error ("Invalid Action");
 	}

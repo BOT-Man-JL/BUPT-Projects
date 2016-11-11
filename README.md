@@ -39,7 +39,7 @@ together with [**buptczq**](https://github.com/buptczq/RE_Bupt_Computer_Network_
   - [Pokemon Game](/3-1-Pokemon)
 - Compiler Principles
   - [Lexical Parser](/3-1-Compiler-Principles/LexParser)
-  - [Phrase Parser](/3-1-Compiler-Principles/SyntaxParser)
+  - [Syntax Parser](/3-1-Compiler-Principles/SyntaxParser)
 - Java
   - Separated assignments
 

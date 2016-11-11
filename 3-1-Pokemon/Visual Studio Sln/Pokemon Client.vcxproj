@@ -27,6 +27,7 @@
     <ClInclude Include="..\src\GUIRoom.h" />
     <ClInclude Include="..\src\GUIShared.h" />
     <ClInclude Include="..\src\PokemonClient.h" />
+    <ClInclude Include="..\src\PokemonPhysics.h" />
     <ClInclude Include="..\src\Shared.h" />
     <ClInclude Include="..\src\Socket.h" />
   </ItemGroup>

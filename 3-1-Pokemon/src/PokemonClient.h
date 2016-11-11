@@ -34,8 +34,13 @@ namespace PokemonGame
 		const PokemonsWithID &MyPokemons () const
 		{ return _myPokemons; }
 
-		const std::unordered_map<UserID, Player> &ViewPlayers () const
+		// Using Physics to Update Players' States
+		Players &GetPlayers ()
 		{ return _players; }
+
+		// Using Physics to Consume Actions
+		ActionQueue &GetActionQueue ()
+		{ return _actionQueue; }
 
 #pragma region Accounting
 
@@ -196,20 +201,21 @@ namespace PokemonGame
 
 #pragma region Gaming
 
-		bool Lockstep (Player::Action action)
+		bool Lockstep (Action action)
 		{
 			using namespace PokemonGame_Impl;
 
-			auto actionStr = ActionToStr (action);
+			action.uid = _userID;
 			action.timestamp =
 				(std::chrono::system_clock::now () - _tLocal) + _tSync;
 
-			auto response = Request ("Lockstep", _sessionID, actionStr);
+			auto response = Request ("Lockstep", _sessionID, ActionToStr (action));
 			if ((response.size () - 2) % 2)
 			{
 				_errMsg = "Invalid Response size";
 				return false;
 			}
+			_actionQueue.push (std::move (action));
 
 			return HandleResponse<1> (response, [&] ()
 			{
@@ -217,15 +223,8 @@ namespace PokemonGame
 				_tLocal = std::chrono::system_clock::now ();
 				response.erase (response.begin ());
 
-				while (!response.empty ())
-				{
-					_players[response[0]].actions.emplace_back (
-						ActionFromStr (response[1]));
-					response.erase (response.begin (), response.begin () + 2);
-				}
-
-				_players[_userID].actions.emplace_back (std::move (action));
-				LockstepUpdate ();
+				for (const auto &responseArg : response)
+					_actionQueue.push (ActionFromStr (responseArg));
 			});
 		}
 
@@ -331,8 +330,6 @@ namespace PokemonGame
 
 			return Player
 			{
-				// Uid
-				response[0],
 				// Is Ready
 				response[1] == "0" ? false : true,
 				// Position
@@ -341,60 +338,6 @@ namespace PokemonGame
 				// Pokemon
 				std::move (pokemons)
 			};
-		}
-
-		void LockstepUpdate ()
-		{
-			for (auto &playerPair : _players)
-			{
-				auto &player = playerPair.second;
-				auto &pokemon = *(player.pokemons.front ().second);
-				const auto &action = player.actions.back ();
-
-				const auto maxX = Player::maxX;
-				const auto maxY = Player::maxY;
-
-				switch (action.action)
-				{
-				case ActionType::None:
-					// Do nothing
-					break;
-
-				case ActionType::Move:
-					switch (action.param)
-					{
-					case MoveDir::A:
-						if (player.x > 0) player.x--;
-						break;
-					case MoveDir::D:
-						if (player.x < maxX) player.x++;
-						break;
-					case MoveDir::W:
-						if (player.y > 0) player.y--;
-						break;
-					case MoveDir::S:
-						if (player.y < maxY) player.y++;
-						break;
-					default:
-						throw std::runtime_error ("Wrong Param");
-						break;
-					}
-					break;
-
-				case ActionType::Attack:
-					break;
-				case ActionType::Defend:
-					break;
-				case ActionType::Recover:
-					break;
-				case ActionType::Switch:
-					break;
-
-				default:
-					throw std::runtime_error ("WTF? (Will not hit)");
-					break;
-				}
-			}
 		}
 
 		BOT_Socket::Client _sockClient;
@@ -406,7 +349,8 @@ namespace PokemonGame
 
 		// Gaming
 		TimePoint _tSync, _tLocal;
-		std::unordered_map<UserID, Player> _players;
+		Players _players;
+		ActionQueue _actionQueue;
 	};
 
 }

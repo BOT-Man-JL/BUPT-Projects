@@ -440,10 +440,9 @@ namespace PokemonGame
 					);
 				}
 
-				room.players[sid] = Player
+				room.players[sessions[sid].uid] = Player
 				{
-					sessions[sid].uid, false,
-					initX, initY, std::move (pokemons)
+					false, initX, initY, std::move (pokemons)
 				};
 				sessions[sid].rid = rid;
 				SetResponse (response, true, "Entered this Room");
@@ -465,7 +464,7 @@ namespace PokemonGame
 				}
 
 				auto &rid = sessions[sid].rid;
-				rooms[rid].players.erase (sid);
+				rooms[rid].players.erase (sessions[sid].uid);
 
 				// Empty Room
 				if (rooms[rid].players.empty ())
@@ -491,11 +490,10 @@ namespace PokemonGame
 				}
 
 				auto &room = rooms[sessions[sid].rid];
-				auto &you = room.players[sid];
+				auto &you = room.players[sessions[sid].uid];
 
 				// Set me Ready
 				you.isReady = !you.isReady;
-				you.actions.emplace_back (Player::Action { ActionType::None });
 
 				SetResponse (response, true, "You are Ready Now ~");
 			});
@@ -515,14 +513,13 @@ namespace PokemonGame
 					return;
 				}
 
-				auto &room = rooms[sessions[sid].rid];
-				auto &you = room.players[sid];
+				const auto &room = rooms[sessions[sid].rid];
 
 				std::string ret =
 					TimePointToStr (std::chrono::system_clock::now ()) + "\n";
 				for (const auto &player : room.players)
 				{
-					ret += player.second.uid + "\n"
+					ret += player.first + "\n"
 						+ (player.second.isReady ? "1\n" : "0\n")
 						+ std::to_string (player.second.x) + "\n"
 						+ std::to_string (player.second.y) + "\n";
@@ -552,21 +549,32 @@ namespace PokemonGame
 					return;
 				}
 
+				const auto &uid = sessions[sid].uid;
 				const auto action = ActionFromStr (args[1]);
 				auto &room = rooms[sessions[sid].rid];
-				auto &you = room.players[sid];
-
-				you.actions.emplace_back (action);
 
 				std::string ret =
 					TimePointToStr (std::chrono::system_clock::now ()) + "\n";
-				for (const auto &player : room.players)
 				{
-					if (player.first == sid)
-						continue;
+					// Sync Action Queue
+					std::lock_guard<std::mutex> lg (room.mtxSync);
 
-					ret += player.second.uid + "\n"
-						+ ActionToStr (player.second.actions.back ()) + "\n";
+					// Push your action to ohters' queue
+					for (auto &actionQueue : room.actionQueues)
+					{
+						if (actionQueue.first == uid)
+							continue;
+						actionQueue.second.push (action);
+					}
+
+					// Pop your queue
+					auto &yourQueue = room.actionQueues[uid];
+					while (!yourQueue.empty ())
+					{
+						ret += ActionToStr (yourQueue.top ());
+						yourQueue.pop ();
+						ret += "\n";
+					}
 				}
 				ret.pop_back ();
 				SetResponse (response, true, ret);

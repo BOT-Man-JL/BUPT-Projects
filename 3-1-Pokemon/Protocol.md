@@ -172,21 +172,24 @@ If Failed:
 > Action
 >
 > Timestamp \n
-> User ID (other) \n
-> Action \n
+> Action 1 \n
+> Action 2 \n
 > ...
 
 #### Action
 
 > Action Type \t
-> Param \t
+> x (Move) \t
+> y (Move) \t
+> User ID \t
 > Timestamp
 
 #### Action Type
 
 - None
 - Move
-  - w/a/s/d
+  - x
+  - y
 - Attack
 - Defend
 - Recover

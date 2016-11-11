@@ -2,6 +2,7 @@
 #define POKEMON_H
 
 #include <vector>
+#include <utility>
 #include <exception>
 #include <random>
 #include <algorithm>
@@ -40,7 +41,7 @@ HealthPoint hp,												\
 HealthPoint fullHP,											\
 TimeGap timeGap)											\
 : TYPE (level, expPoint, atk, def, hp, fullHP, timeGap)		\
-{}															\
+{ _SetPhysics (); }											\
 std::string GetName () const override final					\
 {															\
 	return #CLASSNAME;										\
@@ -100,6 +101,10 @@ namespace PokemonGame
 		HealthPoint GetHP () const { return _hp; }
 		HealthPoint GetFullHP () const { return _fullHP; }
 
+		std::pair<size_t, size_t> GetSize () const
+		{ return std::make_pair (_width, _height); }
+		size_t GetVelocity () const { return _velocity; }
+
 		// Factory
 		static Pokemon *NewPokemon ();
 		static Pokemon *NewPokemon (const std::string &name);
@@ -146,6 +151,7 @@ namespace PokemonGame
 		}
 
 	protected:
+		// Properties
 		Level _level;
 		ExpPoint _expPoint;
 		HealthPoint _atk;
@@ -153,6 +159,10 @@ namespace PokemonGame
 		TimeGap _timeGap;
 		HealthPoint _hp;
 		HealthPoint _fullHP;
+
+		// Physics
+		size_t _width, _height;
+		size_t _velocity;
 
 		// Constructor
 		Pokemon (Level level,
@@ -170,6 +180,7 @@ namespace PokemonGame
 		// Abstract Function Members
 
 		virtual HealthPoint _GetDamagePoint (Pokemon &opPokemon) const = 0;
+		virtual void _SetPhysics () = 0;
 		virtual void _OnBorn () = 0;
 		virtual void _OnKilled () = 0;
 		virtual void _OnRecover (HealthPoint) = 0;
@@ -303,6 +314,12 @@ namespace PokemonGame
 	{
 		SCAFFOLD_POKEMON (Pikachu, SwiftPokemon)
 	protected:
+		void _SetPhysics () override
+		{
+			_width = 10;
+			_height = 20;
+			_velocity = 10;
+		}
 		void _OnBorn () override
 		{
 			using namespace Math;
@@ -323,6 +340,12 @@ namespace PokemonGame
 	{
 		SCAFFOLD_POKEMON (Charmander, StrengthPokemon)
 	protected:
+		void _SetPhysics () override
+		{
+			_width = 20;
+			_height = 25;
+			_velocity = 5;
+		}
 		void _OnBorn () override
 		{
 			using namespace Math;
