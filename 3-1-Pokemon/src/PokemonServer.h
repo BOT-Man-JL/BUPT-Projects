@@ -93,7 +93,7 @@ namespace PokemonGame
 				auto AddPokemon = [&] (const std::string &uid,
 									   const Pokemon &pokemon)
 				{
-					static const auto _pm = PokemonModel ();
+					static auto _pm = PokemonModel ();
 					auto id = pokemonMapper
 						.Query (_pm)
 						.OrderBy (_pm.level)
