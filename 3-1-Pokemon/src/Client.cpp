@@ -587,7 +587,7 @@ int main (int argc, char *argv[])
 	}
 
 	// Test
-	if (false)
+	if (true)
 	{
 		fnPokemonAll (client2);
 		fnUsersAll (client3);

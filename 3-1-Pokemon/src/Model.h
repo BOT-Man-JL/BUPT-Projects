@@ -49,7 +49,7 @@ namespace PokemonGame_Impl
 		}
 
 	private:
-		ORMAP (PokemonModel, id, uid, name, level, expPoint,
+		ORMAP ("Pokemon", id, uid, name, level, expPoint,
 			   atk, def, hp, fullHP, timeGap)
 	};
 
@@ -63,7 +63,7 @@ namespace PokemonGame_Impl
 		std::string badge;
 
 	private:
-		ORMAP (UserModel, uid, pwd, won, los, badge)
+		ORMAP ("UserModel", uid, pwd, won, los, badge)
 	};
 
 	// Session
@@ -79,7 +79,7 @@ namespace PokemonGame_Impl
 	{
 		static const size_t maxPlayerPerRoom = 3;
 		PokemonGame::Players players;
-		
+
 		using ActionQueues =
 			std::unordered_map<PokemonGame::UserID, PokemonGame::ActionQueue>;
 		ActionQueues actionQueues;

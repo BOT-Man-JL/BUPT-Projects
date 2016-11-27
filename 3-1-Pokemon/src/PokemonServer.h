@@ -28,30 +28,35 @@ namespace PokemonGame
 			Sessions sessions;
 			Rooms rooms;
 
-			// Shared ORMapper
-			constexpr auto dbName = "Pokemon.db";
-			ORMapper<PokemonModel> pokemonMapper (dbName);
-			ORMapper<UserModel> userMapper (dbName);
+			ORMapper mapper ("Pokemon.db");
+			PokemonModel pokemonModel;
+			UserModel userModel;
+			auto field = FieldExtractor { pokemonModel, userModel };
 
 			// Init DB
-			if (pokemonMapper.CreateTbl ())
-				std::cout << "Created Pokemon\n";
-			else
-				std::cerr << pokemonMapper.ErrMsg () << std::endl;
-
-			if (userMapper.CreateTbl ())
-				std::cout << "Created User\n";
-			else
-				std::cerr << userMapper.ErrMsg () << std::endl;
+			try
+			{
+				mapper.CreateTbl (PokemonModel {});
+				std::cout << "Created Pokemon Table\n";
+			}
+			catch (const std::exception &ex)
+			{
+				std::cerr << ex.what () << std::endl;
+			}
+			try
+			{
+				mapper.CreateTbl (UserModel {});
+				std::cout << "Created User Table\n";
+			}
+			catch (const std::exception &ex)
+			{
+				std::cerr << ex.what () << std::endl;
+			}
 
 			auto getPokemonModelById = [&] (const PokemonID &id)
 			{
-				PokemonModel pokemonModel;
-				pokemonModel.id = id;
-
-				auto pokemons =
-					pokemonMapper.Query (pokemonModel)
-					.Where (pokemonModel.id)
+				auto pokemons = mapper.Query (pokemonModel)
+					.Where (field (pokemonModel.id) == id)
 					.ToVector ();
 
 				if (pokemons.empty ())
@@ -78,11 +83,14 @@ namespace PokemonGame
 					return;
 				}
 
-				UserModel user { uid, pwd, 1, 0,
-					"Newcomer\n"
-					"Welcome to Pokemon Game\n"
-					"Hello World" };
-				if (!userMapper.Insert (user))
+				try
+				{
+					mapper.Insert (UserModel { uid, pwd, 1, 0,
+								   "Newcomer\n"
+								   "Welcome to Pokemon Game\n"
+								   "Hello World" });
+				}
+				catch (const std::exception &)
 				{
 					SetResponse (response, false, "UserID has been Taken");
 					return;
@@ -93,18 +101,19 @@ namespace PokemonGame
 				auto AddPokemon = [&] (const std::string &uid,
 									   const Pokemon &pokemon)
 				{
-					static auto _pm = PokemonModel ();
-					auto id = pokemonMapper
-						.Query (_pm)
-						.OrderBy (_pm.level)
-						.Limit (1)
-						.Count () + 1;
-					auto newPkm = std::unique_ptr<PokemonModel> (
-						PokemonModel::NewFromPokemon (id, uid, pokemon));
-
-					if (!pokemonMapper.Insert (*newPkm))
+					static PokemonModel _pm;
+					try
+					{
+						// Auto Set ID
+						auto newPkm = std::unique_ptr<PokemonModel> (
+							PokemonModel::NewFromPokemon (0, uid, pokemon));
+						mapper.Insert (*newPkm, false);
+						return true;
+					}
+					catch (const std::exception &)
+					{
 						return false;
-					return true;
+					}
 				};
 
 				// Seed 3 Init Pokemon
@@ -134,14 +143,13 @@ namespace PokemonGame
 								  [&] (std::string &response,
 									   const std::vector<std::string> &args)
 			{
-				UserModel userModel;
-				userModel.uid = args[0];
-				userModel.pwd = args[1];
+				auto userId = args[0];
 
 				// No User & Password Match
-				if (!userMapper.Query (userModel)
-					.Where (Expr { userModel.uid } && Expr { userModel.pwd })
-					.Count ())
+				if (mapper.Query (userModel)
+					.Where (field (userModel.uid) == userId &&
+							field (userModel.pwd) == args[1])
+					.Select (Expression::Count ()) == 0)
 				{
 					SetResponse (response, false, "Bad Login Attempt");
 					return;
@@ -149,7 +157,7 @@ namespace PokemonGame
 
 				// Login Already
 				for (const auto &session : sessions)
-					if (session.second.uid == userModel.uid)
+					if (session.second.uid == userId)
 					{
 						//SetResponse (response, true, session.first);
 						SetResponse (response, false, "Login already");
@@ -157,9 +165,9 @@ namespace PokemonGame
 					}
 
 				// New Session
-				auto sid = userModel.uid +
+				auto sid = userId +
 					TimePointToStr (std::chrono::system_clock::now ());
-				sessions[sid] = SessionModel { userModel.uid, RoomID () };
+				sessions[sid] = SessionModel { userId, RoomID {} };
 				SetResponse (response, true, sid);
 			});
 
@@ -186,11 +194,8 @@ namespace PokemonGame
 						   [&] (std::string &response,
 								const std::vector<std::string> &args)
 			{
-				UserModel userModel;
-				userModel.uid = args[1];
-				auto users =
-					userMapper.Query (userModel)
-					.Where (userModel.uid)
+				auto users = mapper.Query (userModel)
+					.Where (field (userModel.uid) == args[1])
 					.ToVector ();
 
 				if (users.empty ())
@@ -209,11 +214,8 @@ namespace PokemonGame
 						   [&] (std::string &response,
 								const std::vector<std::string> &args)
 			{
-				UserModel userModel;
-				userModel.uid = args[1];
-				auto users =
-					userMapper.Query (userModel)
-					.Where (userModel.uid)
+				auto users = mapper.Query (userModel)
+					.Where (field (userModel.uid) == args[1])
 					.ToVector ();
 
 				if (users.empty ())
@@ -229,7 +231,8 @@ namespace PokemonGame
 						   [&] (std::string &response,
 								const std::vector<std::string> &args)
 			{
-				auto users = userMapper.Query (UserModel ()).ToList ();
+				auto users = mapper.Query (userModel)
+					.ToList ();
 
 				if (users.empty ())
 				{
@@ -282,23 +285,23 @@ namespace PokemonGame
 								const std::vector<std::string> &args)
 			{
 				const auto &pokemonId = (PokemonID) std::stoull (args[1]);
-				auto pokemonModel = getPokemonModelById (pokemonId);
+				auto pm = getPokemonModelById (pokemonId);
 
-				if (pokemonModel == nullptr)
+				if (pm == nullptr)
 				{
 					SetResponse (response, false, "No such Pokemon");
 					return;
 				}
 
 				SetResponse (response, true,
-							 pokemonModel->name,
-							 std::to_string (pokemonModel->level),
-							 std::to_string (pokemonModel->expPoint),
-							 std::to_string (pokemonModel->atk),
-							 std::to_string (pokemonModel->def),
-							 std::to_string (pokemonModel->hp),
-							 std::to_string (pokemonModel->fullHP),
-							 std::to_string (pokemonModel->timeGap));
+							 pm->name,
+							 std::to_string (pm->level),
+							 std::to_string (pm->expPoint),
+							 std::to_string (pm->atk),
+							 std::to_string (pm->def),
+							 std::to_string (pm->hp),
+							 std::to_string (pm->fullHP),
+							 std::to_string (pm->timeGap));
 			});
 
 			// Handle UsersPokemons
@@ -308,12 +311,8 @@ namespace PokemonGame
 						   [&] (std::string &response,
 								const std::vector<std::string> &args)
 			{
-				PokemonModel pokemonModel;
-				pokemonModel.uid = args[1];
-
-				auto pokemons =
-					pokemonMapper.Query (pokemonModel)
-					.Where (pokemonModel.uid)
+				auto pokemons = mapper.Query (pokemonModel)
+					.Where (field (pokemonModel.uid) == args[1])
 					.ToList ();
 
 				if (pokemons.empty ())
@@ -339,8 +338,8 @@ namespace PokemonGame
 						   [&] (std::string &response,
 								const std::vector<std::string> &args)
 			{
-				auto pokemons = pokemonMapper
-					.Query (PokemonModel ()).ToList ();
+				auto pokemons = mapper.Query (pokemonModel)
+					.ToList ();
 
 				if (pokemons.empty ())
 				{
