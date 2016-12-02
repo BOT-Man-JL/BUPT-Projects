@@ -34,38 +34,16 @@
                         <TextBlock Name="title" Margin="5" FontSize="28"
                                    Text="Bupt Campus Network Auto Login"/>
                     </Viewbox>
-                    <StackPanel VerticalAlignment="Center" Margin="0, 5">
-                        <TextBox Name="uid" PlaceholderText="User ID"
+					<StackPanel VerticalAlignment="Center" Margin="0, 5">
+						<TextBox Name="uid" PlaceholderText="User ID"
                                  MaxHeight="16" MaxWidth="500" Margin="15, 5"/>
-                        <PasswordBox Name="password" PlaceholderText="Password"
+						<PasswordBox Name="password" PlaceholderText="Password"
                                      MaxHeight="16" MaxWidth="500" Margin="15, 5"/>
-                        <TextBox Name="config1"
-                                 PlaceholderText="Login_URL,SSID,SSID..."
-                                 MaxHeight="16" MaxWidth="500" Margin="15, 5"/>
-                        <TextBox Name="config2"
-                                 PlaceholderText="Login_URL,SSID,SSID..."
-                                 MaxHeight="16" MaxWidth="500" Margin="15, 5"/>
-                        <TextBox Name="config3"
-                                 PlaceholderText="Login_URL,SSID,SSID..."
-                                 MaxHeight="16" MaxWidth="500" Margin="15, 5"/>
-                            <Button Name="button" Content="Save Configs"
+						<Button Name="button" Content="Save Configs"
                                 HorizontalAlignment="Center"
                                 Click="Button_Click" Margin="5, 0"/>
-                        <StackPanel Orientation="Horizontal"
-                                    HorizontalAlignment="Center">
-                            <TextBlock Text="Debug" Margin="5, 0, 0, 0"/>
-                            <ToggleSwitch Name="toggle" Margin="15, 0, 0, 0"
-                                      Toggled="ToggleSwitch_Toggled"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal"
-                                    HorizontalAlignment="Center">
-                            <TextBlock Text="Prompt to Scan" Margin="5, 0, 0, 0"/>
-                            <ToggleSwitch Name="toggle2" Margin="15, 0, 0, 0"
-                                      Toggled="ToggleSwitch2_Toggled"/>
-                        </StackPanel>
-                    </StackPanel>
-                    <TextBlock Name="output" Visibility="Collapsed"/>
-                </StackPanel>
+					</StackPanel>
+				</StackPanel>
 
                 <!--Part 2-->
                 <TextBlock TextWrapping="WrapWholeWords"

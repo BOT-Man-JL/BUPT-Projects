@@ -23,40 +23,31 @@ namespace Bupt_CampusNetwork_Login_Bg
 			deferral = taskInstance.GetDeferral();
 			taskInstance.Canceled += TaskInstance_Canceled;
 
-			var model = new AppModel();
-			if (model.debugMode)
+			if (taskInstance.TriggerDetails.GetType() ==
+				typeof(ToastNotificationActionTriggerDetail))
 			{
-				//(taskInstance.TriggerDetails as NetworkStateChangeEventDetails).HasNewInternetConnectionProfile
-				Module.Toast("", "Task Running",
-					(taskInstance.TriggerDetails != null ?
-					taskInstance.TriggerDetails.ToString() :
-					"Something UnKnown") + " is Running (for Debug)");
-			}
-
-			if (taskInstance.TriggerDetails.GetType() == typeof(ToastNotificationActionTriggerDetail))
-			{
-				var details = taskInstance.TriggerDetails as ToastNotificationActionTriggerDetail;
+				var details = taskInstance.TriggerDetails
+					as ToastNotificationActionTriggerDetail;
 				if (details.Argument != "")
-					await Windows.System.Launcher.LaunchUriAsync(new Uri(details.Argument));
+					await Windows.System.Launcher
+						.LaunchUriAsync(new Uri(details.Argument));
 			}
 			else  // NetworkStateChangeEventDetails
 			{
-				var url = Module.GetUrlFromCurrentConnection();
-				if (url != "")
+				try
 				{
-					var peekTitle = await Module.Peek(url);
-					if (peekTitle != "上网注销窗")
+					var url = await Module.GetUrl();
+					if (url != "")
 					{
-						var loginTitle = await Module.Login(url, model.id, model.password);
-						if (loginTitle == "登录成功窗")
-							Module.Toast("", "Good Job!", "Login Successfully");
-						else
-							Module.Toast(url, "Oops!", "Some Error occured... (Click to Login Manually)");
+						var model = new AppModel();
+						await Module.Login(url, model.id, model.password);
 					}
-					// else => Connected already
+					// else Login already
 				}
-				else if (model.promptScan)
-					Module.Toast("Connect-Wifi", "Click Me", "Click to Scan and Connect Bupt Wifi");
+				catch (Exception)
+				{
+					// No Connection
+				}
 			}
 
 			if (deferral != null)

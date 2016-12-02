@@ -49,36 +49,6 @@ namespace Bupt_CampusNetwork_Login
 			Module.RegBgTask();
 		}
 
-		protected override async void OnActivated(IActivatedEventArgs args)
-		{
-#if DEBUG
-			if (System.Diagnostics.Debugger.IsAttached)
-			{
-				this.DebugSettings.EnableFrameRateCounter = true;
-			}
-#endif
-
-			if (args.Kind == ActivationKind.ToastNotification)
-			{
-				var commandArgs = args as ToastNotificationActivatedEventArgs;
-				if (commandArgs.Argument == "Connect-Wifi")
-				{
-					try
-					{
-						await Module.ConnectWifi();
-						Module.Toast("", "Seems Good :-)", "Connected to Campus Wifi");
-					}
-					catch (Exception exception)
-					{
-						Module.Toast("", "Looks Bad :-(", exception.Message);
-					}
-				}
-			}
-
-			await CreateWindow();
-			Module.RegBgTask();
-		}
-
 		private async Task CreateWindow()
 		{
 			// Set TitleBar Color and Mobile View Mode

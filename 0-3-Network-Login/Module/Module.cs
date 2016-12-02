@@ -29,56 +29,17 @@ namespace Bupt_CampusNetwork_Login_Module
 			get { Load(ref _password, true); return _password; }
 			set { Save(ref _password, value, true); }
 		}
-
-		private bool _debugMode;
-		public bool debugMode
-		{
-			get { Load(ref _debugMode, true); return _debugMode; }
-			set { Save(ref _debugMode, value, true); }
-		}
-
-		private bool _promptScan;
-		public bool promptScan
-		{
-			get { Load(ref _promptScan, true); return _promptScan; }
-			set { Save(ref _promptScan, value, true); }
-		}
-
-		private string[] _configs;
-		public string[] configs
-		{
-			get { Load(ref _configs, true); return _configs; }
-			set { Save(ref _configs, value, true); }
-		}
 	}
 
 	public static class Module
 	{
-		public static async Task<string> Peek(string url)
+		private static async Task<string> _Login(string url, string uid, string password)
 		{
 			using (var client = new HttpClient())
 			{
-				try
-				{
-					var result = await client.GetAsync(url);
-					result.EnsureSuccessStatusCode();
-
-					return await GetTitle(result.Content);
-				}
-				catch (Exception e)
-				{
-					return e.Message;
-				}
-			}
-		}
-
-		public static async Task<string> Login(string url, string uid, string password)
-		{
-			using (var client = new HttpClient())
-			{
-				//client.DefaultRequestHeaders.UserAgent.ParseAdd
-				//	("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" +
-				//	" (KHTML, like Gecko) Chrome/46.0.2486.0 Safari/537.36 Edge/13.10586");
+				client.DefaultRequestHeaders.UserAgent.ParseAdd
+					("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" +
+					" (KHTML, like Gecko) Chrome/46.0.2486.0 Safari/537.36 Edge/13.10586");
 
 				var payload = new FormUrlEncodedContent(new List<KeyValuePair<string, string>>
 				{
@@ -93,7 +54,20 @@ namespace Bupt_CampusNetwork_Login_Module
 					var result = await client.PostAsync(url, payload);
 					result.EnsureSuccessStatusCode();
 
-					return await GetTitle(result.Content);
+					var htmlPage = await result.Content.ReadAsStringAsync();
+					var charset = Regex.Match(htmlPage, "charset=(.*?)\">").Groups[1].Value;
+
+					using (var stream = await result.Content.ReadAsStreamAsync())
+					{
+						Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+						var reader = new StreamReader(stream, Encoding.GetEncoding(charset));
+						htmlPage = reader.ReadToEnd();
+					}
+
+					if (_GetTitle(htmlPage) == okTitle)
+						return okTitle;
+					else
+						return "";
 				}
 				catch (Exception e)
 				{
@@ -102,99 +76,56 @@ namespace Bupt_CampusNetwork_Login_Module
 			}
 		}
 
-		private static async Task<string> GetTitle(HttpContent content)
+		private static string _GetTitle(string htmlPage)
 		{
-			var htmlPage = await content.ReadAsStringAsync();
-			var charset = Regex.Match(htmlPage, "charset=(.*?)\">").Groups[1].Value;
-
-			using (var stream = await content.ReadAsStreamAsync())
-			{
-				Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-				var reader = new StreamReader(stream, Encoding.GetEncoding(charset));
-				htmlPage = reader.ReadToEnd();
-			}
-
 			return Regex.Match(htmlPage, "<title>(.*?)</title>").Groups[1].Value;
 		}
 
-		public static string GetUrlFromCurrentConnection()
+		public static string okTitle = "登录成功窗";
+
+		public static async Task Login(string url, string uid, string password)
 		{
-			var url = "";
-			var connection = NetworkInformation.GetInternetConnectionProfile();
-			if (connection != null && connection.IsWlanConnectionProfile)
+			if (uid != null && password != null)
 			{
-				var model = new AppModel();
-				foreach (var config in model.configs)
-				{
-					var segs = config.Split(',');
-					if (segs.Count() <= 1)
-						continue;
-
-					foreach (var ssid in segs)
-						if (ssid == connection.ProfileName)
-						{
-							url = segs[0];
-							break;
-						}
-
-					if (url != "")
-						break;
-				}
+				var msg = await _Login(url, uid, password);
+				if (msg == okTitle)
+					Toast("", "Good Job!", "Login Successfully :-)");
+				else
+					Toast(url, "Oops!",
+						"Login Failed :-(   Click to Login in Website");
 			}
-			return url;
+			else
+				Toast(null, "Welcome!",
+					"Set your ID and Password first :-)");
 		}
 
-		public static async Task ConnectWifi()
+		public static async Task<string> GetUrl()
 		{
-			if (await WiFiAdapter.RequestAccessAsync()
-				!= WiFiAccessStatus.Allowed)
-				throw new Exception("No Access to Connect Wifi");
-
-			var adapter = (await WiFiAdapter.FindAllAdaptersAsync())[0];
-			await adapter.ScanAsync();
-
-			if (adapter.NetworkReport.AvailableNetworks.Count == 0)
-				throw new Exception("No Wifi Network Connection");
-
-			var mapping = new Dictionary<WiFiAvailableNetwork, int>();
-			var model = new AppModel();
-			foreach (var network in adapter.NetworkReport.AvailableNetworks)
+			const string testUrl = "http://baidu.com";
+			using (var client = new HttpClient())
 			{
-				foreach (var config in model.configs)
-				{
-					var segs = config.Split(',');
-					if (segs.Count() <= 1)
-						continue;
-
-					foreach (var ssid in segs)
-						if (ssid == network.Ssid)
-						{
-							mapping[network] = network.SignalBars;
-							break;
-						}
-				}
+				var result = await client.GetAsync(testUrl);
+				if (result.StatusCode == System.Net.HttpStatusCode.OK &&
+					result.RequestMessage.RequestUri.Host != new Uri(testUrl).Host)
+					return result.RequestMessage.RequestUri.ToString();
+				return "";
 			}
-
-			if (mapping.Count == 0)
-				throw new Exception("No Campus Wifi within the range");
-
-			mapping.OrderByDescending(network => network.Value);
-			var result = await adapter.ConnectAsync(mapping.First().Key, WiFiReconnectionKind.Automatic);
-
-			if (result.ConnectionStatus != WiFiConnectionStatus.Success)
-				throw new Exception("Failed to Connect to Campus Wifi");
 		}
 
 		public static void Toast(string url, string title, string msg)
 		{
-			var xmlStr = $"<toast launch=\"{url}\" activationType=";
+			string xmlStr;
+			if (url != null)
+			{
+				xmlStr = $"<toast launch=\"{url}\" activationType=";
 
-			if (url == "Connect-Wifi")
-				xmlStr += "\"foreground\">";
-			else if (url.Contains("http"))
-				xmlStr += "\"protocol\">";
+				if (url.Contains("http"))
+					xmlStr += "\"protocol\">";
+				else
+					xmlStr += "\"background\">";
+			}
 			else
-				xmlStr += "\"background\">";
+				xmlStr = $"<toast launch=\"\" activationType=\"foreground\">";
 
 			xmlStr +=
 @"  <visual>
@@ -238,6 +169,7 @@ namespace Bupt_CampusNetwork_Login_Module
 				var task = RegisterBackgroundTask(taskEntryPoint, taskNametmp, trigger, null);
 			}
 		}
+
 		public static BackgroundTaskRegistration RegisterBackgroundTask(
 			string taskEntryPoint,
 			string taskName,
@@ -246,7 +178,7 @@ namespace Bupt_CampusNetwork_Login_Module
 		{
 			foreach (var cur in BackgroundTaskRegistration.AllTasks)
 				if (cur.Value.Name == taskName)
-					return (BackgroundTaskRegistration)(cur.Value);
+					return (BackgroundTaskRegistration) (cur.Value);
 
 			var builder = new BackgroundTaskBuilder();
 
@@ -258,17 +190,8 @@ namespace Bupt_CampusNetwork_Login_Module
 				builder.AddCondition(condition);
 
 			BackgroundTaskRegistration task = builder.Register();
-			task.Completed += Task_Completed;
+			//task.Completed += Task_Completed;
 			return task;
-		}
-
-		private static void Task_Completed(
-			BackgroundTaskRegistration sender,
-			BackgroundTaskCompletedEventArgs args)
-		{
-			var model = new AppModel();
-			if (model.debugMode)
-				Toast("", "Task Running", sender.Name + " is Done (for Debug)");
 		}
 	}
 }

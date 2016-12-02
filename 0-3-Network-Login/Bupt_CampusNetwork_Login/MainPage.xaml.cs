@@ -25,7 +25,6 @@ namespace Bupt_CampusNetwork_Login
 	public sealed partial class MainPage : Page
 	{
 		AppModel model;
-		List<TextBox> configBox;
 
 		public MainPage()
 		{
@@ -36,90 +35,42 @@ namespace Bupt_CampusNetwork_Login
 				uid.Text = model.id;
 			if (model.password != null)
 				password.Password = model.password;
-
-			toggle.IsOn = model.debugMode;
-			toggle2.IsOn = model.promptScan;
-
-			if (model.configs == null)
-			{
-				model.configs = new string[]
-				{
-					"http://10.3.8.211,BUPT-1",
-					"http://10.4.1.2,BUPT-2",
-					""
-				};
-			}
-
-			configBox = new List<TextBox>();
-			configBox.Add(config1);
-			configBox.Add(config2);
-			configBox.Add(config3);
-
-			for (var i = 0; i < 3; ++i)
-				configBox[i].Text = model.configs[i];
 		}
 
 		protected override async void OnNavigatedTo(NavigationEventArgs e)
 		{
 			base.OnNavigatedTo(e);
 
-			var url = Module.GetUrlFromCurrentConnection();
-			if (url != "")
+			try
 			{
-				if (await Module.Peek(url) != "上网注销窗")
-				{
-					if (await Module.Login(url, model.id, model.password) == "登录成功窗")
-						Module.Toast("", "Good Job!", "Login Successfully");
-					else
-						Module.Toast(url, "Oops!", "Some Error occured... (Click to Login Manually)");
-				}
+				var url = await Module.GetUrl ();
+				if (url != "")
+					await Module.Login(url, model.id, model.password);
 				else
-					await Prompt("Status: Connected already", 5000);
+					Module.Toast("", "Well Done!", "Login already :-)");
 			}
-			else
+			catch (Exception)
 			{
-				try
-				{
-					await Module.ConnectWifi();
-					await Prompt("Status: Connect to Campus Wifi", 5000);
-				}
-				catch (Exception exception)
-				{
-					await Prompt("Error: " + exception.Message, 5000);
-				}
+				Module.Toast("", "Oh!", "No Network Connection...");
 			}
 		}
 
-		private void Button_Click(object sender, RoutedEventArgs e)
+		private async void Button_Click(object sender, RoutedEventArgs e)
 		{
 			model.id = uid.Text;
 			model.password = password.Password;
 
-			var tmpArr = new string[] { "", "", "" };
-			for (var i = 0; i < 3; ++i)
-				tmpArr[i] = configBox[i].Text;
-			model.configs = tmpArr;
-		}
-
-		private void ToggleSwitch_Toggled(object sender, RoutedEventArgs e)
-		{
-			model.debugMode = toggle.IsOn;
-		}
-
-		private void ToggleSwitch2_Toggled(object sender, RoutedEventArgs e)
-		{
-			model.promptScan = toggle2.IsOn;
-		}
-
-		private async Task Prompt(string msg, int millisecondsDelay)
-		{
-			output.Visibility = Visibility.Visible;
-			output.Text = msg;
-
-			await Task.Delay(millisecondsDelay);
-
-			output.Text = "";
-			output.Visibility = Visibility.Collapsed;
+			try
+			{
+				var url = await Module.GetUrl();
+				if (url != "")
+					await Module.Login(url, model.id, model.password);
+				// else Login already
+			}
+			catch (Exception)
+			{
+				Module.Toast("", "Oh!", "No Network Connection...");
+			}
 		}
 	}
 }
