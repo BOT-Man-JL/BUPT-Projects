@@ -40,6 +40,8 @@ together with [**buptczq**](https://github.com/buptczq/RE_Bupt_Computer_Network_
 - Compiler Principles
   - [Lexical Parser](/3-1-Compiler-Principles/LexParser)
   - [Syntax Parser](/3-1-Compiler-Principles/SyntaxParser)
+- Assembly
+  - Student Management System
 - Java
   - Separated assignments
 
