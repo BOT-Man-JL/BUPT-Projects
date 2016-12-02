@@ -1,7 +1,7 @@
 # Bupt Campus Network Login
 
-A UWP App to help **Bupt** students **login** their **Campus Network**
-without entering Pass every time.
+A UWP App to help **Bupt** students **login** to **Campus Network**
+without entering **Password** every time.
 
 ## Motivation
 
@@ -32,20 +32,21 @@ without entering Pass every time.
 
 ## Features
 
-- **Auto** Login
-- **Configurable** for Different Network ID
+- **Auto Login**
+- Detecting **Variable Gateway IP**
 - **Toast Notification** Support
 - Support **Desktop** and **Mobile**
 
 ## Usage
 
 - Enable *Developer Mode* in *[Setting/Updates and Security](ms-settings:developers)*
-- ~~Download the Latest [Release](https://github.com/BOT-Man-JL/Bupt_CampusNetwork_Login/releases), in *zip*~~
 - **Compile** the Project and **Publish** with the key in *zip*
 - Desktop
-  - ~~Unsip~~
   - Right-Click the *Add-AppDevPackage.ps1* file and Open with *PowerShell*
 - Mobile
-  - ~~Unzip and~~ Copy the *appxbundle* file to Your Mobile
+  - Copy the *appxbundle* file to Your Mobile
   - Open *appxbundle* on Your Mobile
+- If you don't wanna Compile it by yourself,
+  you can **Download** the [Release](http://pan.baidu.com/s/1bLRh98)
+  :wink:
 - And Enjoy it :smile:
