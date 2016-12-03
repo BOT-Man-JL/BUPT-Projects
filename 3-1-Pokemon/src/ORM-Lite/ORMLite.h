@@ -47,7 +47,8 @@ auto __Tuple () const                                     \
 static const std::vector<std::string> &__FieldNames ()    \
 {                                                         \
     static const std::vector<std::string> _fieldNames {   \
-        BOT_ORM_Impl::ExtractFieldName (#__VA_ARGS__) };  \
+        BOT_ORM_Impl::FieldNameHelper::ExtractFieldName ( \
+        #__VA_ARGS__) };                                  \
     return _fieldNames;                                   \
 }                                                         \
 constexpr static const char *__TableName =  _TABLE_NAME_; \
@@ -71,19 +72,19 @@ namespace BOT_ORM
 								const Nullable<T2> &op);
 		template <typename T2>
 		friend bool operator== (const Nullable<T2> &op,
-								nullptr_t);
+								std::nullptr_t);
 		template <typename T2>
-		friend bool operator== (nullptr_t,
+		friend bool operator== (std::nullptr_t,
 								const Nullable<T2> &op);
 	public:
 		// Default or Null Construction
 		Nullable ()
 			: m_hasValue (false), m_value (T ()) {}
-		Nullable (nullptr_t)
+		Nullable (std::nullptr_t)
 			: Nullable () {}
 
 		// Null Assignment
-		const Nullable<T> & operator= (nullptr_t)
+		const Nullable<T> & operator= (std::nullptr_t)
 		{
 			m_hasValue = false;
 			m_value = T ();
@@ -137,12 +138,12 @@ namespace BOT_ORM
 	// == nullptr
 	template <typename T2>
 	inline bool operator== (const Nullable<T2> &op,
-							nullptr_t)
+							std::nullptr_t)
 	{
 		return !op.m_hasValue;
 	}
 	template <typename T2>
-	inline bool operator== (nullptr_t,
+	inline bool operator== (std::nullptr_t,
 							const Nullable<T2> &op)
 	{
 		return !op.m_hasValue;
@@ -365,22 +366,25 @@ namespace BOT_ORM_Impl
 
 	// Injection Helper - Extract Field Names
 
-	std::vector<std::string> ExtractFieldName (std::string input)
+	struct FieldNameHelper
 	{
-		std::vector<std::string> ret;
-		std::string tmpStr;
-
-		for (const auto &ch : std::move (input) + ",")
+		static std::vector<std::string> ExtractFieldName (std::string input)
 		{
-			if (isalnum (ch) || ch == '_')
-				tmpStr += ch;
-			else if (ch == ',')
+			std::vector<std::string> ret;
+			std::string tmpStr;
+
+			for (const auto &ch : std::move (input) + ",")
 			{
-				ret.push_back (tmpStr);
-				tmpStr.clear ();
+				if (isalnum (ch) || ch == '_')
+					tmpStr += ch;
+				else if (ch == ',')
+				{
+					ret.push_back (tmpStr);
+					tmpStr.clear ();
+				}
 			}
-		}
-		return ret;
+			return ret;
+		};
 	};
 }
 
@@ -450,7 +454,7 @@ namespace BOT_ORM
 				return SetExpr { os.str () };
 			}
 
-			inline SetExpr operator = (nullptr_t)
+			inline SetExpr operator = (std::nullptr_t)
 			{ return SetExpr { this->fieldName + "=null" }; }
 		};
 
@@ -587,11 +591,11 @@ namespace BOT_ORM
 		// Nullable Field == / != nullptr
 
 		template <typename T>
-		inline Expr operator == (const NullableField<T> &op, nullptr_t)
+		inline Expr operator == (const NullableField<T> &op, std::nullptr_t)
 		{ return Expr { op, " is null" }; }
 
 		template <typename T>
-		inline Expr operator != (const NullableField<T> &op, nullptr_t)
+		inline Expr operator != (const NullableField<T> &op, std::nullptr_t)
 		{ return Expr { op, " is not null" }; }
 
 		// String Field & / | std::string

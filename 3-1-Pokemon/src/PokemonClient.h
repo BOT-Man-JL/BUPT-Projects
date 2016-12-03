@@ -5,6 +5,8 @@
 #include <vector>
 #include <array>
 #include <unordered_map>
+#include <sstream>
+#include <iomanip>
 
 #include "Socket.h"
 #include "Pokemon.h"
@@ -17,6 +19,44 @@ namespace PokemonGame
 		std::unique_ptr<Pokemon>
 	>;
 
+	void PrintPokemon (std::ostream &os,
+					   const Pokemon *pokemon)
+	{
+		os << "\t" << std::setw (10)
+			<< pokemon->GetName ()
+			<< ": [LV:"
+			<< pokemon->GetLevel ()
+			<< ", Exp:"
+			<< pokemon->GetExp ()
+			<< ", Atk:"
+			<< pokemon->GetAtk ()
+			<< ", Def:"
+			<< pokemon->GetDef ()
+			<< ", HP:"
+			<< pokemon->GetHP ()
+			<< ", FHP:"
+			<< pokemon->GetFullHP ()
+			<< ", Gap:"
+			<< pokemon->GetTimeGap ()
+			<< "]\n";
+	}
+
+	void PrintPlayer (std::ostream &os,
+					  const UserID &uid,
+					  const Player &player)
+	{
+		os << "\t" << uid << ", "
+			<< std::boolalpha << player.isReady << ", "
+			<< player.x << ", "
+			<< player.y << "\n";
+
+		for (const auto &pokemon : player.pokemons)
+		{
+			os << "\t";
+			PrintPokemon (os, pokemon.second.get ());
+		}
+	}
+
 	class PokemonClient
 	{
 	public:
@@ -28,7 +68,7 @@ namespace PokemonGame
 		const std::string &ErrMsg () const
 		{ return _errMsg; }
 
-		const PokemonGame::UserID &MyUID () const
+		const UserID &MyUID () const
 		{ return _userID; }
 
 		const PokemonsWithID &MyPokemons () const

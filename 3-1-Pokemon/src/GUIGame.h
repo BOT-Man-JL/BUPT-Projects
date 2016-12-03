@@ -16,10 +16,11 @@ namespace PokemonGameGUI
 	{
 	public:
 		GameWindow (size_t worldW, size_t worldH,
+					const std::string &title,
 					size_t width = 640, size_t height = 480)
 			: _worldW (worldW), _worldH (worldH),
 			_width (width), _height (height),
-			_wnd (width, height, "Pokemon Game")
+			_wnd (width, height, title.c_str ())
 		{
 			_wnd.OnResized ([this] (EggAche::Window *, size_t x, size_t y)
 			{

@@ -149,7 +149,7 @@ namespace PokemonGame
 				if (mapper.Query (userModel)
 					.Where (field (userModel.uid) == userId &&
 							field (userModel.pwd) == args[1])
-					.Select (Expression::Count ()) == 0)
+					.Select (Expression::Count ()).Value () == 0)
 				{
 					SetResponse (response, false, "Bad Login Attempt");
 					return;
