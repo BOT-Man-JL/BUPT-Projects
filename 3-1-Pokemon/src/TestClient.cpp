@@ -130,17 +130,8 @@ int main (int argc, char *argv[])
 		PokemonGame::PokemonClient &client,
 		std::string roomId)
 	{
-		std::array<PokemonGame::PokemonID, 3>
-			pokemonIds { PokemonGame::PokemonID () };
-
-		auto index = 0;
-		for (const auto &pokemon : client.MyPokemons ())
-		{
-			if (index == pokemonIds.size ()) break;
-			pokemonIds[index++] = pokemon.first;
-		}
-
-		if (client.RoomEnter (roomId, pokemonIds))
+		auto pid = client.MyPokemons ().begin ()->first;
+		if (client.RoomEnter (roomId, pid))
 			std::cout << "Entered " << roomId << std::endl;
 		else
 			std::cerr << client.ErrMsg () << std::endl;

@@ -132,9 +132,7 @@ If Failed:
 
 > Session ID \n
 > Room ID \n
-> Pokemon ID 1 \n
-> Pokemon ID 2 \n
-> Pokemon ID 3 \n
+> Pokemon ID \n
 >
 > Msg
 
@@ -159,9 +157,7 @@ If Failed:
 > Is Ready \n
 > Init X \n
 > Init Y \n
-> Pokemon ID 1 \n
-> Pokemon ID 2 \n
-> Pokemon ID 3 \n
+> Pokemon ID \n
 > ...
 
 ## Playing
@@ -192,5 +188,3 @@ If Failed:
   - y
 - Attack
 - Defend
-- Recover
-- Switch

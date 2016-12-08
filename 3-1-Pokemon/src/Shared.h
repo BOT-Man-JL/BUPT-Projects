@@ -22,17 +22,14 @@ namespace PokemonGame
 	using SessionID = std::string;
 	using RoomID = std::string;
 
-	using PokemonsOfPlayer =
-		std::vector<std::pair
-		<PokemonGame::PokemonID, std::unique_ptr<PokemonGame::Pokemon>>>;
-
 	struct Player
 	{
 		static constexpr size_t maxX = 300, maxY = 200;
 
 		bool isReady;
 		size_t x, y;
-		PokemonsOfPlayer pokemons;
+		PokemonGame::PokemonID pid;
+		std::unique_ptr<PokemonGame::Pokemon> pokemon;
 	};
 
 	using Players = std::unordered_map<UserID, Player>;
@@ -41,12 +38,9 @@ namespace PokemonGame
 
 	enum class ActionType
 	{
-		None,
 		Move,
 		Attack,
-		Defend,
-		Recover,
-		Switch
+		Defend
 	};
 
 	struct Action
@@ -136,12 +130,9 @@ namespace PokemonGame_Impl
 
 		switch (action.type)
 		{
-			_HANDLE_ACTION_CASE (ActionType::None, action.x, action.y, action.uid, action.timestamp);
 			_HANDLE_ACTION_CASE (ActionType::Move, action.x, action.y, action.uid, action.timestamp);
 			_HANDLE_ACTION_CASE (ActionType::Attack, action.x, action.y, action.uid, action.timestamp);
 			_HANDLE_ACTION_CASE (ActionType::Defend, action.x, action.y, action.uid, action.timestamp);
-			_HANDLE_ACTION_CASE (ActionType::Recover, action.x, action.y, action.uid, action.timestamp);
-			_HANDLE_ACTION_CASE (ActionType::Switch, action.x, action.y, action.uid, action.timestamp);
 		default:
 			throw std::runtime_error ("WTF? (Will not hit)");
 			break;
@@ -160,12 +151,9 @@ namespace PokemonGame_Impl
 		auto &uid = args[3];
 		auto timestamp = TimePointFromStr (args[4]);
 
-		_HANDLE_ACTION_STR (ActionType::None, args[0], x, y, uid, timestamp);
 		_HANDLE_ACTION_STR (ActionType::Move, args[0], x, y, uid, timestamp);
 		_HANDLE_ACTION_STR (ActionType::Attack, args[0], x, y, uid, timestamp);
 		_HANDLE_ACTION_STR (ActionType::Defend, args[0], x, y, uid, timestamp);
-		_HANDLE_ACTION_STR (ActionType::Recover, args[0], x, y, uid, timestamp);
-		_HANDLE_ACTION_STR (ActionType::Switch, args[0], x, y, uid, timestamp);
 
 		throw std::runtime_error ("Invalid Action");
 	}

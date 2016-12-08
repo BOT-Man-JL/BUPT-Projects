@@ -53,18 +53,6 @@ namespace PokemonGame
 				std::cerr << ex.what () << std::endl;
 			}
 
-			auto getPokemonModelById = [&] (const PokemonID &id)
-			{
-				auto pokemons = mapper.Query (pokemonModel)
-					.Where (field (pokemonModel.id) == id)
-					.ToVector ();
-
-				if (pokemons.empty ())
-					return std::unique_ptr<PokemonModel> (nullptr);
-
-				return std::make_unique<PokemonModel> (pokemons[0]);
-			};
-
 #pragma region Accounting
 
 			// Handle Register
@@ -284,24 +272,27 @@ namespace PokemonGame
 						   [&] (std::string &response,
 								const std::vector<std::string> &args)
 			{
-				const auto &pokemonId = (PokemonID) std::stoull (args[1]);
-				auto pm = getPokemonModelById (pokemonId);
+				const auto pid = (PokemonID) std::stoull (args[1]);
 
-				if (pm == nullptr)
+				auto pokemons = mapper.Query (pokemonModel)
+					.Where (field (pokemonModel.id) == pid)
+					.ToVector ();
+
+				if (pokemons.empty ())
 				{
 					SetResponse (response, false, "No such Pokemon");
 					return;
 				}
 
 				SetResponse (response, true,
-							 pm->name,
-							 std::to_string (pm->level),
-							 std::to_string (pm->expPoint),
-							 std::to_string (pm->atk),
-							 std::to_string (pm->def),
-							 std::to_string (pm->hp),
-							 std::to_string (pm->fullHP),
-							 std::to_string (pm->timeGap));
+							 pokemons[0].name,
+							 std::to_string (pokemons[0].level),
+							 std::to_string (pokemons[0].expPoint),
+							 std::to_string (pokemons[0].atk),
+							 std::to_string (pokemons[0].def),
+							 std::to_string (pokemons[0].hp),
+							 std::to_string (pokemons[0].fullHP),
+							 std::to_string (pokemons[0].timeGap));
 			});
 
 			// Handle UsersPokemons
@@ -387,12 +378,13 @@ namespace PokemonGame
 			// Handle RoomEnter
 			// Succeed if Room is not full
 			// Fail if Room is full or already in this Room
-			SetHandler<5> ("RoomEnter",
+			SetHandler<3> ("RoomEnter",
 						   [&] (std::string &response,
 								const std::vector<std::string> &args)
 			{
 				const auto &sid = args[0];
 				const auto &rid = args[1];
+				const auto pid = (PokemonID) std::stoull (args[2]);
 
 				if (rid.empty ())
 				{
@@ -418,30 +410,24 @@ namespace PokemonGame
 				auto initX = rand () % Player::maxX;
 				auto initY = rand () % Player::maxY;
 
-				std::vector<std::string> pidStrs
-				{
-					args[2], args[3], args[4]
-				};
-				std::vector<PokemonID> pids;
-				for (const auto &pidStr : pidStrs)
-					pids.emplace_back ((PokemonID) std::stoull (pidStr));
+				// Remember to Check if this Pokemon belonging to this User
+				auto pokemons = mapper.Query (pokemonModel)
+					.Where (
+						field (pokemonModel.id) == pid &&
+						field (pokemonModel.uid) == sessions[sid].uid
+					)
+					.ToVector ();
 
-				PokemonsOfPlayer pokemons;
-				for (size_t i = 0; i < pids.size (); i++)
+				if (pokemons.empty ())
 				{
-					if (pids[i] == PokemonID ())
-						continue;
-
-					pokemons.emplace_back (
-						pids[i],
-						std::unique_ptr<Pokemon> (
-							getPokemonModelById (pids[i])->ToPokemon ())
-					);
+					SetResponse (response, false, "You have NO such Pokemon");
+					return;
 				}
 
 				room.players[sessions[sid].uid] = Player
 				{
-					false, initX, initY, std::move (pokemons)
+					false, initX, initY, pid,
+					std::unique_ptr<Pokemon> (pokemons[0].ToPokemon ())
 				};
 				sessions[sid].rid = rid;
 				SetResponse (response, true, "Entered this Room");
@@ -521,10 +507,8 @@ namespace PokemonGame
 					ret += player.first + "\n"
 						+ (player.second.isReady ? "1\n" : "0\n")
 						+ std::to_string (player.second.x) + "\n"
-						+ std::to_string (player.second.y) + "\n";
-
-					for (const auto &pokemon : player.second.pokemons)
-						ret += std::to_string (pokemon.first) + "\n";
+						+ std::to_string (player.second.y) + "\n"
+						+ std::to_string (player.second.pid) + "\n";
 				}
 				ret.pop_back ();
 				SetResponse (response, true, ret);
@@ -559,12 +543,13 @@ namespace PokemonGame
 					std::lock_guard<std::mutex> lg (room.mtxSync);
 
 					// Push your action to ohters' queue
-					for (auto &actionQueue : room.actionQueues)
-					{
-						if (actionQueue.first == uid)
-							continue;
-						actionQueue.second.push (action);
-					}
+					if (action.x != 0 || action.y != 0 || action.type != ActionType::Move)
+						for (auto &actionQueue : room.actionQueues)
+						{
+							if (actionQueue.first == uid)
+								continue;
+							actionQueue.second.push (action);
+						}
 
 					// Pop your queue
 					auto &yourQueue = room.actionQueues[uid];

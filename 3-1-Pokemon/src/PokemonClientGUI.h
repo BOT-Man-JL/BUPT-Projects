@@ -62,27 +62,19 @@ namespace PokemonGameGUI
 			auto isAllReady = false;
 			PokemonGameGUI::RoomWindow wnd;
 
-			std::array<PokemonGame::PokemonID, 3>
-				pokemonIds { PokemonGame::PokemonID () };
-
-			auto index = 0;
-			for (const auto &pokemon : client.MyPokemons ())
-			{
-				if (index == pokemonIds.size ()) break;
-				pokemonIds[index++] = pokemon.first;
-			}
+			auto pid = client.MyPokemons ().begin ()->first;
 
 			std::mutex mtx;
 
 			wnd.SetState (hasEntered, isReady);
 			wnd.OnClickBtn (
-				[&wnd, this, &mtx, &hasEntered, &isReady, &pokemonIds] (
+				[&wnd, this, &mtx, &hasEntered, &isReady, pid] (
 					const std::string &roomId)
 			{
 				std::lock_guard<std::mutex> lg (mtx);
 				if (!hasEntered)
 				{
-					if (client.RoomEnter (roomId, pokemonIds))
+					if (client.RoomEnter (roomId, pid))
 					{
 						wnd.SetState (hasEntered = true, isReady);
 						wnd.Prompt ("You Entered " + roomId);
@@ -316,24 +308,17 @@ namespace PokemonGameGUI
 				// Lockstep action
 				if (cFrame == 0)
 				{
-					PokemonGame::Action action { ActionType::None };
+					PokemonGame::Action action { ActionType::Move, 0, 0 };
 					if (isMouseDown)
 					{
 						getPos ();
-						action.type = ActionType::Move;
 						action.x = mosX - posX;
 						action.y = mosY - posY;
 					}
 					else if (cA || cD || cW || cS)
 					{
-						action.type = ActionType::Move;
 						action.x = cD - cA;
 						action.y = cS - cW;
-					}
-					else
-					{
-						action.type = ActionType::Move;
-						action.x = action.y = 0;
 					}
 
 					client.Lockstep (action);

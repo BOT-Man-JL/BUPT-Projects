@@ -69,7 +69,7 @@ namespace PokemonGame
 		PlayerPhysics (Player &player)
 			: _player (player),
 			Physics (player.x, player.y, 0, 0),
-			_pokemon (_player.pokemons.front ().second.get ())
+			_pokemon (_player.pokemon.get ())
 		{
 			auto size = _pokemon->GetSize ();
 			_rect.w = size.first;
@@ -78,7 +78,7 @@ namespace PokemonGame
 
 		const Pokemon &CurPokemon () const
 		{
-			return *(_player.pokemons.front ().second);
+			return *(_player.pokemon);
 		}
 
 		void Move (int x, int y, const Physics &worldMap)
@@ -145,7 +145,7 @@ namespace PokemonGame
 				const auto &player = _players[action.uid];
 
 				// Current Pokemon
-				auto &pokemon = *(player.pokemons.front ().second);
+				auto &pokemon = *(player.pokemon);
 
 				// Rigid body
 				auto &physics = playersPhysics.at (action.uid);
@@ -161,21 +161,14 @@ namespace PokemonGame
 
 				switch (action.type)
 				{
-				case ActionType::None:
-					// Do nothing
-					break;
-
 				case ActionType::Move:
 					physics.Move (distX, distY, worldMap);
 					break;
 
 				case ActionType::Attack:
 					break;
+
 				case ActionType::Defend:
-					break;
-				case ActionType::Recover:
-					break;
-				case ActionType::Switch:
 					break;
 
 				default:

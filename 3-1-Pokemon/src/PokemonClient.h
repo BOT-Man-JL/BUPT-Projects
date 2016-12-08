@@ -50,11 +50,7 @@ namespace PokemonGame
 			<< player.x << ", "
 			<< player.y << "\n";
 
-		for (const auto &pokemon : player.pokemons)
-		{
-			os << "\t";
-			PrintPokemon (os, pokemon.second.get ());
-		}
+		PrintPokemon (os, player.pokemon.get ());
 	}
 
 	class PokemonClient
@@ -192,12 +188,10 @@ namespace PokemonGame
 		}
 
 		bool RoomEnter (const std::string &roomId,
-						const std::array<PokemonID, 3> &pokemonIds)
+						PokemonID pokemonId)
 		{
 			auto response = Request ("RoomEnter", _sessionID, roomId,
-									 std::to_string (pokemonIds[0]),
-									 std::to_string (pokemonIds[1]),
-									 std::to_string (pokemonIds[2]));
+									 std::to_string (pokemonId));
 			return HandleResponse (response);
 		}
 
@@ -216,13 +210,13 @@ namespace PokemonGame
 		bool RoomState ()
 		{
 			auto response = Request ("RoomState", _sessionID);
-			if ((response.size () - 2) % 7)
+			if ((response.size () - 2) % 5)
 			{
 				_errMsg = "Invalid Response size";
 				return false;
 			}
 
-			return HandleResponse<8> (response, [&] ()
+			return HandleResponse<6> (response, [&] ()
 			{
 				_tSync = PokemonGame_Impl::TimePointFromStr (response[0]);
 				_tLocal = std::chrono::system_clock::now ();
@@ -231,8 +225,18 @@ namespace PokemonGame
 				_players.clear ();
 				while (!response.empty ())
 				{
-					_players[response[0]] = PlayerFromResponse (response);
-					response.erase (response.begin (), response.begin () + 7);
+					_players[response[0]] = Player
+					{
+						// Is Ready
+						response[1] == "0" ? false : true,
+						// Position
+						(size_t) std::stoull (response[2]),
+						(size_t) std::stoull (response[3]),
+						// Pokemon
+						(PokemonID) std::stoull (response[4]),
+						std::unique_ptr<Pokemon> (PokemonFromID (response[4]))
+					};;
+					response.erase (response.begin (), response.begin () + 5);
 				}
 			});
 		}
@@ -275,8 +279,9 @@ namespace PokemonGame
 		{
 			try
 			{
-				return PokemonGame_Impl::SplitStr (
-					_sockClient.Request (strToken), "\n");
+				auto response = _sockClient.Request (strToken);
+				//std::cout << response << std::endl;
+				return PokemonGame_Impl::SplitStr (std::move (response), "\n");
 			}
 			catch (const std::exception &ex)
 			{
@@ -341,43 +346,6 @@ namespace PokemonGame
 				std::stoul (response[5]),
 				std::stoul (response[6]),
 				std::stoul (response[7]));
-		}
-
-		Player PlayerFromResponse (
-			const std::vector<std::string> &response)
-		{
-			using namespace PokemonGame_Impl;
-
-			std::vector<std::string> pidStrs
-			{
-				response[4], response[5], response[6]
-			};
-			std::vector<PokemonID> pids;
-			for (const auto &pidStr : pidStrs)
-				pids.emplace_back ((PokemonID) std::stoull (pidStr));
-
-			PokemonsOfPlayer pokemons;
-			for (size_t i = 0; i < pids.size (); i++)
-			{
-				if (pids[i] == PokemonID ())
-					continue;
-
-				pokemons.emplace_back (
-					pids[i],
-					std::unique_ptr<Pokemon> (PokemonFromID (pidStrs[i]))
-				);
-			}
-
-			return Player
-			{
-				// Is Ready
-				response[1] == "0" ? false : true,
-				// Position
-				(size_t) std::stoull (response[2]),
-				(size_t) std::stoull (response[3]),
-				// Pokemon
-				std::move (pokemons)
-			};
 		}
 
 		BOT_Socket::Client _sockClient;
