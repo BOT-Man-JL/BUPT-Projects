@@ -29,9 +29,9 @@ namespace PokemonGame
 			return _rect;
 		}
 
-		std::pair<int, int> GetVelocity () const
+		std::tuple<const int &, const int &> GetVelocity () const
 		{
-			return std::make_pair (_vx, _vy);
+			return std::forward_as_tuple (_vx, _vy);
 		}
 
 		bool IsOverlap (const Physics &other) const

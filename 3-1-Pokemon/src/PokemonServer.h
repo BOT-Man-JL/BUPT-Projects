@@ -406,10 +406,6 @@ namespace PokemonGame
 					return;
 				}
 
-				std::random_device rand;
-				auto initX = rand () % Player::maxX;
-				auto initY = rand () % Player::maxY;
-
 				// Remember to Check if this Pokemon belonging to this User
 				auto pokemons = mapper.Query (pokemonModel)
 					.Where (
@@ -423,11 +419,15 @@ namespace PokemonGame
 					SetResponse (response, false, "You have NO such Pokemon");
 					return;
 				}
+				auto pokemon = std::unique_ptr<Pokemon> (pokemons[0].ToPokemon ());
+
+				std::random_device rand;
+				auto initX = rand () % (Player::maxX - pokemon->GetSize ().first);
+				auto initY = rand () % (Player::maxY - pokemon->GetSize ().second);
 
 				room.players[sessions[sid].uid] = Player
 				{
-					false, initX, initY, pid,
-					std::unique_ptr<Pokemon> (pokemons[0].ToPokemon ())
+					false, initX, initY, pid, std::move (pokemon)
 				};
 				sessions[sid].rid = rid;
 				SetResponse (response, true, "Entered this Room");
@@ -543,13 +543,12 @@ namespace PokemonGame
 					std::lock_guard<std::mutex> lg (room.mtxSync);
 
 					// Push your action to ohters' queue
-					if (action.x != 0 || action.y != 0 || action.type != ActionType::Move)
-						for (auto &actionQueue : room.actionQueues)
-						{
-							if (actionQueue.first == uid)
-								continue;
-							actionQueue.second.push (action);
-						}
+					for (auto &actionQueue : room.actionQueues)
+					{
+						if (actionQueue.first == uid)
+							continue;
+						actionQueue.second.push (action);
+					}
 
 					// Pop your queue
 					auto &yourQueue = room.actionQueues[uid];

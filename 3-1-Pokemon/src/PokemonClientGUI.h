@@ -211,6 +211,7 @@ namespace PokemonGameGUI
 
 			wnd.GetWindow ().OnLButtonDown ([&] (EggAche::Window *, int x, int y)
 			{
+				std::lock_guard<std::mutex> lg { mtx };
 				isMouseDown = true;
 				mosX = x;
 				mosY = y;
@@ -218,17 +219,20 @@ namespace PokemonGameGUI
 
 			wnd.GetWindow ().OnLButtonUp ([&] (EggAche::Window *, int x, int y)
 			{
+				std::lock_guard<std::mutex> lg { mtx };
 				isMouseDown = false;
 			});
 
 			wnd.GetWindow ().OnMouseMove ([&] (EggAche::Window *, int x, int y)
 			{
+				std::lock_guard<std::mutex> lg { mtx };
 				mosX = x;
 				mosY = y;
 			});
 
 			wnd.GetWindow ().OnKeyDown ([&] (EggAche::Window *, char ch)
 			{
+				std::lock_guard<std::mutex> lg { mtx };
 				switch (ch)
 				{
 				case 'A':
@@ -260,6 +264,7 @@ namespace PokemonGameGUI
 
 			wnd.GetWindow ().OnKeyUp ([&] (EggAche::Window *, char ch)
 			{
+				std::lock_guard<std::mutex> lg { mtx };
 				switch (ch)
 				{
 				case 'A':
@@ -308,6 +313,7 @@ namespace PokemonGameGUI
 				// Lockstep action
 				if (cFrame == 0)
 				{
+					std::lock_guard<std::mutex> lg { mtx };
 					PokemonGame::Action action { ActionType::Move, 0, 0 };
 					if (isMouseDown)
 					{

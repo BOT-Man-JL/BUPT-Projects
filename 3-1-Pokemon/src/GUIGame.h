@@ -43,8 +43,8 @@ namespace PokemonGameGUI
 			{
 				auto rect = physics.GetRect ();
 				const auto &velocity = physics.GetVelocity ();
-				rect.x += (int) (animationFraction * velocity.first);
-				rect.y += (int) (animationFraction * velocity.second);
+				rect.x += (int) (animationFraction * std::get<0> (velocity));
+				rect.y += (int) (animationFraction * std::get<1> (velocity));
 
 				rect.x = XX (rect.x);
 				rect.y = YY (rect.y);

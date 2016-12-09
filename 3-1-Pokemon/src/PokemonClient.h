@@ -254,11 +254,6 @@ namespace PokemonGame
 				(std::chrono::system_clock::now () - _tLocal) + _tSync;
 
 			auto response = Request ("Lockstep", _sessionID, ActionToStr (action));
-			if ((response.size () - 2) % 2)
-			{
-				_errMsg = "Invalid Response size";
-				return false;
-			}
 			_actionQueue.push (std::move (action));
 
 			return HandleResponse<1> (response, [&] ()
