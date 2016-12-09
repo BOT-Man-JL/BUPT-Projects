@@ -61,14 +61,13 @@ namespace PokemonGameGUI
 			{
 				const auto &playerUid = playerPair.first;
 				const auto &player = playerPair.second;
-				const auto &pokemon = player.CurPokemon ();
 
 				//auto imgName = AssestPath + pokemon.GetName ();
 
 				auto rect = getRect (player);
 				_bg->DrawRect (rect.x, rect.y, rect.x + rect.w, rect.y + rect.h);
 				_bg->DrawTxt (rect.x, rect.y - 18, playerUid.c_str ());
-				_bg->DrawTxt (rect.x, rect.y, pokemon.GetName ().c_str ());
+				_bg->DrawTxt (rect.x, rect.y, player.GetPlayer ().pokemon->GetName ().c_str ());
 			}
 
 			// Render Damages

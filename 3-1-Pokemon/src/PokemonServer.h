@@ -291,7 +291,6 @@ namespace PokemonGame
 							 std::to_string (pokemons[0].atk),
 							 std::to_string (pokemons[0].def),
 							 std::to_string (pokemons[0].hp),
-							 std::to_string (pokemons[0].fullHP),
 							 std::to_string (pokemons[0].timeGap));
 			});
 
@@ -427,7 +426,7 @@ namespace PokemonGame
 
 				room.players[sessions[sid].uid] = Player
 				{
-					false, initX, initY, pid, std::move (pokemon)
+					false, initX, initY, pokemon->GetTimeGap (), pid, std::move (pokemon)
 				};
 				sessions[sid].rid = rid;
 				SetResponse (response, true, "Entered this Room");
@@ -508,6 +507,7 @@ namespace PokemonGame
 						+ (player.second.isReady ? "1\n" : "0\n")
 						+ std::to_string (player.second.x) + "\n"
 						+ std::to_string (player.second.y) + "\n"
+						+ std::to_string (player.second.timeGap) + "\n"
 						+ std::to_string (player.second.pid) + "\n";
 				}
 				ret.pop_back ();

@@ -34,8 +34,6 @@ namespace PokemonGame
 			<< pokemon->GetDef ()
 			<< ", HP:"
 			<< pokemon->GetHP ()
-			<< ", FHP:"
-			<< pokemon->GetFullHP ()
 			<< ", Gap:"
 			<< pokemon->GetTimeGap ()
 			<< "]\n";
@@ -209,14 +207,16 @@ namespace PokemonGame
 
 		bool RoomState ()
 		{
+			constexpr auto segSize = 6;
+
 			auto response = Request ("RoomState", _sessionID);
-			if ((response.size () - 2) % 5)
+			if ((response.size () - 2) % segSize)
 			{
 				_errMsg = "Invalid Response size";
 				return false;
 			}
 
-			return HandleResponse<6> (response, [&] ()
+			return HandleResponse<segSize> (response, [&] ()
 			{
 				_tSync = PokemonGame_Impl::TimePointFromStr (response[0]);
 				_tLocal = std::chrono::system_clock::now ();
@@ -232,11 +232,12 @@ namespace PokemonGame
 						// Position
 						(size_t) std::stoull (response[2]),
 						(size_t) std::stoull (response[3]),
+						(Pokemon::TimeGap) std::stoull (response[4]),
 						// Pokemon
-						(PokemonID) std::stoull (response[4]),
-						std::unique_ptr<Pokemon> (PokemonFromID (response[4]))
+						(PokemonID) std::stoull (response[5]),
+						std::unique_ptr<Pokemon> (PokemonFromID (response[5]))
 					};;
-					response.erase (response.begin (), response.begin () + 5);
+					response.erase (response.begin (), response.begin () + 6);
 				}
 			});
 		}
@@ -328,7 +329,7 @@ namespace PokemonGame
 		Pokemon* PokemonFromID (const std::string &id)
 		{
 			auto response = Request ("PokemonInfo", _sessionID, id);
-			if (!HandleResponse<8> (response))
+			if (!HandleResponse<7> (response))
 				throw std::runtime_error (
 					_errMsg + ": Loading Pokemon Info Failed");
 
@@ -339,8 +340,7 @@ namespace PokemonGame
 				std::stoul (response[3]),
 				std::stoul (response[4]),
 				std::stoul (response[5]),
-				std::stoul (response[6]),
-				std::stoul (response[7]));
+				std::stoul (response[6]));
 		}
 
 		BOT_Socket::Client _sockClient;

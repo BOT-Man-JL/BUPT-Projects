@@ -60,7 +60,8 @@ namespace PokemonGameGUI
 			auto hasEntered = false;
 			auto isReady = false;
 			auto isAllReady = false;
-			PokemonGameGUI::RoomWindow wnd;
+			PokemonGameGUI::RoomWindow wnd (
+				client.MyUID () + " - Pick up a Room");
 
 			auto pid = client.MyPokemons ().begin ()->first;
 
@@ -182,7 +183,7 @@ namespace PokemonGameGUI
 
 			PokemonGameGUI::GameWindow wnd (PokemonGame::Player::maxX,
 											PokemonGame::Player::maxY,
-											client.MyUID ());
+											client.MyUID () + " - In Game :-)");
 
 			auto &players = client.GetPlayers ();
 			auto &actionQueue = client.GetActionQueue ();

@@ -20,8 +20,8 @@ namespace PokemonGame
 			int w, h;
 		};
 
-		Physics (int x, int y, int w, int h)
-			: _rect { x, y, w, h }, _vx (0), _vy (0)
+		Physics (int x, int y, int w, int h, int vx, int vy)
+			: _rect { x, y, w, h }, _vx (vx), _vy (vy)
 		{}
 
 		const Rect &GetRect () const
@@ -29,7 +29,7 @@ namespace PokemonGame
 			return _rect;
 		}
 
-		std::tuple<const int &, const int &> GetVelocity () const
+		decltype (auto) GetVelocity () const
 		{
 			return std::forward_as_tuple (_vx, _vy);
 		}
@@ -67,18 +67,12 @@ namespace PokemonGame
 	{
 	public:
 		PlayerPhysics (Player &player)
-			: _player (player),
-			Physics (player.x, player.y, 0, 0),
-			_pokemon (_player.pokemon.get ())
+			: Physics (player.x, player.y, 0, 0, 0, 0),
+			_player (player)
 		{
-			auto size = _pokemon->GetSize ();
+			auto size = _player.pokemon->GetSize ();
 			_rect.w = size.first;
 			_rect.h = size.second;
-		}
-
-		const Pokemon &CurPokemon () const
-		{
-			return *(_player.pokemon);
 		}
 
 		void Move (int x, int y, const Physics &worldMap)
@@ -109,14 +103,47 @@ namespace PokemonGame
 			_rect.y -= y;
 		}
 
+		decltype (auto) GetPlayer () const
+		{
+			return _player;
+		}
+
 	private:
 		Player &_player;
-		Pokemon *_pokemon;
 	};
 
-	struct DamagePhysics : Physics
+	class DamagePhysics : public Physics
 	{
-		Player *player;
+		static constexpr auto width = 10;
+		static constexpr auto height = 10;
+
+	public:
+		DamagePhysics (const UserID &player,
+					   int x, int y, int vx, int vy,
+					   PokemonGame::Pokemon::HealthPoint damage,
+					   size_t tick)
+			: Physics (x, y, width, height, vx, vy),
+			_player (player), _damage (damage), _tick (tick)
+		{}
+
+		bool Move ()
+		{
+			// Move in Velocity
+			_rect.x += _vx;
+			_rect.y += _vy;
+
+			// Count down tick
+			_tick--;
+
+			if (_tick) return false;
+		}
+
+		auto GetDamage () const { return _damage; }
+
+	private:
+		UserID _player;
+		PokemonGame::Pokemon::HealthPoint _damage;
+		size_t _tick;
 	};
 
 	using PlayersPhysics = std::unordered_map<UserID, PlayerPhysics>;
@@ -136,7 +163,7 @@ namespace PokemonGame
 		void Update ()
 		{
 			// World map is also a Physics
-			const static Physics worldMap (0, 0, Player::maxX, Player::maxY);
+			const static Physics worldMap (0, 0, Player::maxX, Player::maxY, 0, 0);
 
 			while (!_actionQueue.empty ())
 			{
@@ -159,6 +186,10 @@ namespace PokemonGame
 					distX = (int) ((int) pokemon.GetVelocity () * action.x / len);
 				}
 
+				// Get Attack Property
+				pokemon.GetTimeGap ();
+				pokemon.GetAtk ();
+
 				switch (action.type)
 				{
 				case ActionType::Move:
@@ -166,6 +197,7 @@ namespace PokemonGame
 					break;
 
 				case ActionType::Attack:
+
 					break;
 
 				case ActionType::Defend:

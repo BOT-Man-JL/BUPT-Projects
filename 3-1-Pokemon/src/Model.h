@@ -24,14 +24,13 @@ namespace PokemonGame_Impl
 		PokemonGame::Pokemon::HealthPoint atk;
 		PokemonGame::Pokemon::HealthPoint def;
 		PokemonGame::Pokemon::HealthPoint hp;
-		PokemonGame::Pokemon::HealthPoint fullHP;
 		PokemonGame::Pokemon::TimeGap timeGap;
 
 		inline PokemonGame::Pokemon *ToPokemon ()
 		{
 			return PokemonGame::Pokemon::NewPokemon (
 				name, level, expPoint,
-				atk, def, hp, fullHP, timeGap);
+				atk, def, hp, timeGap);
 		}
 
 		static PokemonModel *NewFromPokemon (
@@ -43,14 +42,13 @@ namespace PokemonGame_Impl
 				id, uid, pokemon.GetName (),
 				pokemon.GetLevel (), pokemon.GetExp (),
 				pokemon.GetAtk (), pokemon.GetDef (),
-				pokemon.GetHP (), pokemon.GetFullHP (),
-				pokemon.GetTimeGap ()
+				pokemon.GetHP (), pokemon.GetTimeGap ()
 			};
 		}
 
 	private:
 		ORMAP ("Pokemon", id, uid, name, level, expPoint,
-			   atk, def, hp, fullHP, timeGap)
+			   atk, def, hp, timeGap);
 	};
 
 	// User

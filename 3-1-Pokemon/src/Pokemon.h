@@ -21,9 +21,8 @@ ExpPoint expPoint,											\
 HealthPoint atk,											\
 HealthPoint def,											\
 HealthPoint hp,												\
-HealthPoint fullHP,											\
 TimeGap timeGap)											\
-: Pokemon (level, expPoint, atk, def, hp, fullHP, timeGap)	\
+: Pokemon (level, expPoint, atk, def, hp, timeGap)			\
 {}															\
 public:														\
 std::string GetType () const override final					\
@@ -38,9 +37,8 @@ ExpPoint expPoint,											\
 HealthPoint atk,											\
 HealthPoint def,											\
 HealthPoint hp,												\
-HealthPoint fullHP,											\
 TimeGap timeGap)											\
-: TYPE (level, expPoint, atk, def, hp, fullHP, timeGap)		\
+: TYPE (level, expPoint, atk, def, hp, timeGap)				\
 { _SetPhysics (); }											\
 std::string GetName () const override final					\
 {															\
@@ -50,7 +48,7 @@ std::string GetName () const override final					\
 #define SCAFFOLD_NEW_POKEMON_FROM_NAME(CLASSNAME)			\
 if (name == #CLASSNAME)										\
 	return new CLASSNAME (level, expPoint, atk, def,		\
-						  hp, fullHP, timeGap)				\
+						  hp, timeGap)						\
 
 #define NAMEOF(CLASSNAME) #CLASSNAME
 
@@ -99,7 +97,6 @@ namespace PokemonGame
 		HealthPoint GetDef () const { return _def; }
 		TimeGap GetTimeGap () const { return _timeGap; }
 		HealthPoint GetHP () const { return _hp; }
-		HealthPoint GetFullHP () const { return _fullHP; }
 
 		std::pair<size_t, size_t> GetSize () const
 		{ return std::make_pair (_width, _height); }
@@ -114,7 +111,6 @@ namespace PokemonGame
 									HealthPoint atk,
 									HealthPoint def,
 									HealthPoint hp,
-									HealthPoint fullHP,
 									TimeGap timeGap);
 		static const std::vector<std::string> &PokemonNames ();
 
@@ -141,15 +137,6 @@ namespace PokemonGame
 			return std::make_pair (isKilling, isUpgraded);
 		}
 
-		void Recover (HealthPoint hp = 0)
-		{
-			if (hp)
-				_hp = Math::Min (_fullHP, hp + _hp);
-			else
-				_hp = _fullHP;
-			_OnRecover (hp);
-		}
-
 	protected:
 		// Properties
 		Level _level;
@@ -158,7 +145,6 @@ namespace PokemonGame
 		HealthPoint _def;
 		TimeGap _timeGap;
 		HealthPoint _hp;
-		HealthPoint _fullHP;
 
 		// Physics
 		size_t _width, _height;
@@ -170,11 +156,9 @@ namespace PokemonGame
 				 HealthPoint atk,
 				 HealthPoint def,
 				 HealthPoint hp,
-				 HealthPoint fullHP,
 				 TimeGap timeGap)
 			: _level (level), _expPoint (expPoint),
-			_atk (atk), _def (def), _timeGap (timeGap),
-			_hp (hp), _fullHP (fullHP)
+			_atk (atk), _def (def), _timeGap (timeGap), _hp (hp)
 		{}
 
 		// Abstract Function Members
@@ -325,7 +309,7 @@ namespace PokemonGame
 			using namespace Math;
 			_atk = Rand (8, 12);
 			_def = Rand (6, 8);
-			_hp = _fullHP = Rand (40, 50);
+			_hp = Rand (40, 50);
 			_timeGap = Rand (6, 9);
 		}
 		void _OnKilled () override
@@ -351,7 +335,7 @@ namespace PokemonGame
 			using namespace Math;
 			_atk = Rand (10, 15);
 			_def = Rand (6, 8);
-			_hp = _fullHP = Rand (50, 60);
+			_hp = Rand (50, 60);
 			_timeGap = Rand (8, 12);
 		}
 		void _OnKilled () override
@@ -378,7 +362,6 @@ namespace PokemonGame
 										 HealthPoint atk,
 										 HealthPoint def,
 										 HealthPoint hp,
-										 HealthPoint fullHP,
 										 TimeGap timeGap)
 	{
 		SCAFFOLD_NEW_POKEMON_FROM_NAME (Pikachu);
@@ -389,7 +372,7 @@ namespace PokemonGame
 	Pokemon *Pokemon::NewPokemon (const std::string &name)
 	{
 		auto ret = Pokemon::NewPokemon (name,
-										1, 0, 0, 0, 0, 0, 0);
+										1, 0, 0, 0, 0, 0);
 
 		// Set Init Attr Here
 		ret->_OnBorn ();

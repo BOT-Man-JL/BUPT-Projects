@@ -98,7 +98,6 @@ If Failed:
 > Atk \n
 > Def \n
 > HP \n
-> FullHP \n
 > Time Gap \n
 
 ### UsersPokemons

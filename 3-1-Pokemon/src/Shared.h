@@ -10,6 +10,7 @@
 #include <vector>
 #include <queue>
 #include <unordered_map>
+#include <memory>
 
 #include "Pokemon.h"
 
@@ -28,8 +29,9 @@ namespace PokemonGame
 
 		bool isReady;
 		size_t x, y;
-		PokemonGame::PokemonID pid;
-		std::unique_ptr<PokemonGame::Pokemon> pokemon;
+		Pokemon::TimeGap timeGap;
+		PokemonID pid;
+		std::unique_ptr<Pokemon> pokemon;
 	};
 
 	using Players = std::unordered_map<UserID, Player>;

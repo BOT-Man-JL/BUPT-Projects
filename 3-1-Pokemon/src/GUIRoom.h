@@ -19,12 +19,12 @@ namespace PokemonGameGUI
 	class RoomWindow
 	{
 	public:
-
-		RoomWindow (size_t width = 640, size_t height = 640)
+		RoomWindow (const std::string &title,
+					size_t width = 640, size_t height = 640)
 			: _width (width), _height (height),
 			_isEntered (false), _isReady (false),
 			_promptStr ("Enter a Room to Play"),
-			_wnd (width, height, "Pokemon Room")
+			_wnd (width, height, title.c_str ())
 		{
 			InitLayout ();
 
