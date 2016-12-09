@@ -16,8 +16,6 @@ int main (int argc, char *argv[])
 
 		std::cout << "HP:\t" << p1.GetHP () << "\t"
 			<< p2.GetHP () << std::endl
-			<< "FHP:\t" << p1.GetFullHP () << "\t"
-			<< p2.GetFullHP () << std::endl
 			<< "LV: \t" << p1.GetLevel () << "\t"
 			<< p2.GetLevel () << std::endl;
 

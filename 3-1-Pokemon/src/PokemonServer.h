@@ -507,7 +507,6 @@ namespace PokemonGame
 						+ (player.second.isReady ? "1\n" : "0\n")
 						+ std::to_string (player.second.x) + "\n"
 						+ std::to_string (player.second.y) + "\n"
-						+ std::to_string (player.second.timeGap) + "\n"
 						+ std::to_string (player.second.pid) + "\n";
 				}
 				ret.pop_back ();

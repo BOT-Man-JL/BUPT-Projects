@@ -136,9 +136,11 @@ namespace PokemonGame
 			_tick--;
 
 			if (_tick) return false;
+			return true;
 		}
 
 		auto GetDamage () const { return _damage; }
+		const auto &GetPlayerName () const { return _player; }
 
 	private:
 		UserID _player;
@@ -160,6 +162,34 @@ namespace PokemonGame
 			}
 		}
 
+		void UpdateDamage ()
+		{
+			for (auto p = damagesPhysics.begin (); p != damagesPhysics.end ();)
+			{
+				auto &damage = *p;
+
+				for (const auto &player : playersPhysics)
+				{
+					const auto &playerFrom = _players[damage.GetPlayerName ()];
+					if (player.first != damage.GetPlayerName () &&
+						player.second.IsOverlap (damage))
+					{
+						playerFrom.pokemon->Attack (
+							*player.second.GetPlayer ().pokemon);
+					}
+				}
+
+				if (damage.Move ())
+					p = damagesPhysics.erase (p);
+				else
+					++p;
+			}
+
+			for (auto &player : _players)
+				if (player.second.timeGap != 0)
+					player.second.timeGap--;
+		}
+
 		void Update ()
 		{
 			// World map is also a Physics
@@ -169,7 +199,7 @@ namespace PokemonGame
 			{
 				// Retrieve Action
 				const auto &action = _actionQueue.top ();
-				const auto &player = _players[action.uid];
+				auto &player = _players[action.uid];
 
 				// Current Pokemon
 				auto &pokemon = *(player.pokemon);
@@ -187,7 +217,7 @@ namespace PokemonGame
 				}
 
 				// Get Attack Property
-				pokemon.GetTimeGap ();
+				const auto &rect = physics.GetRect ();
 				pokemon.GetAtk ();
 
 				switch (action.type)
@@ -197,10 +227,20 @@ namespace PokemonGame
 					break;
 
 				case ActionType::Attack:
-
+					physics.Move (0, 0, worldMap);
+					if (player.timeGap == 0)
+					{
+						damagesPhysics.emplace_back (
+							DamagePhysics { action.uid, rect.x, rect.y,
+							(int) (distX * 1.5), (int) (distY * 1.5),
+							pokemon.GetAtk (), pokemon.GetAtk () * 2 }
+						);
+						player.timeGap = pokemon.GetTimeGap ();
+					}
 					break;
 
 				case ActionType::Defend:
+					physics.Move (0, 0, worldMap);
 					break;
 
 				default:

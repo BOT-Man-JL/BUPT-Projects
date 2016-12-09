@@ -196,7 +196,8 @@ namespace PokemonGameGUI
 			constexpr auto cMax = 100;
 
 			// Mouse Input
-			auto isMouseDown = false;
+			auto isAtk = false;
+			auto isDef = false;
 			auto mosX = 0, mosY = 0;
 
 			// Position
@@ -213,7 +214,7 @@ namespace PokemonGameGUI
 			wnd.GetWindow ().OnLButtonDown ([&] (EggAche::Window *, int x, int y)
 			{
 				std::lock_guard<std::mutex> lg { mtx };
-				isMouseDown = true;
+				isAtk = true;
 				mosX = x;
 				mosY = y;
 			});
@@ -221,7 +222,19 @@ namespace PokemonGameGUI
 			wnd.GetWindow ().OnLButtonUp ([&] (EggAche::Window *, int x, int y)
 			{
 				std::lock_guard<std::mutex> lg { mtx };
-				isMouseDown = false;
+				isAtk = false;
+			});
+
+			wnd.GetWindow ().OnRButtonDown ([&] (EggAche::Window *, int x, int y)
+			{
+				std::lock_guard<std::mutex> lg { mtx };
+				isDef = true;
+			});
+
+			wnd.GetWindow ().OnRButtonUp ([&] (EggAche::Window *, int x, int y)
+			{
+				std::lock_guard<std::mutex> lg { mtx };
+				isDef = false;
 			});
 
 			wnd.GetWindow ().OnMouseMove ([&] (EggAche::Window *, int x, int y)
@@ -298,6 +311,9 @@ namespace PokemonGameGUI
 			{
 				auto tBeg = std::chrono::system_clock::now ();
 
+				// Frame Update
+				gamePhysics.UpdateDamage ();
+
 				// Render
 				wnd.Render (gamePhysics, (double) cFrame / Fpl);
 
@@ -316,9 +332,14 @@ namespace PokemonGameGUI
 				{
 					std::lock_guard<std::mutex> lg { mtx };
 					PokemonGame::Action action { ActionType::Move, 0, 0 };
-					if (isMouseDown)
+					if (isDef)
+					{
+						action.type = ActionType::Defend;
+					}
+					else if (isAtk)
 					{
 						getPos ();
+						action.type = ActionType::Attack;
 						action.x = mosX - posX;
 						action.y = mosY - posY;
 					}

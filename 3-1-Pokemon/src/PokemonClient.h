@@ -207,7 +207,7 @@ namespace PokemonGame
 
 		bool RoomState ()
 		{
-			constexpr auto segSize = 6;
+			constexpr auto segSize = 5;
 
 			auto response = Request ("RoomState", _sessionID);
 			if ((response.size () - 2) % segSize)
@@ -225,6 +225,7 @@ namespace PokemonGame
 				_players.clear ();
 				while (!response.empty ())
 				{
+					auto pokemon = std::unique_ptr<Pokemon> (PokemonFromID (response[4]));
 					_players[response[0]] = Player
 					{
 						// Is Ready
@@ -232,12 +233,12 @@ namespace PokemonGame
 						// Position
 						(size_t) std::stoull (response[2]),
 						(size_t) std::stoull (response[3]),
-						(Pokemon::TimeGap) std::stoull (response[4]),
+						pokemon->GetTimeGap (),
 						// Pokemon
-						(PokemonID) std::stoull (response[5]),
-						std::unique_ptr<Pokemon> (PokemonFromID (response[5]))
+						(PokemonID) std::stoull (response[4]),
+						std::move (pokemon)
 					};;
-					response.erase (response.begin (), response.begin () + 6);
+					response.erase (response.begin (), response.begin () + segSize);
 				}
 			});
 		}

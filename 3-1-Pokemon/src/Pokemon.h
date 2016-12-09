@@ -98,6 +98,9 @@ namespace PokemonGame
 		TimeGap GetTimeGap () const { return _timeGap; }
 		HealthPoint GetHP () const { return _hp; }
 
+		// Runtime
+		HealthPoint GetCurHP () const { return _curHp; }
+
 		std::pair<size_t, size_t> GetSize () const
 		{ return std::make_pair (_width, _height); }
 		size_t GetVelocity () const { return _velocity; }
@@ -137,6 +140,12 @@ namespace PokemonGame
 			return std::make_pair (isKilling, isUpgraded);
 		}
 
+		void Recover (HealthPoint hp = 0)
+		{
+			_curHp = _hp;
+			_OnRecover ();
+		}
+
 	protected:
 		// Properties
 		Level _level;
@@ -145,6 +154,9 @@ namespace PokemonGame
 		HealthPoint _def;
 		TimeGap _timeGap;
 		HealthPoint _hp;
+
+		// Runtime
+		HealthPoint _curHp;
 
 		// Physics
 		size_t _width, _height;
@@ -158,7 +170,7 @@ namespace PokemonGame
 				 HealthPoint hp,
 				 TimeGap timeGap)
 			: _level (level), _expPoint (expPoint),
-			_atk (atk), _def (def), _timeGap (timeGap), _hp (hp)
+			_atk (atk), _def (def), _timeGap (timeGap), _hp (hp), _curHp (hp)
 		{}
 
 		// Abstract Function Members
@@ -167,7 +179,7 @@ namespace PokemonGame
 		virtual void _SetPhysics () = 0;
 		virtual void _OnBorn () = 0;
 		virtual void _OnKilled () = 0;
-		virtual void _OnRecover (HealthPoint) = 0;
+		virtual void _OnRecover () = 0;
 		virtual void _OnUpgrade () = 0;
 
 	private:
@@ -176,12 +188,12 @@ namespace PokemonGame
 		// Return false otherwise
 		bool Hurt (HealthPoint damage)
 		{
-			if (_hp >= damage)
-				_hp -= damage;
+			if (_curHp >= damage)
+				_curHp -= damage;
 			else
-				_hp = 0;
+				_curHp = 0;
 
-			return (_hp == 0);
+			return (_curHp == 0);
 		}
 
 		// Upgrade
@@ -309,12 +321,12 @@ namespace PokemonGame
 			using namespace Math;
 			_atk = Rand (8, 12);
 			_def = Rand (6, 8);
-			_hp = Rand (40, 50);
+			_hp = _curHp = Rand (40, 50);
 			_timeGap = Rand (6, 9);
 		}
 		void _OnKilled () override
 		{}
-		void _OnRecover (HealthPoint hp) override
+		void _OnRecover () override
 		{}
 		void _OnUpgrade () override
 		{}
@@ -335,12 +347,12 @@ namespace PokemonGame
 			using namespace Math;
 			_atk = Rand (10, 15);
 			_def = Rand (6, 8);
-			_hp = Rand (50, 60);
+			_hp = _curHp = Rand (50, 60);
 			_timeGap = Rand (8, 12);
 		}
 		void _OnKilled () override
 		{}
-		void _OnRecover (HealthPoint hp) override
+		void _OnRecover () override
 		{}
 		void _OnUpgrade () override
 		{}
