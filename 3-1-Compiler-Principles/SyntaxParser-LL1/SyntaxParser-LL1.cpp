@@ -584,11 +584,11 @@ namespace BOT_SyntaxParser
 		}
 	};
 
-	class SyntaxParser
+	class LL1Parser
 	{
 	public:
-		SyntaxParser (std::istream &is,
-					  std::ostream &os)
+		LL1Parser (std::istream &is,
+				   std::ostream &os)
 			: _grammar (is)
 		{
 			_grammar.FixLeftRecursion ();
@@ -801,7 +801,7 @@ int main (int argc, char *argv[])
 									  argv[2] + ".output.txt");
 
 		// Generate parser from ifsGrammar into ofsGrammar
-		SyntaxParser parser (ifsGrammar, ofsGrammar);
+		LL1Parser parser (ifsGrammar, ofsGrammar);
 
 		// Parse ifs into ofs :-)
 		parser.Parse (ifsInput, ofsOutput);
