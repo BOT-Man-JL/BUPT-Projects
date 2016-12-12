@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="SyntaxParser.cpp" />
+    <ClCompile Include="SyntaxParser-LL1.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{5DE0E009-2955-4071-8FDD-750392990CA4}</ProjectGuid>

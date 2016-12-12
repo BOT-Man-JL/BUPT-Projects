@@ -39,7 +39,8 @@ together with [**buptczq**](https://github.com/buptczq/RE_Bupt_Computer_Network_
   - [Pokemon Game](/3-1-Pokemon)
 - Compiler Principles
   - [Lexical Parser](/3-1-Compiler-Principles/LexParser)
-  - [Syntax Parser](/3-1-Compiler-Principles/SyntaxParser)
+  - [Syntax Parser LL (1)](/3-1-Compiler-Principles/SyntaxParser-LL1)
+  - [Syntax Parser LR (1)](/3-1-Compiler-Principles/SyntaxParser-LR1)
 - Assembly
   - Student Management System
 - Java
