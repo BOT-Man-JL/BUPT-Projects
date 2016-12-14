@@ -198,14 +198,14 @@ E -> E + T | E - T | T
 
 #### 待识别文件输出
 
-每一个**待分析表达式**的 **LR分析过程**
+每一个**待分析表达式**的 **LR分析过程** （生成markdown表格）
 
 ## 运行样例
 
 Windows下，在工作路径下的命令行输入
 
 ``` cmd
-SyntaxParser-LR1.exe Grammar.txt Input.txt
+LR1Parser.exe Grammar.txt Input.txt
 ```
 
 ![How To Run](How-To-Run.png)
@@ -225,7 +225,7 @@ F -> ( E ) | num
 ```
 5+5*3
 (3.5/(2-4*.8/2)-2*3.+(2/(2)-2))+2
-* (3.3 - 2) * + ( * + 2
+ (3.3 - 2) * + ( * + 2
 ```
 
 ### Output
@@ -857,13 +857,11 @@ LR1 Table:
 
 #### Input.txt.output.txt
 
-pdf显示不全，可以在
-https://github.com/BOT-Man-JL/BUPT-Projects/tree/master/3-1-Compiler-Principles/SyntaxParser-LR1
-查看；
 
-```
-Parse $5+5*3$ :
+Parse `5+5*3` :
+
 Stack                     | Input        | Action
+------------------------- | ------------ | ---------------------
 0                         | num+num*num$ | shift 5
 0 num 5                   |    +num*num$ | reduce by F -> num 
 0 F 3                     |    +num*num$ | reduce by T -> F 
@@ -879,8 +877,10 @@ Stack                     | Input        | Action
 0 E 1 + 6 T 15            |            $ | reduce by E -> T + E 
 0 E 1                     |            $ | accept
 
-Parse $(3.5/(2-4*.8/2)-2*3.+(2/(2)-2))+2$ :
+Parse `(3.5/(2-4*.8/2)-2*3.+(2/(2)-2))+2` :
+
 Stack                                            | Input                                                | Action
+------------------------------------------------ | ---------------------------------------------------- | ---------------------
 0                                                | (num/(num-num*num/num)-num*num+(num/(num)-num))+num$ | shift 4
 0 ( 4                                            |  num/(num-num*num/num)-num*num+(num/(num)-num))+num$ | shift 14
 0 ( 4 num 14                                     |     /(num-num*num/num)-num*num+(num/(num)-num))+num$ | reduce by F -> num 
@@ -952,7 +952,22 @@ Stack                                            | Input                        
 0 E 1 + 6 T 15                                   |                                                    $ | reduce by E -> T + E 
 0 E 1                                            |                                                    $ | accept
 
-Parse $* (3.3 - 2) * + ( * + 2$ :
-Stack | Input               | Action
-0     | *(num-num)*+(*+num$ | No Action for (0, *)
-```
+Parse ` (3.3 - 2) * + ( * + 2` :
+
+Stack                   | Input              | Action
+----------------------- | ------------------ | ---------------------
+0                       | (num-num)*+(*+num$ | shift 4
+0 ( 4                   |  num-num)*+(*+num$ | shift 14
+0 ( 4 num 14            |     -num)*+(*+num$ | reduce by F -> num 
+0 ( 4 F 12              |     -num)*+(*+num$ | reduce by T -> F 
+0 ( 4 T 11              |     -num)*+(*+num$ | reduce by E -> T 
+0 ( 4 E 10              |     -num)*+(*+num$ | shift 20
+0 ( 4 E 10 - 20         |      num)*+(*+num$ | shift 14
+0 ( 4 E 10 - 20 num 14  |         )*+(*+num$ | reduce by F -> num 
+0 ( 4 E 10 - 20 F 12    |         )*+(*+num$ | reduce by T -> F 
+0 ( 4 E 10 - 20 T 26    |         )*+(*+num$ | reduce by E -> T - E 
+0 ( 4 E 10              |         )*+(*+num$ | shift 21
+0 ( 4 E 10 ) 21         |          *+(*+num$ | reduce by F -> ) E ( 
+0 F 3                   |          *+(*+num$ | reduce by T -> F 
+0 T 2                   |          *+(*+num$ | shift 8
+0 T 2 * 8               |           +(*+num$ | No Action for (8, +)

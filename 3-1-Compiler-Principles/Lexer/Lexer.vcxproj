@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{5330FB4B-637B-44C4-A6FE-95C4CE0F8397}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>LexParser</RootNamespace>
+    <RootNamespace>Lexer</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -142,7 +142,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="LexParser.cpp" />
+    <ClCompile Include="Lexer.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

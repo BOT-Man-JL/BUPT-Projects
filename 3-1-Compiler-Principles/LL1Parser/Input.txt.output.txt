@@ -1,0 +1,88 @@
+
+Parse $* (3.3 - 2) * + ( * + 2$ :
+Err: E | *              Skip *
+E -> T E'
+T -> F T'
+F -> ( E )
+E -> T E'
+T -> F T'
+F -> num
+T' -> epsilon
+E' -> - T E'
+T -> F T'
+F -> num
+T' -> epsilon
+E' -> epsilon
+T' -> * F T'
+Err: F | +               Pop F
+T' -> epsilon
+E' -> + T E'
+T -> F T'
+F -> ( E )
+Err: E | *              Skip *
+Err: E | +              Skip +
+E -> T E'
+T -> F T'
+F -> num
+T' -> epsilon
+E' -> epsilon
+Err: ) | $               Pop )
+T' -> epsilon
+E' -> epsilon
+
+Parse $(3.5/(2-4*.8/2)-2*3.+(2/(2)-2))+2$ :
+E -> T E'
+T -> F T'
+F -> ( E )
+E -> T E'
+T -> F T'
+F -> num
+T' -> / F T'
+F -> ( E )
+E -> T E'
+T -> F T'
+F -> num
+T' -> epsilon
+E' -> - T E'
+T -> F T'
+F -> num
+T' -> * F T'
+F -> num
+T' -> / F T'
+F -> num
+T' -> epsilon
+E' -> epsilon
+T' -> epsilon
+E' -> - T E'
+T -> F T'
+F -> num
+T' -> * F T'
+F -> num
+T' -> epsilon
+E' -> + T E'
+T -> F T'
+F -> ( E )
+E -> T E'
+T -> F T'
+F -> num
+T' -> / F T'
+F -> ( E )
+E -> T E'
+T -> F T'
+F -> num
+T' -> epsilon
+E' -> epsilon
+T' -> epsilon
+E' -> - T E'
+T -> F T'
+F -> num
+T' -> epsilon
+E' -> epsilon
+T' -> epsilon
+E' -> epsilon
+T' -> epsilon
+E' -> + T E'
+T -> F T'
+F -> num
+T' -> epsilon
+E' -> epsilon

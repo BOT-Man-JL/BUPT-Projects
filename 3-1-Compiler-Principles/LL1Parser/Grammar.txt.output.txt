@@ -1,0 +1,44 @@
+
+Grammar:
+Starting Symbol:
+	E
+Non Terminal Symbols:
+	E T F E' T' 
+Terminal Symbols:
+	( ) num + - * epsilon / 
+Production Rules:
+	E -> T E'
+	T -> F T'
+	F -> ( E ) | num
+	E' -> + T E' | - T E' | epsilon
+	T' -> * F T' | / F T' | epsilon
+
+LL1 Table:
+<E, (>         E -> T E'
+<T, (>         T -> F T'
+<F, (>         F -> ( E )
+<F, $>         F -> sync
+<T, $>         T -> sync
+<E, $>         E -> sync
+<T', $>        T' -> epsilon
+<E', $>        E' -> epsilon
+<E, num>       E -> T E'
+<T, num>       T -> F T'
+<F, num>       F -> num
+<F, +>         F -> sync
+<T, +>         T -> sync
+<T', +>        T' -> epsilon
+<E', +>        E' -> + T E'
+<F, ->         F -> sync
+<T, ->         T -> sync
+<T', ->        T' -> epsilon
+<E', ->        E' -> - T E'
+<F, )>         F -> sync
+<T, )>         T -> sync
+<E, )>         E -> sync
+<T', )>        T' -> epsilon
+<E', )>        E' -> epsilon
+<F, *>         F -> sync
+<T', *>        T' -> * F T'
+<F, />         F -> sync
+<T', />        T' -> / F T'

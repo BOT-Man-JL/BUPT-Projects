@@ -357,13 +357,13 @@ punctuator: one of
 
 ### Windows MSVC 2015 (Visual Studio 2015)
 
-运行 `LexParser.vcxproj`, 并使用参数 `LexTest.c`
+运行 `Lexer.vcxproj`, 并使用参数 `LexTest.c`
 
 ### Unix/Unix-like
 
 ``` bash
-g++ LexParser.cpp -std=c++11 -o LexParser
-./LexParser LexTest.c
+g++ Lexer.cpp -std=c++11 -o Lexer
+./Lexer LexTest.c
 ```
 
 ### Input : LexTest.c

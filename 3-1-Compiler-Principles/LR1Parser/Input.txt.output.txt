@@ -1,6 +1,8 @@
 
-Parse $5+5*3$ :
+Parse `5+5*3` :
+
 Stack                     | Input        | Action
+------------------------- | ------------ | ---------------------
 0                         | num+num*num$ | shift 5
 0 num 5                   |    +num*num$ | reduce by F -> num 
 0 F 3                     |    +num*num$ | reduce by T -> F 
@@ -16,8 +18,10 @@ Stack                     | Input        | Action
 0 E 1 + 6 T 15            |            $ | reduce by E -> T + E 
 0 E 1                     |            $ | accept
 
-Parse $(3.5/(2-4*.8/2)-2*3.+(2/(2)-2))+2$ :
+Parse `(3.5/(2-4*.8/2)-2*3.+(2/(2)-2))+2` :
+
 Stack                                            | Input                                                | Action
+------------------------------------------------ | ---------------------------------------------------- | ---------------------
 0                                                | (num/(num-num*num/num)-num*num+(num/(num)-num))+num$ | shift 4
 0 ( 4                                            |  num/(num-num*num/num)-num*num+(num/(num)-num))+num$ | shift 14
 0 ( 4 num 14                                     |     /(num-num*num/num)-num*num+(num/(num)-num))+num$ | reduce by F -> num 
@@ -89,6 +93,22 @@ Stack                                            | Input                        
 0 E 1 + 6 T 15                                   |                                                    $ | reduce by E -> T + E 
 0 E 1                                            |                                                    $ | accept
 
-Parse $* (3.3 - 2) * + ( * + 2$ :
-Stack | Input               | Action
-0     | *(num-num)*+(*+num$ | No Action for (0, *)
+Parse ` (3.3 - 2) * + ( * + 2` :
+
+Stack                   | Input              | Action
+----------------------- | ------------------ | ---------------------
+0                       | (num-num)*+(*+num$ | shift 4
+0 ( 4                   |  num-num)*+(*+num$ | shift 14
+0 ( 4 num 14            |     -num)*+(*+num$ | reduce by F -> num 
+0 ( 4 F 12              |     -num)*+(*+num$ | reduce by T -> F 
+0 ( 4 T 11              |     -num)*+(*+num$ | reduce by E -> T 
+0 ( 4 E 10              |     -num)*+(*+num$ | shift 20
+0 ( 4 E 10 - 20         |      num)*+(*+num$ | shift 14
+0 ( 4 E 10 - 20 num 14  |         )*+(*+num$ | reduce by F -> num 
+0 ( 4 E 10 - 20 F 12    |         )*+(*+num$ | reduce by T -> F 
+0 ( 4 E 10 - 20 T 26    |         )*+(*+num$ | reduce by E -> T - E 
+0 ( 4 E 10              |         )*+(*+num$ | shift 21
+0 ( 4 E 10 ) 21         |          *+(*+num$ | reduce by F -> ) E ( 
+0 F 3                   |          *+(*+num$ | reduce by T -> F 
+0 T 2                   |          *+(*+num$ | shift 8
+0 T 2 * 8               |           +(*+num$ | No Action for (8, +)

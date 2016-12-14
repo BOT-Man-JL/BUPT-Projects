@@ -1,0 +1,282 @@
+Total Lines: 35
+Total Chars: 788
+
+Total Words:
+[   keyword]:	18
+[identifier]:	26
+[  constant]:	25
+[    string]:	4
+
+Symbols:
+"$this is a \"String\""
+"LexTest"
+"LexTest\n\r\v\t"
+"String\n\r\v\t		2"
+'@this is a \'Char\''
+.0
+.1e3
+.3f
+.6l
+0
+0.
+0.5
+0.7e+8
+00
+0070
+02lu
+02u
+0x0
+0x1l
+0x2u
+0x90
+1.5
+1.e2
+10
+1lu
+1ul
+4.l
+56e-3
+a
+argc
+argv
+b
+c
+ch
+d
+d1
+dd
+dd0
+main
+printf
+scanf
+sf
+str
+xx
+xxx
+
+Tokens:
+<   keyword>	int
+<identifier>	main
+<punctuator>	(
+<   keyword>	int
+<identifier>	argc
+<punctuator>	,
+<   keyword>	char
+<punctuator>	*
+<identifier>	argv
+<punctuator>	[
+<punctuator>	]
+<punctuator>	)
+<punctuator>	{
+<   keyword>	int
+<identifier>	a
+<punctuator>	=
+<  constant>	10
+<punctuator>	,
+<  constant>	0x90
+<punctuator>	,
+<  constant>	0070
+<punctuator>	,
+<  constant>	0
+<punctuator>	,
+<  constant>	00
+<punctuator>	,
+<  constant>	0x0
+<punctuator>	;
+<   keyword>	double
+<identifier>	b
+<punctuator>	=
+<  constant>	0.5
+<punctuator>	,
+<  constant>	1.5
+<punctuator>	,
+<  constant>	.0
+<punctuator>	,
+<  constant>	.1e3
+<punctuator>	,
+<  constant>	0.
+<punctuator>	,
+<  constant>	1.e2
+<punctuator>	,
+<  constant>	56e-3
+<punctuator>	,
+<  constant>	0.7e+8
+<punctuator>	;
+<   keyword>	float
+<identifier>	c
+<punctuator>	=
+<identifier>	a
+<punctuator>	+
+<identifier>	b
+<punctuator>	=
+<identifier>	a
+<punctuator>	/
+<identifier>	b
+<punctuator>	;
+<punctuator>	;
+<punctuator>	;
+<   keyword>	long
+<identifier>	d
+<punctuator>	=
+<identifier>	dd0
+<punctuator>	.
+<identifier>	xxx
+<punctuator>	,
+<identifier>	dd
+<punctuator>	.
+<identifier>	xx
+<punctuator>	,
+<identifier>	d1
+<punctuator>	.
+<punctuator>	;
+<   keyword>	auto
+<identifier>	sf
+<punctuator>	=
+<  constant>	1lu
+<punctuator>	,
+<  constant>	1ul
+<punctuator>	,
+<  constant>	02u
+<punctuator>	,
+<  constant>	02lu
+<punctuator>	,
+<  constant>	0x1l
+<punctuator>	,
+<  constant>	0x2u
+<punctuator>	,
+<  constant>	.3f
+<punctuator>	,
+<  constant>	4.l
+<punctuator>	;
+<   keyword>	char
+<identifier>	ch
+<punctuator>	=
+<  constant>	'@this is a \'Char\''
+<punctuator>	;
+<   keyword>	const
+<   keyword>	char
+<punctuator>	*
+<identifier>	str
+<punctuator>	=
+<    string>	"$this is a \"String\""
+<punctuator>	,
+<    string>	"String\n\r\v\t		2"
+<punctuator>	;
+<identifier>	printf
+<punctuator>	(
+<    string>	"LexTest\n\r\v\t"
+<punctuator>	)
+<punctuator>	;
+<punctuator>	[
+<punctuator>	]
+<punctuator>	(
+<punctuator>	)
+<punctuator>	{
+<punctuator>	}
+<punctuator>	.
+<punctuator>	->
+<punctuator>	++
+<punctuator>	--
+<punctuator>	&
+<punctuator>	*
+<punctuator>	+
+<punctuator>	-
+<punctuator>	~
+<punctuator>	!
+<punctuator>	/
+<punctuator>	%
+<punctuator>	<<
+<punctuator>	>>
+<punctuator>	<
+<punctuator>	>
+<punctuator>	<=
+<punctuator>	>=
+<punctuator>	==
+<punctuator>	!=
+<punctuator>	^
+<punctuator>	|
+<punctuator>	&&
+<punctuator>	||
+<punctuator>	?
+<punctuator>	:
+<punctuator>	,
+<punctuator>	;
+<punctuator>	...
+<punctuator>	=
+<punctuator>	*=
+<punctuator>	/=
+<punctuator>	%=
+<punctuator>	+=
+<punctuator>	-=
+<punctuator>	<<=
+<punctuator>	>>=
+<punctuator>	&=
+<punctuator>	^=
+<punctuator>	|=
+<   keyword>	int
+<identifier>	a
+<punctuator>	=
+<punctuator>	;
+<   keyword>	double
+<identifier>	b
+<punctuator>	=
+<punctuator>	,
+<punctuator>	,
+<punctuator>	;
+<   keyword>	auto
+<identifier>	sf
+<punctuator>	=
+<punctuator>	,
+<punctuator>	,
+<punctuator>	,
+<punctuator>	,
+<punctuator>	,
+<punctuator>	,
+<punctuator>	,
+<punctuator>	,
+<  constant>	.6l
+<punctuator>	;
+<   keyword>	char
+<identifier>	ch
+<punctuator>	=
+<punctuator>	,
+<   keyword>	const
+<   keyword>	char
+<punctuator>	*
+<identifier>	str
+<punctuator>	=
+<identifier>	scanf
+<punctuator>	(
+<    string>	"LexTest"
+<punctuator>	)
+<punctuator>	;
+<   keyword>	return
+<  constant>	0
+<punctuator>	;
+<punctuator>	}
+
+Errors:
+[26]	Invalid 0x
+[27]	Bad Exponential: 5.0e
+[27]	Bad Exponential: 65e+
+[27]	Bad Exponential: 72e-
+[28]	Bad Suffix: 1uu
+[28]	Bad Suffix: 1ull
+[28]	Bad Suffix: 1llu
+[28]	Bad Suffix: 1lul
+[28]	Bad Suffix: 2lu2
+[28]	Bad Suffix: 2ul2
+[28]	Bad Suffix: .3fl
+[28]	Bad Suffix: .4lf
+[28]	Bad Suffix: .5l3l
+[29]	Too few chars inside Pair ''
+[30]	No End Bracket: 'hahaha;
+[31]	No End Bracket: "haha;
+[31]	Invalid Escape Char: \e
+[31]	Invalid Escape Char: \*
+[31]	Invalid Escape Char: \|
+[31]	Invalid Escape Char: \h
+[32]	Invalid Punctuator: @
+[32]	Invalid Punctuator: $
+[32]	Invalid Punctuator: `
+[32]	Invalid Punctuator: ..

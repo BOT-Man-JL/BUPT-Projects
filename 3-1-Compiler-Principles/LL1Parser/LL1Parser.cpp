@@ -507,11 +507,11 @@ namespace BOT_SyntaxParser
 		}
 	};
 
-	struct LexParser
+	struct Lexer
 	{
 		std::vector<std::string> tokens;
 
-		LexParser (std::istream &is,
+		Lexer (std::istream &is,
 				   const std::unordered_set<std::string> &puncSet)
 		{
 			while (true)
@@ -627,7 +627,7 @@ namespace BOT_SyntaxParser
 
 			const auto &table = _grammar.table;
 			std::vector<std::string> tokenFlow
-				= LexParser (is, _grammar.terminalSymbols).tokens;
+				= Lexer (is, _grammar.terminalSymbols).tokens;
 			std::stack<std::string> stack;
 
 			// Init input & stack
@@ -665,7 +665,7 @@ namespace BOT_SyntaxParser
 						if (rule.front () != sync)
 						{
 							// Reversal Push
-							for (int i = rule.size () - 1; i >= 0; i--)
+							for (int i = (int) rule.size () - 1; i >= 0; i--)
 								if (rule[i] != epsilon)
 									stack.push (rule[i]);
 

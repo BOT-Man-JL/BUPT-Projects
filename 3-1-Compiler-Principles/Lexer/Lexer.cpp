@@ -14,9 +14,9 @@
 //#define PRINTCOMMENT
 //#define PRINTPREPROCESS
 
-namespace BOT_LexParser
+namespace BOT_Lexer
 {
-	namespace BOT_LexParser_Impl
+	namespace BOT_Lexer_Impl
 	{
 		constexpr const char *Keywords[]
 		{
@@ -111,7 +111,7 @@ namespace BOT_LexParser
 			size_t operator()(Token const& obj) const
 			{
 				return std::underlying_type<
-					BOT_LexParser::BOT_LexParser_Impl::Token>::type (obj);
+					BOT_Lexer::BOT_Lexer_Impl::Token>::type (obj);
 			}
 		};
 
@@ -133,7 +133,7 @@ namespace BOT_LexParser
 	void LexParsing (std::istream &is,
 					 std::ostream &os)
 	{
-		using namespace BOT_LexParser_Impl;
+		using namespace BOT_Lexer_Impl;
 
 		size_t cLine = 1;
 		size_t cChar = 0;  // Issue: Windows ignore \r :-(
@@ -605,7 +605,7 @@ int main (int argc, char *argv[])
 {
 	try
 	{
-		using namespace BOT_LexParser;
+		using namespace BOT_Lexer;
 
 		if (argc < 2)
 			throw std::runtime_error ("Too few Arguments");

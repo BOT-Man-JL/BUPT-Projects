@@ -565,7 +565,7 @@ namespace BOT_SyntaxParser
 				if (strlen (buffer) == 0 || buffer[0] == '\r')
 					continue;
 
-				os << "\nParse $" << buffer << "$ :\n";
+				os << "\nParse `" << buffer << "` :\n\n";
 				std::stringstream iStream (buffer);
 				_Parse (iStream, os);
 			}
@@ -606,8 +606,9 @@ namespace BOT_SyntaxParser
 			std::vector<std::tuple<
 				std::string, std::string, std::string
 				>> output;
-			size_t width1 = 5;  // 5 is preserved for title
+			size_t width1 = 5;  // 5/6 is preserved for title
 			size_t width2 = 5;
+			size_t width3 = 6;
 
 			std::string stackStr;
 			std::string inputStr;
@@ -726,6 +727,8 @@ namespace BOT_SyntaxParser
 
 					// Output
 					output.emplace_back (stackStr, inputStr, actionStr);
+					if (width3 < actionStr.size ())
+						width3 = actionStr.size ();
 				}
 			}
 			catch (const std::exception &ex)
@@ -734,13 +737,23 @@ namespace BOT_SyntaxParser
 
 				// Output
 				output.emplace_back (stackStr, inputStr, actionStr);
+				if (width3 < actionStr.size ())
+					width3 = actionStr.size ();
 			}
 
 			os << std::setw (width1) << std::left
 				<< "Stack" << " | "
 				<< std::setw (width2) << std::left
 				<< "Input" << " | "
-				<< "Action" << std::endl;
+				<< "Action" << std::endl
+				<< std::setfill ('-')
+				<< std::setw (width1)
+				<< "-" << " | "
+				<< std::setw (width2)
+				<< "-" << " | "
+				<< std::setw (width3)
+				<< "-" << std::endl
+				<< std::setfill (' ');
 
 			for (const auto &row : output)
 			{
