@@ -19,10 +19,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\Model.h" />
     <ClInclude Include="..\src\ORM-Lite\ORMLite.h" />
     <ClInclude Include="..\src\ORM-Lite\sqlite3.h" />
     <ClInclude Include="..\src\Pokemon.h" />
+    <ClInclude Include="..\src\PokemonPhysics.h" />
     <ClInclude Include="..\src\PokemonServer.h" />
     <ClInclude Include="..\src\Shared.h" />
     <ClInclude Include="..\src\Socket.h" />

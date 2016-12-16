@@ -4,17 +4,17 @@
 // is Logging
 #define LOGGING
 
-// Protocol Defined Buf Size
-#define BUF_SIZE 1024
+// Logging
+#include <mutex>
+#include <iostream>
 
 #include <string>
 #include <exception>
 #include <functional>
 #include <thread>
+#include <sstream>
 
-// Logging
-#include <mutex>
-#include <iostream>
+#define BUF_SIZE 256
 
 #ifdef WIN32
 
@@ -28,27 +28,31 @@ namespace BOT_Socket
 {
 	class SocketInit
 	{
-		static size_t refCount;
+		static size_t &refCount ()
+		{
+			static size_t refCount = 0;
+			return refCount;
+		}
+
 	public:
 		SocketInit ()
 		{
-			if (!refCount)
+			if (!refCount ())
 			{
 				WSADATA wsaData;
 				if (WSAStartup (MAKEWORD (2, 2), &wsaData) != 0)
 					throw std::runtime_error ("Failed at WSAStartup");
 			}
-			refCount++;
+			refCount ()++;
 		}
 
 		~SocketInit ()
 		{
-			refCount--;
-			if (!refCount)
+			refCount ()--;
+			if (!refCount ())
 				WSACleanup ();
 		}
 	};
-	size_t SocketInit::refCount = 0;
 }
 
 #else
@@ -122,30 +126,31 @@ namespace BOT_Socket
 					while (true)
 					{
 						// Recv
+						std::ostringstream oss;
 						char recvBuf[BUF_SIZE];
-						auto bytesRead = 0;
-						while (bytesRead < BUF_SIZE)
+						auto isRead = false;
+						while (true)
 						{
-							auto curRecv = recv (connectSock, recvBuf + bytesRead,
-												 BUF_SIZE - bytesRead, 0);
+							auto curRecv = recv (connectSock, recvBuf, BUF_SIZE - 1, 0);
 							if (curRecv == 0 || curRecv == -1)
 								break;
 
-							bytesRead += curRecv;
+							recvBuf[curRecv] = 0;
+							oss << recvBuf;
+							isRead = true;
 
 							// Read '\0'
-							if (bytesRead > 1 && !recvBuf[bytesRead - 1])
+							if (recvBuf[curRecv - 1] == 0)
 								break;
 						}
 
 						// Client Close the Connection
-						if (!bytesRead)
+						if (!isRead)
 							break;
 
 						// Callback
 						std::string response;
-						if (callback)
-							callback (recvBuf, response);
+						if (callback) callback (oss.str (), response);
 
 						// Client Close the Connection
 						if (-1 == send (connectSock, response.c_str (),
@@ -238,27 +243,29 @@ namespace BOT_Socket
 			}
 
 			// Recv
+			std::ostringstream oss;
 			char recvBuf[BUF_SIZE];
-			auto bytesRead = 0;
-			while (bytesRead < BUF_SIZE)
+			auto isRead = false;
+			while (true)
 			{
-				auto curRecv = recv (_sock, recvBuf + bytesRead,
-									 BUF_SIZE - bytesRead, 0);
+				auto curRecv = recv (_sock, recvBuf, BUF_SIZE - 1, 0);
 				if (curRecv == 0 || curRecv == -1)
 					break;
 
-				bytesRead += curRecv;
+				recvBuf[curRecv] = 0;
+				oss << recvBuf;
+				isRead = true;
 
 				// Read '\0'
-				if (bytesRead > 1 && !recvBuf[bytesRead - 1])
+				if (recvBuf[curRecv - 1] == 0)
 					break;
 			}
 
 			// Server Close the Connection
-			if (!bytesRead)
+			if (!isRead)
 				throw std::runtime_error ("Server Close the Connection");
 
-			return recvBuf;
+			return oss.str ();
 		}
 
 		~Client ()

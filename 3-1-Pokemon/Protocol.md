@@ -1,189 +1,158 @@
 # Pokemon Protocol
 
-- **PokemonServer** is the Server who handle Request from Client;
-- **PokemonClient** is the Client who send Request to Server;
-
-## Format
-
-### Request Format
-
-> Token \n
-> Param 1 \n
-> Param 2 \n
-> ...
-> \0
-
-### Response Format
-
-If Succeeded:
-
-> 1 \n
-> Param 1 \n
-> Param 2 \n
-> ...
-> \0
-
-If Failed:
-
-> 0 \n
-> Error Msg
-> \0
-
 ## Accounting
 
-### Register
+#### register
 
-> User ID \n
-> User Password
->
-> Msg
+``` json
+{"request": "register", "param": {"uid": uid, "pwd": pwd}}
 
-### Login
+{"success": true, "response": msg}
+{"success": false, "response": msg}
+```
 
-> User ID \n
-> User Password
->
-> Session ID
+#### login
 
-### Logout
+``` json
+{"request": "login", "param": {"uid": uid, "pwd": pwd}}
 
-> Session ID
->
-> Msg
+{"success": true, "response": sid}
+{"success": false, "response": msg}
+```
 
-## User Info
+#### logout
 
-### UsersWonRate
+``` json
+{"request": "logout", "param": {"sid": sid}}
 
-> Session ID \n
-> User ID
->
-> Won Rate (double)
+{"success": true, "response": msg}
+{"success": false, "response": msg}
+```
 
-### UsersBadges
+## Query
 
-> Session ID \n
-> User ID
->
-> Badge 1 \n
-> Badge 2 \n
-> ...
+``` json
+user = {"uid": uid, "wonrate": wonrate,
+        "badges": [badge], "pokemons": [pokemon]}
+```
 
-### UsersAll
+``` json
+pokemon = {"pid": pid, "uid": uid, "name": name,
+           "level": level, "exppoint": exppoint,
+           "atk": atk, "def": def, "hp": hp, "timegap": timegap}
+```
 
-> Session ID \n
->
-> User ID 1 \n
-> User ID 2 \n
-> ...
+#### pokemonall
 
-### UsersOnline
+``` json
+{"request": "pokemonall", "param": {"sid": sid}}
 
-> Session ID \n
->
-> User ID 1 \n
-> User ID 2 \n
-> ...
+{"success": true, "response": [pokemon]}
+{"success": false, "response": msg}
+```
 
-## Pokemon Info
+#### userall
 
-### PokemonInfo
+``` json
+{"request": "userall", "param": {"sid": sid}}
 
-> Session ID \n
-> Pokemon ID \n
->
-> Name \n
-> Level \n
-> Exp Point \n
-> Atk \n
-> Def \n
-> HP \n
-> Time Gap \n
+{"success": true, "response": [user]}
+{"success": false, "response": msg}
+```
 
-### UsersPokemons
+#### useronline
 
-> Session ID \n
-> User ID
->
-> Pokemon ID 1 \n
-> Pokemon ID 2 \n
-> ...
+``` json
+{"request": "useronline", "param": {"sid": sid}}
 
-### PokemonsAll
-
-> Session ID \n
->
-> Pokemon ID 1 \n
-> Pokemon ID 2 \n
-> ...
+{"success": true, "response": [user]}
+{"success": false, "response": msg}
+```
 
 ## Room
 
-### RoomQuery
+#### roomall
 
-> Session ID \n
->
-> Room ID 1 \n
-> Room ID 2 \n
-> ...
+``` json
+{"request": "roomall", "param": {"sid": sid}}
 
-### RoomEnter
+{"success": true, "response": [rid]}
+{"success": false, "response": msg}
+```
 
-> Session ID \n
-> Room ID \n
-> Pokemon ID \n
->
-> Msg
+#### roomenter
 
-### RoomLeave
+``` json
+{"request": "roomenter",
+ "param": {"sid": sid, "rid": rid, "pid": pid}}
 
-> Session ID \n
->
-> Msg
+{"success": true, "response": msg}
+{"success": false, "response": msg}
+```
 
-### RoomReady
+#### roomleave
 
-> Session ID \n
->
-> Msg
+``` json
+{"request": "roomleave", "param": {"sid": sid}}
 
-### RoomState
+{"success": true, "response": msg}
+{"success": false, "response": msg}
+```
 
-> Session ID \n
->
-> Timestamp
-> User ID \n
-> Is Ready \n
-> Init X \n
-> Init Y \n
-> Pokemon ID \n
-> ...
+#### roomready
 
-## Playing
+``` json
+{"request": "roomready", "param": {"sid": sid}}
 
-### Lockstep
+{"success": true, "response": msg}
+{"success": false, "response": msg}
+```
 
-> Session ID \n
-> Action
->
-> Timestamp \n
-> Action 1 \n
-> Action 2 \n
-> ...
+#### roomstate
 
-#### Action
+``` json
+roomplayer = {"uid": uid, "isready": isready, "pokemon": pokemon}
+```
 
-> Action Type \t
-> x (Move) \t
-> y (Move) \t
-> User ID \t
-> Timestamp
+``` json
+{"request": "roomstate", "param": {"sid": sid}}
 
-#### Action Type
+{"success": true, "response": [roomplayer]}
+{"success": false, "response": msg}
+```
 
-- None
-- Move
-  - x
-  - y
-- Attack
-- Defend
+## Gaming
+
+``` json
+player = {"uid": uid, "x": x, "y": y, "vx": vx, "vy": vy,
+          "curHp": curHp, "pokemon": pokemon}
+```
+
+#### gamesync
+
+``` json
+{ "request": "gamesync",
+  "param": {
+    "action": {
+      "timestamp": timestamp,
+      "movex": movex, "movey": movey,
+      "atkx": atkx, "atky": atky, "def": isdef}
+    }
+}
+
+{"success": true, "response": [player]}
+{"success": false, "response": msg}
+```
+
+#### gameresult
+
+``` json
+playerresult = {"uid": uid, "win": iswin, "pokemon": pokemon}
+```
+
+``` json
+{"request": "gameresult", "param": {"sid": sid}}
+
+{"success": true, "response": [playerresult]}
+{"success": false, "response": msg}
+```
