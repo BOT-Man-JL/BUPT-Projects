@@ -1,5 +1,36 @@
 # Pokemon Protocol
 
+## Data
+
+``` json
+user = {"uid": uid, "online": isonline, "wonrate": wonrate,
+        "badges": [badge], "pokemons": [pokemon]}
+```
+
+``` json
+pokemon = {"pid": pid, "uid": uid, "name": name,
+           "level": level, "exppoint": exppoint,
+           "atk": atk, "def": def, "hp": hp, "timegap": timegap}
+```
+
+``` json
+roomplayer = {"uid": uid, "ready": isready, "pokemon": pokemon}
+```
+
+``` json
+gameplayer = {"uid": uid,
+              "x": x, "y": y,
+              "vx": vx, "vy": vy,
+              "timegap": timegap,
+              "curHp": curHp}
+```
+
+``` json
+resultplayer = {"uid": uid,
+                "won": iswon,
+                "pokemon": pokemonlost}
+```
+
 ## Accounting
 
 #### register
@@ -16,7 +47,7 @@
 ``` json
 {"request": "login", "param": {"uid": uid, "pwd": pwd}}
 
-{"success": true, "response": sid}
+{"success": true, "response": {"sid": sid, "user": thisuser}
 {"success": false, "response": msg}
 ```
 
@@ -30,17 +61,6 @@
 ```
 
 ## Query
-
-``` json
-user = {"uid": uid, "online": isonline, "wonrate": wonrate,
-        "badges": [badge], "pokemons": [pokemon]}
-```
-
-``` json
-pokemon = {"pid": pid, "uid": uid, "name": name,
-           "level": level, "exppoint": exppoint,
-           "atk": atk, "def": def, "hp": hp, "timegap": timegap}
-```
 
 #### pokemons
 
@@ -93,10 +113,6 @@ pokemon = {"pid": pid, "uid": uid, "name": name,
 #### roomready
 
 ``` json
-roomplayer = {"uid": uid, "isready": isready, "pokemon": pokemon}
-```
-
-``` json
 {"request": "roomready",
  "param": {"sid": sid, "ready": isready}}
 
@@ -105,11 +121,6 @@ roomplayer = {"uid": uid, "isready": isready, "pokemon": pokemon}
 ```
 
 ## Gaming
-
-``` json
-player = {"uid": uid, "x": x, "y": y, "vx": vx, "vy": vy,
-          "curHp": curHp, "pokemon": pokemon}
-```
 
 #### gamesync
 
@@ -123,19 +134,13 @@ player = {"uid": uid, "x": x, "y": y, "vx": vx, "vy": vy,
     }
 }
 
-{"success": true, "response": [player]}
-{"success": false, "response": msg}
-```
-
-#### gameresult
-
-``` json
-playerresult = {"uid": uid, "win": iswin, "pokemon": pokemon}
-```
-
-``` json
-{"request": "gameresult", "param": {"sid": sid}}
-
-{"success": true, "response": [playerresult]}
+{
+  "success": true,
+  "response": {
+    "over": isover,
+    "players": [gameplayer]   // not over
+    "players": [resultplayer] // over
+  }
+}
 {"success": false, "response": msg}
 ```
