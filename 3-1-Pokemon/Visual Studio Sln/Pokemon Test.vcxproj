@@ -145,6 +145,7 @@
     <ClInclude Include="..\src\Pokemon.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\Pokemon.cpp" />
     <ClCompile Include="..\src\TestPokemon.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

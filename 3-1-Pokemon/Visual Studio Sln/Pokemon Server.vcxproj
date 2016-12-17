@@ -29,6 +29,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\ORM-Lite\sqlite3.c" />
+    <ClCompile Include="..\src\Pokemon.cpp" />
     <ClCompile Include="..\src\Server.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

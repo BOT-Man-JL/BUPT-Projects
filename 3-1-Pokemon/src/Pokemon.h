@@ -7,80 +7,84 @@
 #include <random>
 #include <algorithm>
 #include <string>
+#include <memory>
 
-// Scaffold Macros
+// Fix for the pollution by <windows.h>
+#ifdef max
+#undef max
+#endif
+#ifdef min
+#undef min
+#endif
 
+// Scaffolding Macros
 #define SCAFFOLD_POKEMON_TYPE(CLASSNAME)					\
+struct CLASSNAME : public Pokemon {							\
 protected:													\
-using Pokemon::HealthPoint;									\
-using Pokemon::TimeGap;										\
-using Pokemon::Level;										\
-using Pokemon::ExpPoint;									\
-CLASSNAME (Level level,										\
-ExpPoint expPoint,											\
-HealthPoint atk,											\
-HealthPoint def,											\
-HealthPoint hp,												\
-TimeGap timeGap)											\
-: Pokemon (level, expPoint, atk, def, hp, timeGap)			\
-{}															\
+	using Pokemon::HealthPoint;								\
+	using Pokemon::TimeGap;									\
+	using Pokemon::Level;									\
+	using Pokemon::ExpPoint;								\
+	CLASSNAME (Level level,									\
+		ExpPoint expPoint,									\
+		HealthPoint atk,									\
+		HealthPoint def,									\
+		HealthPoint hp,										\
+		TimeGap timeGap)									\
+	: Pokemon (level, expPoint, atk, def, hp, timeGap) {}	\
 public:														\
-std::string GetType () const override final					\
-{															\
-	return #CLASSNAME;										\
+	std::string GetType () const override final				\
+	{														\
+		return #CLASSNAME;									\
+	}														\
+	HealthPoint _GetDamagePoint (							\
+		const Pokemon &opPokemon) const override;			\
 }															\
 
-#define SCAFFOLD_POKEMON(CLASSNAME, TYPE)					\
+#define SCAFFOLD_POKEMON(									\
+	CLASSNAME, TYPE, W, H, V, ATK, DEF, HP, TG)				\
+class CLASSNAME : public TYPE {								\
 public:														\
-CLASSNAME (Level level,										\
-ExpPoint expPoint,											\
-HealthPoint atk,											\
-HealthPoint def,											\
-HealthPoint hp,												\
-TimeGap timeGap)											\
-: TYPE (level, expPoint, atk, def, hp, timeGap)				\
-{ _SetPhysics (); }											\
-std::string GetName () const override final					\
-{															\
-	return #CLASSNAME;										\
+	CLASSNAME (Level level,									\
+		ExpPoint expPoint,									\
+		HealthPoint atk,									\
+		HealthPoint def,									\
+		HealthPoint hp,										\
+		TimeGap timeGap)									\
+	: TYPE (level, expPoint, atk, def, hp, timeGap) {}		\
+	CLASSNAME ()											\
+	: TYPE (1, 0, _RandAttr (ATK), _RandAttr (DEF),			\
+			_RandAttr (HP), _RandAttr (TG)) {}				\
+	std::string GetName () const override final				\
+	{														\
+		return #CLASSNAME;									\
+	}														\
+	std::pair<size_t, size_t> GetSize (						\
+		) const override final								\
+	{														\
+		return std::make_pair (W, H);						\
+	}														\
+	size_t GetVelocity () const override final				\
+	{														\
+		return V;											\
+	}														\
+protected:													\
+	void _OnUpgrade () override final;						\
 }															\
-
-#define SCAFFOLD_NEW_POKEMON_FROM_NAME(CLASSNAME)			\
-if (name == #CLASSNAME)										\
-	return new CLASSNAME (level, expPoint, atk, def,		\
-						  hp, timeGap)						\
-
-#define NAMEOF(CLASSNAME) #CLASSNAME
-
-// Helper Function
-namespace Math
-{
-	int Rand (int min, int max)
-	{
-		static std::random_device rand;
-		return rand () % (max - min) + min;
-	};
-
-	template <typename T>
-	T Min (const T &a, const T &b)
-	{
-		return a < b ? a : b;
-	}
-
-	template <typename T>
-	T Max (const T &a, const T &b)
-	{
-		return a > b ? a : b;
-	}
-}
-
-// class Pokemon
 
 namespace PokemonGame
 {
 	class Pokemon
 	{
 	public:
+		// Get Type & Name
+		virtual std::string GetType () const = 0;
+		virtual std::string GetName () const = 0;
+
+		// Get Physics
+		virtual std::pair<size_t, size_t> GetSize () const = 0;
+		virtual size_t GetVelocity () const = 0;
+
 		// Attribute
 		typedef unsigned Level;
 		typedef unsigned ExpPoint;
@@ -88,9 +92,6 @@ namespace PokemonGame
 		typedef unsigned TimeGap;
 
 		// Get Attr
-		virtual std::string GetType () const = 0;
-		virtual std::string GetName () const = 0;
-
 		Level GetLevel () const { return _level; }
 		Level GetExp () const { return _expPoint; }
 		HealthPoint GetAtk () const { return _atk; }
@@ -98,24 +99,22 @@ namespace PokemonGame
 		TimeGap GetTimeGap () const { return _timeGap; }
 		HealthPoint GetHP () const { return _hp; }
 
-		// Runtime
+		// Runtime Attr
 		HealthPoint GetCurHP () const { return _curHp; }
 
-		std::pair<size_t, size_t> GetSize () const
-		{ return std::make_pair (_width, _height); }
-		size_t GetVelocity () const { return _velocity; }
-
 		// Factory
-		static Pokemon *NewPokemon ();
-		static Pokemon *NewPokemon (const std::string &name);
-		static Pokemon *NewPokemon (const std::string &name,
-									Level level,
-									ExpPoint expPoint,
-									HealthPoint atk,
-									HealthPoint def,
-									HealthPoint hp,
-									TimeGap timeGap);
 		static const std::vector<std::string> &PokemonNames ();
+		static std::unique_ptr<Pokemon> NewPokemon ();
+		static std::unique_ptr<Pokemon> NewPokemon (
+			const std::string &name);
+		static std::unique_ptr<Pokemon> NewPokemon (
+			const std::string &name,
+			Level level,
+			ExpPoint expPoint,
+			HealthPoint atk,
+			HealthPoint def,
+			HealthPoint hp,
+			TimeGap timeGap);
 
 		// this Pokemon Attack opPokemon
 		// Return <isKilling, isUpgraded>
@@ -123,27 +122,26 @@ namespace PokemonGame
 		{
 			auto &thisPokemon = *this;
 			auto damage = thisPokemon._GetDamagePoint (opPokemon);
-			auto isKilling = opPokemon.Hurt (damage);
+			auto isKilling = opPokemon._Hurt (damage);
 			auto isUpgraded = false;
 
 			if (isKilling)
 			{
-				opPokemon._OnKilled ();
-				isUpgraded = thisPokemon.Upgrade (
-					opPokemon.GetLevel () * Math::Rand (50, 100));
+				isUpgraded = thisPokemon._Upgrade (
+					opPokemon.GetLevel () * _Rand (50, 100));
 			}
 			else
-				isUpgraded = thisPokemon.Upgrade (
-					opPokemon.GetLevel () * Math::Rand (0, 5));
+				isUpgraded = thisPokemon._Upgrade (
+					opPokemon.GetLevel () * _Rand (0, 5));
 			if (isUpgraded) thisPokemon._OnUpgrade ();
 
 			return std::make_pair (isKilling, isUpgraded);
 		}
 
-		void Recover (HealthPoint hp = 0)
+		// Reset cur Hp to Full Hp
+		void Recover ()
 		{
 			_curHp = _hp;
-			_OnRecover ();
 		}
 
 	protected:
@@ -158,10 +156,6 @@ namespace PokemonGame
 		// Runtime
 		HealthPoint _curHp;
 
-		// Physics
-		size_t _width, _height;
-		size_t _velocity;
-
 		// Constructor
 		Pokemon (Level level,
 				 ExpPoint expPoint,
@@ -170,23 +164,33 @@ namespace PokemonGame
 				 HealthPoint hp,
 				 TimeGap timeGap)
 			: _level (level), _expPoint (expPoint),
-			_atk (atk), _def (def), _timeGap (timeGap), _hp (hp), _curHp (hp)
+			_atk (atk), _def (def), _timeGap (timeGap),
+			_hp (hp), _curHp (hp)
 		{}
 
-		// Abstract Function Members
-
-		virtual HealthPoint _GetDamagePoint (Pokemon &opPokemon) const = 0;
-		virtual void _SetPhysics () = 0;
-		virtual void _OnBorn () = 0;
-		virtual void _OnKilled () = 0;
-		virtual void _OnRecover () = 0;
+		// Abstract Functions
+		virtual HealthPoint _GetDamagePoint (
+			const Pokemon &opPokemon) const = 0;
 		virtual void _OnUpgrade () = 0;
+
+		// Helper Functions
+		static int _Rand (int min, int max)
+		{
+			static std::random_device rand;
+			return rand () % (max - min) + min;
+		};
+
+		static unsigned _RandAttr (unsigned attr)
+		{
+			// Vary from -20% to 20%
+			auto delta = (unsigned) (attr / 5.0);
+			return _Rand (attr - delta, attr + delta);
+		}
 
 	private:
 		// Hurt
-		// Return true if Killed
-		// Return false otherwise
-		bool Hurt (HealthPoint damage)
+		// Return true if Killed, false otherwise
+		bool _Hurt (HealthPoint damage)
 		{
 			if (_curHp >= damage)
 				_curHp -= damage;
@@ -197,9 +201,8 @@ namespace PokemonGame
 		}
 
 		// Upgrade
-		// Return true if Upgraded
-		// Return false otherwise
-		bool Upgrade (ExpPoint exp)
+		// Return true if Upgraded, false otherwise
+		bool _Upgrade (ExpPoint exp)
 		{
 			_expPoint += exp;
 			if (_level >= 15)
@@ -217,186 +220,22 @@ namespace PokemonGame
 		}
 	};
 
-	struct StrengthPokemon : public Pokemon
-	{
-		SCAFFOLD_POKEMON_TYPE (StrengthPokemon)
-	public:
-		HealthPoint _GetDamagePoint (Pokemon &opPokemon) const override;
-	};
+	// Scaffold 4 Types of Pokemons
+	SCAFFOLD_POKEMON_TYPE (StrengthPokemon);
+	SCAFFOLD_POKEMON_TYPE (DefendingPokemon);
+	SCAFFOLD_POKEMON_TYPE (TankPokemon);
+	SCAFFOLD_POKEMON_TYPE (SwiftPokemon);
 
-	struct DefendingPokemon : public Pokemon
-	{
-		SCAFFOLD_POKEMON_TYPE (DefendingPokemon)
-	public:
-		HealthPoint _GetDamagePoint (Pokemon &opPokemon) const override;
-	};
-
-	struct TankPokemon : public Pokemon
-	{
-		SCAFFOLD_POKEMON_TYPE (TankPokemon)
-	public:
-		HealthPoint _GetDamagePoint (Pokemon &opPokemon) const override;
-	};
-
-	struct SwiftPokemon : public Pokemon
-	{
-		SCAFFOLD_POKEMON_TYPE (SwiftPokemon)
-	public:
-		HealthPoint _GetDamagePoint (Pokemon &opPokemon) const override;
-	};
-
-	Pokemon::HealthPoint StrengthPokemon::_GetDamagePoint (
-		Pokemon &opPokemon) const
-	{
-		HealthPoint ret = 0;
-		if (dynamic_cast<TankPokemon *> (&opPokemon))
-			ret = (unsigned) (this->GetAtk () - opPokemon.GetDef () * 1.2);
-		else if (dynamic_cast<DefendingPokemon *> (&opPokemon))
-			ret = this->GetAtk () - opPokemon.GetDef () / 2;
-		else if (dynamic_cast<SwiftPokemon *> (&opPokemon))
-			ret = this->GetAtk () - Math::Rand (0, opPokemon.GetDef () * 2);
-		else
-			ret = this->GetAtk () - opPokemon.GetDef ();
-		return Math::Max (ret, HealthPoint ());
-	}
-
-	Pokemon::HealthPoint DefendingPokemon::_GetDamagePoint (
-		Pokemon &opPokemon) const
-	{
-		HealthPoint ret = 0;
-		if (dynamic_cast<StrengthPokemon *> (&opPokemon))
-			ret = this->GetAtk ();
-		else if (dynamic_cast<TankPokemon *> (&opPokemon))
-			ret = this->GetAtk ();
-		else if (dynamic_cast<SwiftPokemon *> (&opPokemon))
-			ret = this->GetAtk () - Math::Rand (
-				opPokemon.GetDef () / 2, (unsigned) (opPokemon.GetDef () * 1.5));
-		else
-			ret = this->GetAtk () - opPokemon.GetDef ();
-		return Math::Max (ret, HealthPoint ());
-	}
-
-	Pokemon::HealthPoint TankPokemon::_GetDamagePoint (
-		Pokemon &opPokemon) const
-	{
-		HealthPoint ret = 0;
-		if (dynamic_cast<StrengthPokemon *> (&opPokemon))
-			ret = this->GetAtk () - opPokemon.GetDef () / 2;
-		else if (dynamic_cast<DefendingPokemon *> (&opPokemon))
-			ret = this->GetAtk () - opPokemon.GetDef () * 3;
-		else if (dynamic_cast<SwiftPokemon *> (&opPokemon))
-			ret = (unsigned) (this->GetAtk () - (unsigned) (opPokemon.GetDef () * 1.5));
-		else
-			ret = this->GetAtk () - opPokemon.GetDef ();
-		return Math::Max (ret, HealthPoint ());
-	}
-
-	Pokemon::HealthPoint SwiftPokemon::_GetDamagePoint (
-		Pokemon &opPokemon) const
-	{
-		HealthPoint ret = 0;
-		if (dynamic_cast<StrengthPokemon *> (&opPokemon))
-			ret = this->GetAtk () - Math::Rand (0, opPokemon.GetDef () * 2);
-		else if (dynamic_cast<TankPokemon *> (&opPokemon))
-			ret = Math::Rand (this->GetAtk (), this->GetAtk () * 2) - opPokemon.GetDef ();
-		else if (dynamic_cast<DefendingPokemon *> (&opPokemon))
-			ret = Math::Rand (this->GetAtk (), this->GetAtk () * 2) - opPokemon.GetDef () / 2;
-		else
-			ret = this->GetAtk () - opPokemon.GetDef ();
-		return Math::Max (ret, HealthPoint ());
-	}
-
-	class Pikachu : public SwiftPokemon
-	{
-		SCAFFOLD_POKEMON (Pikachu, SwiftPokemon)
-	protected:
-		void _SetPhysics () override
-		{
-			_width = 10;
-			_height = 20;
-			_velocity = 10;
-		}
-		void _OnBorn () override
-		{
-			using namespace Math;
-			_atk = Rand (8, 12);
-			_def = Rand (6, 8);
-			_hp = _curHp = Rand (40, 50);
-			_timeGap = Rand (6, 9);
-		}
-		void _OnKilled () override
-		{}
-		void _OnRecover () override
-		{}
-		void _OnUpgrade () override
-		{}
-	};
-
-	class Charmander : public StrengthPokemon
-	{
-		SCAFFOLD_POKEMON (Charmander, StrengthPokemon)
-	protected:
-		void _SetPhysics () override
-		{
-			_width = 20;
-			_height = 25;
-			_velocity = 5;
-		}
-		void _OnBorn () override
-		{
-			using namespace Math;
-			_atk = Rand (10, 15);
-			_def = Rand (6, 8);
-			_hp = _curHp = Rand (50, 60);
-			_timeGap = Rand (8, 12);
-		}
-		void _OnKilled () override
-		{}
-		void _OnRecover () override
-		{}
-		void _OnUpgrade () override
-		{}
-	};
-
-	inline const std::vector<std::string> &Pokemon::PokemonNames ()
-	{
-		static const std::vector<std::string> pokemonNames
-		{
-			NAMEOF (Pikachu),
-			NAMEOF (Charmander)
-		};
-		return pokemonNames;
-	}
-
-	inline Pokemon *Pokemon::NewPokemon (const std::string &name,
-										 Level level,
-										 ExpPoint expPoint,
-										 HealthPoint atk,
-										 HealthPoint def,
-										 HealthPoint hp,
-										 TimeGap timeGap)
-	{
-		SCAFFOLD_NEW_POKEMON_FROM_NAME (Pikachu);
-		SCAFFOLD_NEW_POKEMON_FROM_NAME (Charmander);
-		throw std::runtime_error ("No Such Pokemon");
-	}
-
-	Pokemon *Pokemon::NewPokemon (const std::string &name)
-	{
-		auto ret = Pokemon::NewPokemon (name,
-										1, 0, 0, 0, 0, 0);
-
-		// Set Init Attr Here
-		ret->_OnBorn ();
-		return ret;
-	}
-
-	inline Pokemon *Pokemon::NewPokemon ()
-	{
-		return NewPokemon (
-			PokemonNames ()[std::random_device ()()
-			% PokemonNames ().size ()]);
-	}
+	// Scaffold Pokemons
+	SCAFFOLD_POKEMON (Pikachu, SwiftPokemon,
+					  10, 20, 10,
+					  10, 7, 45, 8);
+	SCAFFOLD_POKEMON (Charmander, StrengthPokemon,
+					  20, 25, 5,
+					  12, 7, 55, 10);
 }
+
+#undef SCAFFOLD_POKEMON_TYPE
+#undef SCAFFOLD_POKEMON
 
 #endif // !POKEMON_H

@@ -32,7 +32,7 @@
 ## Query
 
 ``` json
-user = {"uid": uid, "wonrate": wonrate,
+user = {"uid": uid, "online": isonline, "wonrate": wonrate,
         "badges": [badge], "pokemons": [pokemon]}
 ```
 
@@ -42,28 +42,19 @@ pokemon = {"pid": pid, "uid": uid, "name": name,
            "atk": atk, "def": def, "hp": hp, "timegap": timegap}
 ```
 
-#### pokemonall
+#### pokemons
 
 ``` json
-{"request": "pokemonall", "param": {"sid": sid}}
+{"request": "pokemons", "param": {"sid": sid}}
 
 {"success": true, "response": [pokemon]}
 {"success": false, "response": msg}
 ```
 
-#### userall
+#### users
 
 ``` json
-{"request": "userall", "param": {"sid": sid}}
-
-{"success": true, "response": [user]}
-{"success": false, "response": msg}
-```
-
-#### useronline
-
-``` json
-{"request": "useronline", "param": {"sid": sid}}
+{"request": "users", "param": {"sid": sid}}
 
 {"success": true, "response": [user]}
 {"success": false, "response": msg}
@@ -71,10 +62,10 @@ pokemon = {"pid": pid, "uid": uid, "name": name,
 
 ## Room
 
-#### roomall
+#### rooms
 
 ``` json
-{"request": "roomall", "param": {"sid": sid}}
+{"request": "rooms", "param": {"sid": sid}}
 
 {"success": true, "response": [rid]}
 {"success": false, "response": msg}
@@ -102,20 +93,12 @@ pokemon = {"pid": pid, "uid": uid, "name": name,
 #### roomready
 
 ``` json
-{"request": "roomready", "param": {"sid": sid}}
-
-{"success": true, "response": msg}
-{"success": false, "response": msg}
-```
-
-#### roomstate
-
-``` json
 roomplayer = {"uid": uid, "isready": isready, "pokemon": pokemon}
 ```
 
 ``` json
-{"request": "roomstate", "param": {"sid": sid}}
+{"request": "roomready",
+ "param": {"sid": sid, "ready": isready}}
 
 {"success": true, "response": [roomplayer]}
 {"success": false, "response": msg}
