@@ -457,7 +457,10 @@ namespace PokemonGame
 					std::move (pokemon)
 				};
 
-				response = "Entered this Room";
+				response = json {
+					{ "width", RoomModel::Player::maxX },
+					{ "height", RoomModel::Player::maxY }
+				};
 			});
 
 			SetHandler ("roomleave",
@@ -597,9 +600,13 @@ namespace PokemonGame
 					});
 				}
 
+				// Todo
+				json gamedamagesj;
+
 				response = {
 					{ "over", false },
-					{ "resultplayers", std::move (gameplayersj) }
+					{ "gameplayers", std::move (gameplayersj) },
+					{ "gamedamages", std::move (gamedamagesj) }
 				};
 			});
 

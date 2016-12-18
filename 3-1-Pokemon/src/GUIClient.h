@@ -5,17 +5,108 @@
 #include <mutex>
 #include <thread>
 #include <algorithm>
+#include <cctype>
 
 #include "EggAche/EggAche.h"
 
+#include "Pokemon.h"
 #include "PokemonClient.h"
-#include "GUIShared.h"
+
+// Fix for the pollution by <windows.h>
+#ifdef max
+#undef max
+#endif
+#ifdef min
+#undef min
+#endif
 
 namespace PokemonGameGUI
 {
 	class GUIClient
 	{
 	private:
+		struct Rect
+		{
+			size_t x, y;
+			size_t w, h;
+		};
+
+		class Button
+		{
+		public:
+			Button (EggAche::Canvas &canvas,
+					const std::string &text,
+					size_t x, size_t y,
+					size_t w = 20, size_t h = 18)
+				: _rect { x, y, w, h }
+			{
+				canvas.DrawTxt (_rect.x + _rect.w / 2,
+								_rect.y + (_rect.h - 18) / 2,
+								text.c_str ());
+
+				_rect.w += canvas.GetTxtWidth (text.c_str ());
+				canvas.DrawRdRt (_rect.x, _rect.y,
+								 _rect.x + _rect.w,
+								 _rect.y + _rect.h,
+								 _rect.w / 4, _rect.h / 4);
+			}
+
+			bool TestClick (size_t x, size_t y)
+			{
+				return x >= _rect.x && y >= _rect.y &&
+					x <= _rect.x + _rect.w &&
+					y <= _rect.y + _rect.h;
+			}
+
+		private:
+			Rect _rect;
+		};
+
+		class Input
+		{
+		public:
+			Input (EggAche::Canvas &canvas,
+				   const std::string &text,
+				   const std::string &hintText,
+				   bool isActivated,
+				   size_t x, size_t y,
+				   size_t w, size_t h = 18)
+				: _rect { x, y, w + 4, h + 2 }
+			{
+				// Clear and Draw Bounder
+				canvas.SetBrush (false, 255, 255, 255);
+				canvas.DrawRect (_rect.x, _rect.y,
+								 _rect.x + _rect.w,
+								 _rect.y + _rect.h);
+				canvas.SetBrush (true, 0, 0, 0);
+
+				// Draw Text
+				const auto &strToDraw =
+					text.empty () && !isActivated ? hintText : text;
+				canvas.DrawTxt (_rect.x + 2, _rect.y + 1,
+								strToDraw.c_str ());
+
+				// Draw Pipeline
+				if (isActivated)
+				{
+					auto posX = _rect.x + 2 +
+						canvas.GetTxtWidth (strToDraw.c_str ());
+					canvas.DrawLine (posX, _rect.y + 2,
+									 posX, _rect.y - 2 + _rect.h);
+				}
+			}
+
+			bool TestClick (size_t x, size_t y)
+			{
+				return x >= _rect.x && y >= _rect.y &&
+					x <= _rect.x + _rect.w &&
+					y <= _rect.y + _rect.h;
+			}
+
+		private:
+			Rect _rect;
+		};
+
 		static bool HandleInput (std::string &text, char ch)
 		{
 			if (ch != '\x08' && !isalnum (ch) && ch != '_')
@@ -210,7 +301,10 @@ namespace PokemonGameGUI
 		// Room Window
 		//
 
-		static std::vector<PokemonGame::RoomPlayer> RoomWindow (
+		static std::pair<
+			std::pair<size_t, size_t>,
+			std::vector<PokemonGame::RoomPlayer>
+		> RoomWindow (
 			PokemonGame::PokemonClient &client,
 			const PokemonGame::UserModel &curUser,
 			const PokemonGame::PokemonID &pidToPlay,
@@ -221,9 +315,12 @@ namespace PokemonGameGUI
 				"Please Input '_' / 'a-z' / 'A-Z' / '0-9' ...";
 
 			const std::string enteringPrompt = "Entering Room...";
+			const std::string enteredPrompt = "Entered this Room";
 			const std::string leavingPrompt = "Leaving Room...";
 			const std::string readyPrompt = "You are Ready Now";
 			const std::string unreadyPrompt = "You are Unready Now";
+
+			constexpr auto tSleep = std::chrono::milliseconds (500);
 
 			EggAche::Window wnd (width, height,
 				(curUser.uid + " - Room").c_str ());
@@ -243,7 +340,10 @@ namespace PokemonGameGUI
 			auto isReady = false;
 
 			auto hasStart = false;
-			std::vector<PokemonGame::RoomPlayer> ret;
+			std::pair<
+				std::pair<size_t, size_t>,
+				std::vector<PokemonGame::RoomPlayer>
+			> ret;
 
 			std::mutex mtx;
 
@@ -327,7 +427,8 @@ namespace PokemonGameGUI
 
 					try
 					{
-						promptStr = client.RoomEnter (ridStr, pidToPlay);
+						promptStr = enteredPrompt;
+						ret.first = client.RoomEnter (ridStr, pidToPlay);
 						hasEntered = true;
 					}
 					catch (const std::exception &ex)
@@ -444,12 +545,12 @@ namespace PokemonGameGUI
 						try
 						{
 							hasStart = true;
-							ret = client.RoomReady (isReady);
+							ret.second = client.RoomReady (isReady);
 
 							std::ostringstream oss;
 							playerList.clear ();
 
-							for (const auto &player : ret)
+							for (const auto &player : ret.second)
 							{
 								if (!player.isReady)
 									hasStart = false;
@@ -477,10 +578,9 @@ namespace PokemonGameGUI
 					refresh ();
 				}
 
-				std::this_thread::sleep_for (
-					std::chrono::milliseconds (500) -
-					(std::chrono::system_clock::now () - tBeg)
-				);
+				auto tElapse = std::chrono::system_clock::now () - tBeg;
+				if (tSleep > tElapse)
+					std::this_thread::sleep_for (tSleep - tElapse);
 			}
 
 			// Ensure callback function quit
@@ -490,6 +590,226 @@ namespace PokemonGameGUI
 				throw std::runtime_error ("Close Window without Start Game");
 
 			return ret;
+		}
+
+		//
+		// Game Window
+		//
+
+		static std::vector<PokemonGame::GameModel::ResultPlayer> GameWindow (
+			PokemonGame::PokemonClient &client,
+			const PokemonGame::UserModel &curUser,
+			const std::vector<PokemonGame::RoomPlayer> &roomPlayers,
+			size_t worldW, size_t worldH,
+			size_t width = 640, size_t height = 480)
+		{
+			EggAche::Window wnd (width, height,
+				(curUser.uid + " - Playing").c_str ());
+			std::unique_ptr<EggAche::Canvas> bg;
+
+			std::unordered_map<
+				PokemonGame::UserID,
+				std::unique_ptr<PokemonGame::Pokemon>
+			> pokemons;
+			PokemonGame::GameModel gameModel;
+
+			// Frame Control
+			auto curFrame = 0;
+			constexpr auto Fps = 30;
+			constexpr auto Fpl = 10;
+			constexpr auto tSleep = std::chrono::milliseconds (1000) / Fps;
+
+			// Key Input
+			auto cA = 0, cD = 0, cW = 0, cS = 0;
+			constexpr auto cMax = 100;
+
+			// Mouse Input
+			auto isAtk = false;
+			auto isDef = false;
+			auto mosX = 0, mosY = 0;
+
+			// Player Position
+			size_t posX, posY;
+
+			// Init Pokemons
+			for (const auto &player : roomPlayers)
+				pokemons.emplace (
+					player.uid,
+					PokemonGame::Pokemon::NewPokemon (player.pokemon.name)
+				);
+
+			auto fixRectToRender = [&] (Rect &rect)
+			{
+				auto scaleW = (double) width / worldW;
+				auto scaleH = (double) height / worldH;
+
+				rect.x = size_t (rect.x * scaleW);
+				rect.w = size_t (rect.w * scaleW);
+				rect.y = size_t (rect.y * scaleH);
+				rect.h = size_t (rect.h * scaleH);
+			};
+
+			auto render = [&] ()
+			{
+				bg = std::make_unique<EggAche::Canvas> (width, height);
+				wnd.SetBackground (bg.get ());
+
+				// Todo:
+				// curFrame
+
+				// Render Players
+				for (const auto &player : gameModel.players)
+				{
+					const auto &pokemon = pokemons[player.uid];
+					const auto size = pokemon->GetSize ();
+					Rect rect { player.x, player.y, size.first, size.second };
+					fixRectToRender (rect);
+
+					bg->DrawRect (rect.x, rect.y, rect.x + rect.w, rect.y + rect.h);
+					bg->DrawTxt (rect.x, rect.y - 18, player.uid.c_str ());
+					bg->DrawTxt (rect.x, rect.y,
+						(pokemon->GetName () + " / " +
+						 std::to_string (player.curHp)).c_str ());
+				}
+
+				// Render Damages
+				for (const auto &damage : gameModel.damages)
+				{
+					Rect rect { damage.x, damage.y, 10, 10 };
+					bg->DrawElps (rect.x, rect.y, rect.x + rect.w, rect.y + rect.h);
+				}
+
+				wnd.Refresh ();
+			};
+
+			std::mutex mtx;
+
+			wnd.OnResized ([&] (EggAche::Window *, size_t x, size_t y)
+			{
+				std::lock_guard<std::mutex> lg (mtx);
+				width = x; height = y;
+			});
+
+			wnd.OnLButtonDown ([&] (EggAche::Window *, int x, int y)
+			{
+				std::lock_guard<std::mutex> lg (mtx);
+				isAtk = true; mosX = x; mosY = y;
+			});
+
+			wnd.OnLButtonUp ([&] (EggAche::Window *, int x, int y)
+			{
+				std::lock_guard<std::mutex> lg (mtx);
+				isAtk = false;
+			});
+
+			wnd.OnRButtonDown ([&] (EggAche::Window *, int x, int y)
+			{
+				std::lock_guard<std::mutex> lg (mtx);
+				isDef = true;
+			});
+
+			wnd.OnRButtonUp ([&] (EggAche::Window *, int x, int y)
+			{
+				std::lock_guard<std::mutex> lg (mtx);
+				isDef = false;
+			});
+
+			wnd.OnMouseMove ([&] (EggAche::Window *, int x, int y)
+			{
+				std::lock_guard<std::mutex> lg (mtx);
+				mosX = x; mosY = y;
+			});
+
+			wnd.OnKeyDown ([&] (EggAche::Window *, char ch)
+			{
+				std::lock_guard<std::mutex> lg (mtx);
+				switch (ch)
+				{
+				case 'A': cA++; break;
+				case 'D': cD++; break;
+				case 'W': cW++; break;
+				case 'S': cS++; break;
+				default: break;
+				}
+
+				if (cA) cA++;
+				if (cD) cD++;
+				if (cW) cW++;
+				if (cS) cS++;
+
+				if (cA > cMax) cA = cMax;
+				if (cD > cMax) cD = cMax;
+				if (cW > cMax) cW = cMax;
+				if (cS > cMax) cS = cMax;
+			});
+
+			wnd.OnKeyUp ([&] (EggAche::Window *, char ch)
+			{
+				std::lock_guard<std::mutex> lg (mtx);
+				switch (ch)
+				{
+				case 'A': cA = 0; break;
+				case 'D': cD = 0; break;
+				case 'W': cW = 0; break;
+				case 'S': cS = 0; break;
+				default: break;
+				}
+			});
+
+			// Game Loop
+			while (!wnd.IsClosed () && !gameModel.isOver)
+			{
+				auto tBeg = std::chrono::system_clock::now ();
+
+				{
+					std::lock_guard<std::mutex> lg (mtx);
+
+					// Frame Control
+					if (curFrame < Fps) curFrame++;
+					else curFrame = 0;
+
+					// Render
+					render ();
+
+					// Sync
+					if (curFrame % Fpl == 0)
+					{
+						auto atkx = 0, atky = 0;
+						if (isAtk)
+						{
+							const auto &pokemon = pokemons[curUser.uid];
+							const auto size = pokemon->GetSize ();
+							Rect rect { posX, posY, size.first, size.second };
+							fixRectToRender (rect);
+
+							atkx = mosX - rect.x + rect.w / 2;
+							atky = mosY - rect.y + rect.h / 2;
+						}
+
+						gameModel = client.GameSync (
+							cD - cA, cS - cW, atkx, atky, isDef);
+
+						for (const auto &player : gameModel.players)
+							if (player.uid == curUser.uid)
+							{
+								posX = player.x;
+								posY = player.y;
+							}
+					}
+				}
+
+				auto tElapse = std::chrono::system_clock::now () - tBeg;
+				if (tSleep > tElapse)
+					std::this_thread::sleep_for (tSleep - tElapse);
+			}
+
+			// Ensure callback function quit
+			std::lock_guard<std::mutex> lg (mtx);
+
+			if (!gameModel.isOver)
+				throw std::runtime_error ("Close Window without Finish Game");
+
+			return gameModel.results;
 		}
 	};
 }

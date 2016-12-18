@@ -46,19 +46,35 @@ namespace PokemonGame
 		PokemonModel pokemon;
 	};
 
-	// Game Player Model
-	struct GamePlayer
+	// Game Model
+	struct GameModel
 	{
-		UserID uid;
+		struct GamePlayer
+		{
+			UserID uid;
+			size_t x, y;
+			size_t vx, vy;
+			Pokemon::TimeGap timeGap;
+			Pokemon::HealthPoint curHp;
+		};
 
-		// Result Player
-		bool isWon;
+		struct GameDamage
+		{
+			Pokemon::HealthPoint damage;
+			size_t x, y;
+			size_t vx, vy;
+		};
 
-		// Game Player
-		size_t x, y;
-		size_t vx, vy;
-		Pokemon::TimeGap timeGap;
-		Pokemon::HealthPoint curHp;
+		struct ResultPlayer
+		{
+			UserID uid;
+			bool isWon;
+		};
+
+		std::vector<GamePlayer> players;
+		std::vector<GameDamage> damages;
+		std::vector<ResultPlayer> results;
+		bool isOver = false;
 	};
 
 	// Client
@@ -156,16 +172,17 @@ namespace PokemonGame
 			return ret;
 		}
 
-		std::string RoomEnter (const RoomID &rid,
-							   const PokemonID &pid)
+		std::pair<size_t, size_t> RoomEnter (const RoomID &rid,
+											 const PokemonID &pid)
 		{
-			std::string ret;
+			std::pair<size_t, size_t> ret;
 			Request ("roomenter", { { "sid", _sessionID },
 									{ "rid", rid },
 									{ "pid", pid } },
 					 [&] (const json &response)
 			{
-				ret = response.get<std::string> ();
+				ret.first = response.at ("width").get<size_t> ();
+				ret.second = response.at ("height").get<size_t> ();
 			});
 			return ret;
 		}
@@ -198,12 +215,11 @@ namespace PokemonGame
 
 #pragma region Gaming
 
-		std::pair<bool, std::vector<GamePlayer>> GameSync (
+		GameModel GameSync (
 			const int movex, const int movey,
 			const int atkx, const int atky, const bool isDef)
 		{
-			bool isOver;
-			std::vector<GamePlayer> ret;
+			GameModel ret;
 			Request ("gamesync", { { "sid", _sessionID },
 								   { "movex", movex },
 								   { "movey", movex },
@@ -212,19 +228,21 @@ namespace PokemonGame
 								   { "def", isDef} },
 					 [&] (const json &response)
 			{
-				isOver = response.at ("over").get<bool> ();
-				if (!isOver)
+				ret.isOver = response.at ("over").get<bool> ();
+				if (!ret.isOver)
 				{
-					for (const auto &playerj : response)
-						ret.emplace_back (_JsonToGamePlayer (playerj));
+					for (const auto &playerj : response.at ("gameplayers"))
+						ret.players.emplace_back (_JsonToGamePlayer (playerj));
+					//for (const auto &damagej : response.at ("damages"))
+					//	ret.damages.emplace_back (_JsonToDamage (damagej));
 				}
 				else
 				{
-					for (const auto &playerj : response)
-						ret.emplace_back (_JsonToResultPlayer (playerj));
+					for (const auto &playerj : response.at ("resultplayers"))
+						ret.results.emplace_back (_JsonToResultPlayer (playerj));
 				}
 			});
-			return std::make_pair (isOver, ret);
+			return ret;
 		}
 
 #pragma endregion
@@ -240,9 +258,6 @@ namespace PokemonGame
 				auto response = _sockClient.Request (json {
 					{ "request", request }, { "param", param }
 				}.dump ());
-
-				// Debug
-				//std::cout << response << std::endl;
 
 				const json res = json::parse (response.c_str ());
 				if (!res.at ("success").get<bool> ())
@@ -304,11 +319,10 @@ namespace PokemonGame
 			};
 		}
 
-		GamePlayer _JsonToGamePlayer (const json &playerj)
+		GameModel::GamePlayer _JsonToGamePlayer (const json &playerj)
 		{
-			return GamePlayer {
+			return GameModel::GamePlayer {
 				playerj.at ("uid").get<UserID> (),
-				false,
 				playerj.at ("x").get<size_t> (),
 				playerj.at ("y").get<size_t> (),
 				playerj.at ("vx").get<size_t> (),
@@ -318,13 +332,22 @@ namespace PokemonGame
 			};
 		}
 
-		GamePlayer _JsonToResultPlayer (const json &playerj)
+		GameModel::GameDamage _JsonToDamage (const json &damagej)
 		{
-			return GamePlayer {
+			return GameModel::GameDamage {
+				damagej.at ("damage").get<Pokemon::HealthPoint> (),
+				damagej.at ("x").get<size_t> (),
+				damagej.at ("y").get<size_t> (),
+				damagej.at ("vx").get<size_t> (),
+				damagej.at ("vy").get<size_t> ()
+			};
+		}
+
+		GameModel::ResultPlayer _JsonToResultPlayer (const json &playerj)
+		{
+			return GameModel::ResultPlayer {
 				playerj.at ("uid").get<UserID> (),
-				playerj.at ("won").get<bool> (),
-				0, 0, 0, 0,
-				Pokemon::TimeGap {}, Pokemon::HealthPoint {}
+				playerj.at ("won").get<bool> ()
 			};
 		}
 

@@ -28,7 +28,9 @@ int main (int argc, char *argv[])
 
 	UserModel curUser;
 	PokemonID pidToPlay;
+	std::pair<size_t, size_t> worldSize;
 	std::vector<RoomPlayer> roomPlayers;
+	std::vector<GameModel::ResultPlayer> gameResults;
 
 	auto guiState = GUIState::Login;
 	while (guiState != GUIState::Quit)
@@ -58,13 +60,15 @@ int main (int argc, char *argv[])
 
 		case GUIState::Pokemons:
 			break;
+
 		case GUIState::Users:
 			break;
 
 		case GUIState::Rooms:
 			try
 			{
-				roomPlayers = GUIClient::RoomWindow (client, curUser, pidToPlay);
+				std::tie (worldSize, roomPlayers) =
+					GUIClient::RoomWindow (client, curUser, pidToPlay);
 				guiState = GUIState::Game;
 			}
 			catch (const std::exception &)
@@ -74,7 +78,20 @@ int main (int argc, char *argv[])
 			break;
 
 		case GUIState::Game:
+			try
+			{
+				gameResults = GUIClient::GameWindow (
+					client, curUser, roomPlayers,
+					worldSize.first, worldSize.second);
+				guiState = GUIState::GameResult;
+			}
+			catch (const std::exception &)
+			{
+				client.RoomLeave ();
+				guiState = GUIState::ViewInfo;
+			}
 			break;
+
 		case GUIState::GameResult:
 			break;
 

@@ -42,6 +42,16 @@
 }
 ```
 
+#### gamedamage
+
+``` json
+{
+  "damage": damage,
+  "x": x, "y": y,
+  "vx": vx, "vy": vy
+}
+```
+
 #### resultplayer
 
 ``` json
@@ -117,7 +127,7 @@
 {"request": "roomenter",
  "param": {"sid": sid, "rid": rid, "pid": pid}}
 
-{"success": true, "response": msg}
+{"success": true, "response": {"width": width, "height": height}}
 {"success": false, "response": msg}
 ```
 
@@ -158,8 +168,9 @@
   "success": true,
   "response": {
     "over": isover,
-    "gameplayers": [gameplayer]   // not over
-    "resultplayers": [resultplayer] // over
+    "gameplayers": [gameplayer],     // not over
+    "gamedamages": [gamedamage],     // not over
+    "resultplayers": [resultplayer]  // over
   }
 }
 {"success": false, "response": msg}
