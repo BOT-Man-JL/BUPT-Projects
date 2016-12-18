@@ -25,7 +25,10 @@ int main (int argc, char *argv[])
 	using namespace PokemonGameGUI;
 
 	PokemonClient client = PokemonClient (IPADDR, PORT);
+
 	UserModel curUser;
+	PokemonID pidToPlay;
+	std::vector<RoomPlayer> roomPlayers;
 
 	auto guiState = GUIState::Login;
 	while (guiState != GUIState::Quit)
@@ -49,13 +52,27 @@ int main (int argc, char *argv[])
 			break;
 
 		case GUIState::ViewInfo:
+			pidToPlay = curUser.pokemons.front ().pid;
+			guiState = GUIState::Rooms;
 			break;
+
 		case GUIState::Pokemons:
 			break;
 		case GUIState::Users:
 			break;
+
 		case GUIState::Rooms:
+			try
+			{
+				roomPlayers = GUIClient::RoomWindow (client, curUser, pidToPlay);
+				guiState = GUIState::Game;
+			}
+			catch (const std::exception &)
+			{
+				guiState = GUIState::ViewInfo;
+			}
 			break;
+
 		case GUIState::Game:
 			break;
 		case GUIState::GameResult:
