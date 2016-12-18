@@ -183,9 +183,10 @@ namespace PokemonGame
 				if (rid == RoomID {})
 					return false;
 
+				// Remove Player from Game
 				rooms[rid].players.erase (sessions[sid].uid);
 
-				// Clear Room
+				// Clear Room if Empty
 				if (rooms[rid].players.empty ())
 					rooms.erase (rid);
 

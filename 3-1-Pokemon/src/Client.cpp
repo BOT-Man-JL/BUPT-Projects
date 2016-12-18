@@ -97,7 +97,7 @@ int main (int argc, char *argv[])
 
 		default:
 			throw std::runtime_error (
-				"This will not happend unless your OS has a fatal BUG :-(");
+				"This will not happend unless your Compiler has a fatal BUG :-(");
 			break;
 		}
 	}

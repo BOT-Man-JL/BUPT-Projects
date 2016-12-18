@@ -690,36 +690,7 @@ namespace PokemonGameGUI
 				width = x; height = y;
 			});
 
-			wnd.OnLButtonDown ([&] (EggAche::Window *, int x, int y)
-			{
-				std::lock_guard<std::mutex> lg (mtx);
-				isAtk = true; mosX = x; mosY = y;
-			});
-
-			wnd.OnLButtonUp ([&] (EggAche::Window *, int x, int y)
-			{
-				std::lock_guard<std::mutex> lg (mtx);
-				isAtk = false;
-			});
-
-			wnd.OnRButtonDown ([&] (EggAche::Window *, int x, int y)
-			{
-				std::lock_guard<std::mutex> lg (mtx);
-				isDef = true;
-			});
-
-			wnd.OnRButtonUp ([&] (EggAche::Window *, int x, int y)
-			{
-				std::lock_guard<std::mutex> lg (mtx);
-				isDef = false;
-			});
-
-			wnd.OnMouseMove ([&] (EggAche::Window *, int x, int y)
-			{
-				std::lock_guard<std::mutex> lg (mtx);
-				mosX = x; mosY = y;
-			});
-
+			// Move
 			wnd.OnKeyDown ([&] (EggAche::Window *, char ch)
 			{
 				std::lock_guard<std::mutex> lg (mtx);
@@ -742,7 +713,6 @@ namespace PokemonGameGUI
 				if (cW > cMax) cW = cMax;
 				if (cS > cMax) cS = cMax;
 			});
-
 			wnd.OnKeyUp ([&] (EggAche::Window *, char ch)
 			{
 				std::lock_guard<std::mutex> lg (mtx);
@@ -754,6 +724,35 @@ namespace PokemonGameGUI
 				case 'S': cS = 0; break;
 				default: break;
 				}
+			});
+
+			// Atk
+			wnd.OnLButtonDown ([&] (EggAche::Window *, int x, int y)
+			{
+				std::lock_guard<std::mutex> lg (mtx);
+				isAtk = true; mosX = x; mosY = y;
+			});
+			wnd.OnLButtonUp ([&] (EggAche::Window *, int x, int y)
+			{
+				std::lock_guard<std::mutex> lg (mtx);
+				isAtk = false;
+			});
+			wnd.OnMouseMove ([&] (EggAche::Window *, int x, int y)
+			{
+				std::lock_guard<std::mutex> lg (mtx);
+				mosX = x; mosY = y;
+			});
+
+			// Def
+			wnd.OnRButtonDown ([&] (EggAche::Window *, int x, int y)
+			{
+				std::lock_guard<std::mutex> lg (mtx);
+				isDef = true;
+			});
+			wnd.OnRButtonUp ([&] (EggAche::Window *, int x, int y)
+			{
+				std::lock_guard<std::mutex> lg (mtx);
+				isDef = false;
 			});
 
 			// Game Loop

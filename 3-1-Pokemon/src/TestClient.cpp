@@ -136,7 +136,9 @@ int main (int argc, char *argv[])
 	{
 		try
 		{
-			std::cout << client.RoomEnter (rid, pid) << std::endl;
+			std::cout << "Enter the Room of size ";
+			auto size = client.RoomEnter (rid, pid);
+			std::cout << size.first << ", " << size.second << std::endl;
 		}
 		catch (const std::exception &ex)
 		{ std::cerr << ex.what () << std::endl; }
