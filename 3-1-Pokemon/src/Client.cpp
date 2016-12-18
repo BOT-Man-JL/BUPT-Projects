@@ -1,29 +1,72 @@
 ﻿
-#include <thread>
 #include <iostream>
 
-#include "PokemonClientGUI.h"
+#include "PokemonClient.h"
+#include "GUIClient.h"
 
 #define IPADDR "127.0.0.1"
 #define PORT 5768
 
+enum class GUIState
+{
+	Quit,
+	Login,
+	ViewInfo,
+	Pokemons,
+	Users,
+	Rooms,
+	Game,
+	GameResult
+};
+
 int main (int argc, char *argv[])
 {
-	PokemonGameGUI::PokemonClientGUI client_gui (IPADDR, PORT);
+	using namespace PokemonGame;
+	using namespace PokemonGameGUI;
 
-	if (!client_gui.Login ())
+	PokemonClient client = PokemonClient (IPADDR, PORT);
+	UserModel curUser;
+
+	auto guiState = GUIState::Login;
+	while (guiState != GUIState::Quit)
 	{
-		PokemonGameGUI::MsgBox ("You haven't Login in GUI\n");
-		return 0;
-	}
+		switch (guiState)
+		{
+		case GUIState::Quit:
+			// Do nothing just Quit
+			break;
 
-	if (!client_gui.SelectRoom ())
-	{
-		PokemonGameGUI::MsgBox ("You haven't Entered a Room\n");
-		return 0;
-	}
+		case GUIState::Login:
+			try
+			{
+				curUser = GUIClient::LoginWindow (client);
+				guiState = GUIState::ViewInfo;
+			}
+			catch (const std::exception &)
+			{
+				guiState = GUIState::Quit;
+			}
+			break;
 
-	client_gui.Play ();
+		case GUIState::ViewInfo:
+			break;
+		case GUIState::Pokemons:
+			break;
+		case GUIState::Users:
+			break;
+		case GUIState::Rooms:
+			break;
+		case GUIState::Game:
+			break;
+		case GUIState::GameResult:
+			break;
+
+		default:
+			throw std::runtime_error (
+				"This will not happend unless your OS has a fatal BUG :-(");
+			break;
+		}
+	}
 
 	return 0;
 }

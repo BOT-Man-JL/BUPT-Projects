@@ -1,9 +1,7 @@
 ﻿
-#include <string>
 #include <iostream>
-#include <vector>
-
 #include "PokemonServer.h"
+
 #define PORT 5768
 
 int main (int argc, char *argv[])

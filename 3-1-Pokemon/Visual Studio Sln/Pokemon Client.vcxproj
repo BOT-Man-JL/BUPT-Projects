@@ -27,7 +27,7 @@
     <ClInclude Include="..\src\EggAche\EggAche.h" />
     <ClInclude Include="..\src\EggAche\EggAche_Impl.h" />
     <ClInclude Include="..\src\EggAche\stb_image_write.h" />
-    <ClInclude Include="..\src\GUIAccounting.h" />
+    <ClInclude Include="..\src\GUIClient.h" />
     <ClInclude Include="..\src\GUIGame.h" />
     <ClInclude Include="..\src\GUIRoom.h" />
     <ClInclude Include="..\src\GUIShared.h" />

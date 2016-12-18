@@ -167,21 +167,6 @@ int main (int argc, char *argv[])
 		{ std::cerr << ex.what () << std::endl; }
 	};
 
-	//auto fnLockStep = [] (
-	//	PokemonGame::PokemonClient &client,
-	//	PokemonGame::Action &action)
-	//{
-	//	if (client.Lockstep (action))
-	//	{
-	//		std::cout << "I'am :" << client.MyUID () << std::endl;
-	//		std::cout << "Players' State:\n";
-	//		for (const auto &player : client.GetPlayers ())
-	//			PrintPlayer (std::cout, player.first, player.second);
-	//	}
-	//	else
-	//		std::cerr << client.ErrMsg () << std::endl;
-	//};
-
 	PokemonGame::PokemonClient client1 (IPADDR, PORT);
 	PokemonGame::PokemonClient client2 (IPADDR, PORT);
 	PokemonGame::PokemonClient client3 (IPADDR, PORT);

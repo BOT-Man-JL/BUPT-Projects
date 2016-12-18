@@ -3,360 +3,334 @@
 
 #include <string>
 #include <vector>
-#include <array>
 #include <unordered_map>
-#include <sstream>
-#include <iomanip>
+
+#include "json/json.hpp"
 
 #include "Socket.h"
-#include "Pokemon.h"
 #include "Shared.h"
+#include "Pokemon.h"
 
 namespace PokemonGame
 {
-	using PokemonsWithID = std::unordered_map<
-		PokemonID,
-		std::unique_ptr<Pokemon>
-	>;
-
-	void PrintPokemon (std::ostream &os,
-					   const Pokemon *pokemon)
+	// Pokemon Model
+	struct PokemonModel
 	{
-		os << "\t" << std::setw (10)
-			<< pokemon->GetName ()
-			<< ": [LV:"
-			<< pokemon->GetLevel ()
-			<< ", Exp:"
-			<< pokemon->GetExp ()
-			<< ", Atk:"
-			<< pokemon->GetAtk ()
-			<< ", Def:"
-			<< pokemon->GetDef ()
-			<< ", HP:"
-			<< pokemon->GetHP ()
-			<< ", Gap:"
-			<< pokemon->GetTimeGap ()
-			<< "]\n";
-	}
+		PokemonID pid;
+		UserID uid;
 
-	void PrintPlayer (std::ostream &os,
-					  const UserID &uid,
-					  const Player &player)
+		PokemonName name;
+		Pokemon::Level level;
+		Pokemon::ExpPoint expPoint;
+		Pokemon::HealthPoint atk;
+		Pokemon::HealthPoint def;
+		Pokemon::HealthPoint hp;
+		Pokemon::TimeGap timeGap;
+	};
+
+	// User Model
+	struct UserModel
 	{
-		os << "\t" << uid << ", "
-			<< std::boolalpha << player.isReady << ", "
-			<< player.x << ", "
-			<< player.y << "\n";
+		UserID uid;
+		bool online;
+		double wonRate;
+		std::vector<UserBadge> badges;
+		std::vector<PokemonModel> pokemons;
+	};
 
-		PrintPokemon (os, player.pokemon.get ());
-	}
+	// Room Player Model
+	struct RoomPlayer
+	{
+		UserID uid;
+		bool isReady;
+		PokemonModel pokemon;
+	};
 
+	// Game Player Model
+	struct GamePlayer
+	{
+		UserID uid;
+
+		// Result Player
+		bool isWon;
+
+		// Game Player
+		size_t x, y;
+		size_t vx, vy;
+		Pokemon::TimeGap timeGap;
+		Pokemon::HealthPoint curHp;
+	};
+
+	// Client
 	class PokemonClient
 	{
+		using json = nlohmann::json;
+
 	public:
 		PokemonClient (const std::string &ipAddr,
 					   unsigned short port)
 			: _sockClient (ipAddr, port)
 		{}
 
-		const std::string &ErrMsg () const
-		{ return _errMsg; }
-
-		const UserID &MyUID () const
-		{ return _userID; }
-
-		const PokemonsWithID &MyPokemons () const
-		{ return _myPokemons; }
-
-		// Using Physics to Update Players' States
-		Players &GetPlayers ()
-		{ return _players; }
-
-		// Using Physics to Consume Actions
-		ActionQueue &GetActionQueue ()
-		{ return _actionQueue; }
-
 #pragma region Accounting
 
-		bool Login (const std::string &uid,
-					const std::string &pwd)
+		std::string Register (const UserID &uid,
+							  const UserPwd &pwd)
 		{
-			auto response = Request ("Login", uid, pwd);
-			return HandleResponse<1> (response, [&] ()
+			std::string ret;
+			Request ("register", { { "uid", uid },
+								   { "pwd", pwd } },
+					 [&] (const json &response)
 			{
-				_sessionID = response[0];
-				_userID = uid;
-				UsersPokemons (_userID, _myPokemons);
+				ret = response.get<std::string> ();
 			});
+			return ret;
 		}
 
-		bool Register (const std::string &uid,
-					   const std::string &pwd)
+		UserModel Login (const UserID &uid,
+						 const UserPwd &pwd)
 		{
-			auto response = Request ("Register", uid, pwd);
-			return HandleResponse (response);
+			UserModel ret;
+			Request ("login", { { "uid", uid },
+								{ "pwd", pwd } },
+					 [&] (const json &response)
+			{
+				_sessionID = response.at ("sid").get<SessionID> ();
+				ret = _JsonToUser (response.at ("user"));
+			});
+			return ret;
 		}
 
-		bool Logout ()
+		std::string Logout ()
 		{
-			auto response = Request ("Logout", _sessionID);
-			return HandleResponse (response);
+			std::string ret;
+			Request ("logout", { { "sid", _sessionID } },
+					 [&] (const json &response)
+			{
+				ret = response.get<std::string> ();
+			});
+			return ret;
 		}
 
 #pragma endregion
 
-#pragma region User Info
+#pragma region Query
 
-		bool UsersWonRate (const std::string &uid,
-						   double &out)
+		std::vector<PokemonModel> Pokemons ()
 		{
-			auto response = Request ("UsersWonRate", _sessionID, uid);
-			return HandleResponse<1> (response, [&] ()
+			std::vector<PokemonModel> ret;
+			Request ("pokemons", { { "sid", _sessionID } },
+					 [&] (const json &response)
 			{
-				out = std::stod (response[0]);
+				for (const auto &pokemonj : response)
+					ret.emplace_back (_JsonToPokemon (pokemonj));
 			});
+			return ret;
 		}
 
-		bool UsersBadges (const std::string &uid,
-						  std::vector<std::string> &out)
+		std::vector<UserModel> Users ()
 		{
-			auto response = Request ("UsersBadges", _sessionID, uid);
-			return HandleResponse (response, [&] ()
+			std::vector<UserModel> ret;
+			Request ("users", { { "sid", _sessionID } },
+					 [&] (const json &response)
 			{
-				out = std::move (response);
+				for (const auto &userj : response)
+					ret.emplace_back (_JsonToUser (userj));
 			});
-		}
-
-		bool UsersAll (std::vector<std::string> &out)
-		{
-			auto response = Request ("UsersAll", _sessionID);
-			return HandleResponse (response, [&] ()
-			{
-				out = std::move (response);
-			});
-		}
-
-		bool UsersOnline (std::vector<std::string> &out)
-		{
-			auto response = Request ("UsersOnline", _sessionID);
-			return HandleResponse (response, [&] ()
-			{
-				out = std::move (response);
-			});
-		}
-
-#pragma endregion
-
-#pragma region Pokemon Info
-
-		bool UsersPokemons (const std::string &uid,
-							PokemonsWithID &out)
-		{
-			auto response = Request ("UsersPokemons", _sessionID, uid);
-			return HandleResponse (response, [&] ()
-			{
-				for (const auto &id : response)
-					out[(PokemonID) std::stoull (id)] =
-					std::unique_ptr<Pokemon> (PokemonFromID (id));
-			});
-		}
-
-		bool PokemonAll (PokemonsWithID &out)
-		{
-			auto response = Request ("PokemonAll", _sessionID);
-			return HandleResponse (response, [&] ()
-			{
-				for (const auto &id : response)
-					out[(PokemonID) std::stoull (id)] =
-					std::unique_ptr<Pokemon> (PokemonFromID (id));
-			});
+			return ret;
 		}
 
 #pragma endregion
 
 #pragma region Room
 
-		bool RoomQuery (std::vector<std::string> &out)
+		std::vector<RoomID> Rooms ()
 		{
-			auto response = Request ("RoomQuery", _sessionID);
-			return HandleResponse (response, [&] ()
+			std::vector<RoomID> ret;
+			Request ("rooms", { { "sid", _sessionID } },
+					 [&] (const json &response)
 			{
-				out = std::move (response);
+				for (const auto &ridj : response)
+					ret.emplace_back (ridj.get<RoomID> ());
 			});
+			return ret;
 		}
 
-		bool RoomEnter (const std::string &roomId,
-						PokemonID pokemonId)
+		std::string RoomEnter (const RoomID &rid,
+							   const PokemonID &pid)
 		{
-			auto response = Request ("RoomEnter", _sessionID, roomId,
-									 std::to_string (pokemonId));
-			return HandleResponse (response);
-		}
-
-		bool RoomLeave ()
-		{
-			auto response = Request ("RoomLeave", _sessionID);
-			return HandleResponse (response);
-		}
-
-		bool RoomReady ()
-		{
-			auto response = Request ("RoomReady", _sessionID);
-			return HandleResponse (response);
-		}
-
-		bool RoomState ()
-		{
-			constexpr auto segSize = 5;
-
-			auto response = Request ("RoomState", _sessionID);
-			if ((response.size () - 2) % segSize)
+			std::string ret;
+			Request ("roomenter", { { "sid", _sessionID },
+									{ "rid", rid },
+									{ "pid", pid } },
+					 [&] (const json &response)
 			{
-				_errMsg = "Invalid Response size";
-				return false;
-			}
-
-			return HandleResponse<segSize> (response, [&] ()
-			{
-				_tSync = PokemonGame_Impl::TimePointFromStr (response[0]);
-				_tLocal = std::chrono::system_clock::now ();
-				response.erase (response.begin ());
-
-				_players.clear ();
-				while (!response.empty ())
-				{
-					auto pokemon = std::unique_ptr<Pokemon> (PokemonFromID (response[4]));
-					_players[response[0]] = Player
-					{
-						// Is Ready
-						response[1] == "0" ? false : true,
-						// Position
-						(size_t) std::stoull (response[2]),
-						(size_t) std::stoull (response[3]),
-						pokemon->GetTimeGap (),
-						// Pokemon
-						(PokemonID) std::stoull (response[4]),
-						std::move (pokemon)
-					};;
-					response.erase (response.begin (), response.begin () + segSize);
-				}
+				ret = response.get<std::string> ();
 			});
+			return ret;
+		}
+
+		std::string RoomLeave ()
+		{
+			std::string ret;
+			Request ("roomleave", { { "sid", _sessionID } },
+					 [&] (const json &response)
+			{
+				ret = response.get<std::string> ();
+			});
+			return ret;
+		}
+
+		std::vector<RoomPlayer> RoomReady (bool isReady)
+		{
+			std::vector<RoomPlayer> ret;
+			Request ("roomready", { { "sid", _sessionID },
+									{ "ready", isReady } },
+					 [&] (const json &response)
+			{
+				for (const auto &playerj : response)
+					ret.emplace_back (_JsonToRoomPlayer (playerj));
+			});
+			return ret;
 		}
 
 #pragma endregion
 
 #pragma region Gaming
 
-		bool Lockstep (Action action)
+		std::pair<bool, std::vector<GamePlayer>> GameSync (
+			const int movex, const int movey,
+			const int atkx, const int atky, const bool isDef)
 		{
-			using namespace PokemonGame_Impl;
-
-			action.uid = _userID;
-			action.timestamp =
-				(std::chrono::system_clock::now () - _tLocal) + _tSync;
-
-			auto response = Request ("Lockstep", _sessionID, ActionToStr (action));
-			_actionQueue.push (std::move (action));
-
-			return HandleResponse<1> (response, [&] ()
+			bool isOver;
+			std::vector<GamePlayer> ret;
+			Request ("gamesync", { { "sid", _sessionID },
+								   { "movex", movex },
+								   { "movey", movex },
+								   { "atkx", atkx },
+								   { "atky", atky },
+								   { "def", isDef} },
+					 [&] (const json &response)
 			{
-				_tSync = TimePointFromStr (response[0]);
-				_tLocal = std::chrono::system_clock::now ();
-				response.erase (response.begin ());
-
-				for (const auto &responseArg : response)
-					_actionQueue.push (ActionFromStr (responseArg));
+				isOver = response.at ("over").get<bool> ();
+				if (!isOver)
+				{
+					for (const auto &playerj : response)
+						ret.emplace_back (_JsonToGamePlayer (playerj));
+				}
+				else
+				{
+					for (const auto &playerj : response)
+						ret.emplace_back (_JsonToResultPlayer (playerj));
+				}
 			});
+			return std::make_pair (isOver, ret);
 		}
 
 #pragma endregion
 
 	private:
-		std::vector<std::string> Request (const std::string &strToken)
+		void Request (const std::string &request,
+					  const json &param,
+					  std::function<void (const json &response)> callback
+					  = std::function<void (const json &response)> {})
 		{
 			try
 			{
-				auto response = _sockClient.Request (strToken);
+				auto response = _sockClient.Request (json {
+					{ "request", request }, { "param", param }
+				}.dump ());
+
+				// Debug
 				//std::cout << response << std::endl;
-				return PokemonGame_Impl::SplitStr (std::move (response), "\n");
+
+				const json res = json::parse (response.c_str ());
+				if (!res.at ("success").get<bool> ())
+					throw std::runtime_error (
+						res.at ("response").get<std::string> ());
+
+				if (callback) callback (res.at ("response"));
 			}
-			catch (const std::exception &ex)
+			catch (const std::logic_error &)
 			{
-				return { "0", ex.what () };
+				throw std::runtime_error ("Bad Response");
+			}
+			catch (const std::runtime_error &)
+			{
+				throw;
 			}
 		}
 
-		template<typename... Args>
-		inline std::vector<std::string> Request (const std::string &strToken,
-												 const std::string &arg1,
-												 Args & ... args)
+		PokemonModel _JsonToPokemon (const json &pokemonj)
 		{
-			return Request (strToken + '\n' + arg1, args...);
+			return PokemonModel {
+				pokemonj.at ("pid").get<PokemonID> (),
+				pokemonj.at ("uid").get<UserID> (),
+				pokemonj.at ("name").get<PokemonName> (),
+				pokemonj.at ("level").get<Pokemon::Level> (),
+				pokemonj.at ("exppoint").get<Pokemon::ExpPoint> (),
+				pokemonj.at ("atk").get<Pokemon::HealthPoint> (),
+				pokemonj.at ("def").get<Pokemon::HealthPoint> (),
+				pokemonj.at ("hp").get<Pokemon::HealthPoint> (),
+				pokemonj.at ("timegap").get<Pokemon::TimeGap> ()
+			};
 		}
 
-		template<size_t responseCount = 0>
-		bool HandleResponse (std::vector<std::string> &response,
-							 std::function<void ()> fnCaseSucceeded
-							 = std::function<void ()> ())
+		UserModel _JsonToUser (const json &userj)
 		{
-			if (response[0] == "0")
-			{
-				if (response.size () >= 2)
-					_errMsg = response[1];
-				else
-					_errMsg = "Error without a message";
-				return false;
-			}
+			std::vector<UserBadge> badges;
+			for (const auto &badgej : userj.at ("badges"))
+				badges.emplace_back (badgej.get<UserBadge> ());
 
-			response.erase (response.begin ());
-			if (response.size () < responseCount)
-			{
-				_errMsg = "Too few Response Arguments";
-				return false;
-			}
+			std::vector<PokemonModel> pokemons;
+			for (const auto &pokemonj : userj.at ("pokemons"))
+				pokemons.emplace_back (_JsonToPokemon (pokemonj));
 
-			try
-			{
-				if (fnCaseSucceeded) fnCaseSucceeded ();
-				return true;
-			}
-			catch (const std::exception &ex)
-			{
-				_errMsg = ex.what ();
-				return false;
-			}
+			return UserModel {
+				userj.at ("uid").get<UserID> (),
+				userj.at ("online").get<bool> (),
+				userj.at ("wonrate").get<double> (),
+				std::move (badges),
+				std::move (pokemons)
+			};;
 		}
 
-		Pokemon* PokemonFromID (const std::string &id)
+		RoomPlayer _JsonToRoomPlayer (const json &playerj)
 		{
-			auto response = Request ("PokemonInfo", _sessionID, id);
-			if (!HandleResponse<7> (response))
-				throw std::runtime_error (
-					_errMsg + ": Loading Pokemon Info Failed");
+			return RoomPlayer {
+				playerj.at ("uid").get<UserID> (),
+				playerj.at ("ready").get<bool> (),
+				_JsonToPokemon (playerj.at ("pokemon"))
+			};
+		}
 
-			return Pokemon::NewPokemon (
-				response[0],
-				std::stoul (response[1]),
-				std::stoul (response[2]),
-				std::stoul (response[3]),
-				std::stoul (response[4]),
-				std::stoul (response[5]),
-				std::stoul (response[6]));
+		GamePlayer _JsonToGamePlayer (const json &playerj)
+		{
+			return GamePlayer {
+				playerj.at ("uid").get<UserID> (),
+				false,
+				playerj.at ("x").get<size_t> (),
+				playerj.at ("y").get<size_t> (),
+				playerj.at ("vx").get<size_t> (),
+				playerj.at ("vy").get<size_t> (),
+				playerj.at ("timegap").get<Pokemon::TimeGap> (),
+				playerj.at ("hp").get<Pokemon::HealthPoint> ()
+			};
+		}
+
+		GamePlayer _JsonToResultPlayer (const json &playerj)
+		{
+			return GamePlayer {
+				playerj.at ("uid").get<UserID> (),
+				playerj.at ("won").get<bool> (),
+				0, 0, 0, 0,
+				Pokemon::TimeGap {}, Pokemon::HealthPoint {}
+			};
 		}
 
 		BOT_Socket::Client _sockClient;
-		std::string _errMsg;
-
-		UserID _userID;
 		SessionID _sessionID;
-		PokemonsWithID _myPokemons;
-
-		// Gaming
-		TimePoint _tSync, _tLocal;
-		Players _players;
-		ActionQueue _actionQueue;
 	};
-
 }
 
 #endif // !POKEMON_CLIENT_H

@@ -1,35 +1,25 @@
 ﻿#ifndef POKEMON_GUI_SHARED_H
 #define POKEMON_GUI_SHARED_H
 
-#include "EggAche\EggAche.h"
+#include <string>
+#include <cctype>
+#include "EggAche/EggAche.h"
+
+// Fix for the pollution by <windows.h>
+#ifdef max
+#undef max
+#endif
+#ifdef min
+#undef min
+#endif
 
 namespace PokemonGameGUI
 {
-	namespace PokemonGameGUI_Impl
+	struct Rect
 	{
-		template <typename T>
-		T Min (const T &a, const T &b)
-		{
-			return a < b ? a : b;
-		}
-
-		template <typename T>
-		T Max (const T &a, const T &b)
-		{
-			return a > b ? a : b;
-		}
-
-		struct Rect
-		{
-			size_t x, y;
-			size_t w, h;
-		};
-	}
-
-	void MsgBox (const char *str)
-	{
-		EggAche::MsgBox (str, "Pokemon Game");
-	}
+		size_t x, y;
+		size_t w, h;
+	};
 
 	class Button
 	{
@@ -59,7 +49,7 @@ namespace PokemonGameGUI
 		}
 
 	private:
-		PokemonGameGUI_Impl::Rect _rect;
+		Rect _rect;
 	};
 
 	class Input
@@ -68,12 +58,32 @@ namespace PokemonGameGUI
 		Input (EggAche::Canvas &canvas,
 			   const std::string &text,
 			   const std::string &hintText,
+			   bool isActivated,
 			   size_t x, size_t y,
 			   size_t w, size_t h = 18)
-			: _canvas (canvas), _rect { x, y, w + 4, h + 2 },
-			_text (text), _hintText (hintText), _isActivated (false)
+			: _rect { x, y, w + 4, h + 2 }
 		{
-			ReDraw ();
+			// Clear and Draw Bounder
+			canvas.SetBrush (false, 255, 255, 255);
+			canvas.DrawRect (_rect.x, _rect.y,
+							 _rect.x + _rect.w,
+							 _rect.y + _rect.h);
+			canvas.SetBrush (true, 0, 0, 0);
+
+			// Draw Text
+			const auto &strToDraw =
+				text.empty () && !isActivated ? hintText : text;
+			canvas.DrawTxt (_rect.x + 2, _rect.y + 1,
+							strToDraw.c_str ());
+
+			// Draw Pipeline
+			if (isActivated)
+			{
+				auto posX = _rect.x + 2 +
+					canvas.GetTxtWidth (strToDraw.c_str ());
+				canvas.DrawLine (posX, _rect.y + 2,
+								 posX, _rect.y - 2 + _rect.h);
+			}
 		}
 
 		bool TestClick (size_t x, size_t y)
@@ -83,66 +93,8 @@ namespace PokemonGameGUI
 				y <= _rect.y + _rect.h;
 		}
 
-		bool isActivated () const
-		{
-			return _isActivated;
-		}
-
-		void Activate (bool isActivated = true)
-		{
-			_isActivated = isActivated;
-			ReDraw ();
-		}
-
-		const std::string &GetText () const
-		{
-			return _text;
-		}
-
-		void InputKey (char ch)
-		{
-			if (!_isActivated)
-				return;
-
-			if (ch == '\x08' && !_text.empty ())
-				_text.pop_back ();
-			else if ((isalnum (ch) || ch == '_') && _text.size () < 16)
-				_text.push_back (ch);
-
-			ReDraw ();
-		}
-
 	private:
-		EggAche::Canvas &_canvas;
-		PokemonGameGUI_Impl::Rect _rect;
-		std::string _hintText;
-		bool _isActivated;
-		std::string _text;
-
-		void ReDraw ()
-		{
-			// Clear and Draw Bounder
-			_canvas.SetBrush (false, 255, 255, 255);
-			_canvas.DrawRect (_rect.x, _rect.y,
-							  _rect.x + _rect.w,
-							  _rect.y + _rect.h);
-			_canvas.SetBrush (true, 0, 0, 0);
-
-			// Draw Text
-			const auto &strToDraw =
-				_text.empty () && !_isActivated ? _hintText : _text;
-			_canvas.DrawTxt (_rect.x + 2, _rect.y + 1,
-							 strToDraw.c_str ());
-
-			// Draw Pipeline
-			if (_isActivated)
-			{
-				auto posX = _rect.x + 2 +
-					_canvas.GetTxtWidth (strToDraw.c_str ());
-				_canvas.DrawLine (posX, _rect.y + 2,
-								  posX, _rect.y - 2 + _rect.h);
-			}
-		}
+		Rect _rect;
 	};
 
 }

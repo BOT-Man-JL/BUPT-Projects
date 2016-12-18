@@ -1,34 +1,54 @@
 # Pokemon Protocol
 
-## Data
+## Object
+
+#### user
 
 ``` json
-user = {"uid": uid, "online": isonline, "wonrate": wonrate,
-        "badges": [badge], "pokemons": [pokemon]}
+{
+  "uid": uid, "online": isonline, "wonrate": wonrate,
+  "badges": [badge], "pokemons": [pokemon]
+}
 ```
 
-``` json
-pokemon = {"pid": pid, "uid": uid, "name": name,
-           "level": level, "exppoint": exppoint,
-           "atk": atk, "def": def, "hp": hp, "timegap": timegap}
-```
+#### pokemon
 
 ``` json
-roomplayer = {"uid": uid, "ready": isready, "pokemon": pokemon}
+{
+  "pid": pid, "uid": uid, "name": name,
+  "level": level, "exppoint": exppoint,
+  "atk": atk, "def": def, "hp": hp, "timegap": timegap
+}
 ```
 
-``` json
-gameplayer = {"uid": uid,
-              "x": x, "y": y,
-              "vx": vx, "vy": vy,
-              "timegap": timegap,
-              "curHp": curHp}
-```
+#### roomplayer
 
 ``` json
-resultplayer = {"uid": uid,
-                "won": iswon,
-                "pokemon": pokemonlost}
+{
+  "uid": uid, "ready": isready,
+  "pokemon": pokemon
+}
+```
+
+#### gameplayer
+
+``` json
+{
+  "uid": uid,
+  "x": x, "y": y,
+  "vx": vx, "vy": vy,
+  "timegap": timegap,
+  "hp": curHp
+}
+```
+
+#### resultplayer
+
+``` json
+{
+  "uid": uid,
+  "won": iswon
+}
 ```
 
 ## Accounting
@@ -127,19 +147,19 @@ resultplayer = {"uid": uid,
 ``` json
 { "request": "gamesync",
   "param": {
-    "action": {
-      "timestamp": timestamp,
-      "movex": movex, "movey": movey,
-      "atkx": atkx, "atky": atky, "def": isdef}
-    }
+    "sid": sid,
+    "movex": movex, "movey": movey,
+    "atkx": atkx, "atky": atky,
+    "def": isdef
+  }
 }
 
 {
   "success": true,
   "response": {
     "over": isover,
-    "players": [gameplayer]   // not over
-    "players": [resultplayer] // over
+    "gameplayers": [gameplayer]   // not over
+    "resultplayers": [resultplayer] // over
   }
 }
 {"success": false, "response": msg}
