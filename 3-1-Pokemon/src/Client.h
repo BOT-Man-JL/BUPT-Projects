@@ -38,11 +38,19 @@ namespace PokemonGame
 		std::vector<PokemonModel> pokemons;
 	};
 
+	// Room Model
+	struct RoomModel
+	{
+		RoomID rid;
+		bool isPending;
+	};
+
 	// Room Player Model
 	struct RoomPlayer
 	{
 		UserID uid;
 		bool isReady;
+		size_t width, height;
 		PokemonModel pokemon;
 	};
 
@@ -77,13 +85,13 @@ namespace PokemonGame
 	};
 
 	// Client
-	class PokemonClient
+	class Client
 	{
 		using json = nlohmann::json;
 
 	public:
-		PokemonClient (const std::string &ipAddr,
-					   unsigned short port)
+		Client (const std::string &ipAddr,
+				unsigned short port)
 			: _sockClient (ipAddr, port)
 		{}
 
@@ -159,14 +167,14 @@ namespace PokemonGame
 
 #pragma region Room
 
-		std::vector<RoomID> Rooms ()
+		std::vector<RoomModel> Rooms ()
 		{
-			std::vector<RoomID> ret;
+			std::vector<RoomModel> ret;
 			Request ("rooms", { { "sid", _sessionID } },
 					 [&] (const json &response)
 			{
-				for (const auto &ridj : response)
-					ret.emplace_back (ridj.get<RoomID> ());
+				for (const auto &roomj : response)
+					ret.emplace_back (_JsonToRoomModel (roomj));
 			});
 			return ret;
 		}
@@ -310,11 +318,21 @@ namespace PokemonGame
 			};;
 		}
 
+		RoomModel _JsonToRoomModel (const json &roomj)
+		{
+			return RoomModel {
+				roomj.at ("rid").get<RoomID> (),
+				roomj.at ("pending").get<bool> ()
+			};
+		}
+
 		RoomPlayer _JsonToRoomPlayer (const json &playerj)
 		{
 			return RoomPlayer {
 				playerj.at ("uid").get<UserID> (),
 				playerj.at ("ready").get<bool> (),
+				playerj.at ("width").get<size_t> (),
+				playerj.at ("height").get<size_t> (),
 				_JsonToPokemon (playerj.at ("pokemon"))
 			};
 		}

@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\src\EggAche\EggAche.cpp">
+      <Filter>EggAche</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\EggAche\Windows_Impl.cpp">
+      <Filter>EggAche</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\GUIClient.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\GUIClient.h" />
+    <ClInclude Include="..\src\Shared.h" />
+    <ClInclude Include="..\src\Socket.h" />
+    <ClInclude Include="..\src\EggAche\EggAche.h">
+      <Filter>EggAche</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\EggAche\EggAche_Impl.h">
+      <Filter>EggAche</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\EggAche\stb_image_write.h">
+      <Filter>EggAche</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\json\json.hpp">
+      <Filter>json</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Client.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="EggAche">
+      <UniqueIdentifier>{c1ee7605-b3a3-4026-96a7-6cc5473ce51f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="json">
+      <UniqueIdentifier>{c5852cfa-764d-4ce1-8e28-6212bd6917b2}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

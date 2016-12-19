@@ -27,11 +27,21 @@
 }
 ```
 
+#### room
+
+``` json
+{
+  "rid": rid,
+  "pending": not_over_and_not_started
+}
+```
+
 #### roomplayer
 
 ``` json
 {
   "uid": uid, "ready": isready,
+  "width": width, "height": height,
   "pokemon": pokemon
 }
 ```

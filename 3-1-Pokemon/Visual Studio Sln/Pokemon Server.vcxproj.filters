@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\src\Pokemon.cpp" />
+    <ClCompile Include="..\src\Server.cpp" />
+    <ClCompile Include="..\src\ORM-Lite\sqlite3.c">
+      <Filter>ORMLite</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\Pokemon.h" />
+    <ClInclude Include="..\src\Shared.h" />
+    <ClInclude Include="..\src\Socket.h" />
+    <ClInclude Include="..\src\Server.h" />
+    <ClInclude Include="..\src\ORM-Lite\ORMLite.h">
+      <Filter>ORMLite</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\json\json.hpp">
+      <Filter>json</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ORM-Lite\sqlite3.h">
+      <Filter>ORMLite</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="ORMLite">
+      <UniqueIdentifier>{e3b2f13b-ff2c-48c0-8029-804141537960}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="json">
+      <UniqueIdentifier>{d1723ef5-9638-4edc-bb54-43110a200445}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

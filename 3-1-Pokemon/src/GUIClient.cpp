@@ -1,7 +1,7 @@
 ﻿
 #include <iostream>
 
-#include "PokemonClient.h"
+#include "Client.h"
 #include "GUIClient.h"
 
 #define IPADDR "127.0.0.1"
@@ -24,7 +24,7 @@ int main (int argc, char *argv[])
 	using namespace PokemonGame;
 	using namespace PokemonGameGUI;
 
-	PokemonClient client = PokemonClient (IPADDR, PORT);
+	Client client (IPADDR, PORT);
 
 	bool isPassiveOffline = false;
 	UserModel curUser;
@@ -83,7 +83,11 @@ int main (int argc, char *argv[])
 					isPassiveOffline = true;
 				}
 				else
+				{
 					guiState = GUIState::ViewInfo;
+					try { client.RoomLeave (); }
+					catch (...) {}
+				}
 			}
 			break;
 
@@ -111,6 +115,8 @@ int main (int argc, char *argv[])
 			break;
 
 		case GUIState::GameResult:
+			client.RoomLeave ();
+			guiState = GUIState::ViewInfo;
 			break;
 
 		default:

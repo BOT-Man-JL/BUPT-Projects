@@ -4,13 +4,13 @@
 #include <memory>
 #include <mutex>
 #include <thread>
+#include <future>
 #include <algorithm>
 #include <cctype>
 
 #include "EggAche/EggAche.h"
 
-#include "Pokemon.h"
-#include "PokemonClient.h"
+#include "Client.h"
 
 // Fix for the pollution by <windows.h>
 #ifdef max
@@ -129,7 +129,7 @@ namespace PokemonGameGUI
 		//
 
 		static PokemonGame::UserModel LoginWindow (
-			PokemonGame::PokemonClient &client,
+			PokemonGame::Client &client,
 			bool isPassiveOffline,
 			size_t width = 480, size_t height = 360)
 		{
@@ -308,7 +308,7 @@ namespace PokemonGameGUI
 			std::pair<size_t, size_t>,
 			std::vector<PokemonGame::RoomPlayer>
 		> RoomWindow (
-			PokemonGame::PokemonClient &client,
+			PokemonGame::Client &client,
 			const PokemonGame::UserModel &curUser,
 			const PokemonGame::PokemonID &pidToPlay,
 			size_t width = 640, size_t height = 640)
@@ -336,13 +336,13 @@ namespace PokemonGameGUI
 
 			std::string ridStr;
 			std::string promptStr = "Pick up a Room to Play";
-			std::vector<std::string> roomList;
 			std::vector<std::string> playerList;
 
 			auto hasEntered = false;
 			auto isReady = false;
 
-			auto hasStart = false;
+			auto hasStarted = false;
+			std::vector<PokemonGame::RoomModel> roomModels;
 			std::pair<
 				std::pair<size_t, size_t>,
 				std::vector<PokemonGame::RoomPlayer>
@@ -395,12 +395,14 @@ namespace PokemonGameGUI
 				if (!hasEntered)
 				{
 					auto index = 0;
-					for (const auto &roomId : roomList)
+					for (const auto &room : roomModels)
 					{
+						auto roomStr = room.rid + " - " +
+							(room.isPending ? "Pending" : "In Game");
 						roomBtns.emplace_back (std::make_unique<Button> (
-							*bg, roomId,
+							*bg, roomStr,
 							10, height * 3 / 10 + index * 30,
-							width - bg->GetTxtWidth (roomId.c_str ()) - 20));
+							width - bg->GetTxtWidth (roomStr.c_str ()) - 20));
 						index++;
 					}
 				}
@@ -436,8 +438,7 @@ namespace PokemonGameGUI
 					}
 					catch (const std::exception &ex)
 					{
-						if (std::string (ex.what ()) ==
-							PokemonGame::BadSession)
+						if (std::string (ex.what ()) == PokemonGame::BadSession)
 							throw;
 						promptStr = ex.what ();
 					}
@@ -454,8 +455,7 @@ namespace PokemonGameGUI
 					}
 					catch (const std::exception &ex)
 					{
-						if (std::string (ex.what ()) ==
-							PokemonGame::BadSession)
+						if (std::string (ex.what ()) == PokemonGame::BadSession)
 							throw;
 						promptStr = ex.what ();
 					}
@@ -527,10 +527,10 @@ namespace PokemonGameGUI
 				if (readyBtn.get () != nullptr && readyBtn->TestClick (x, y))
 					fnReady ();
 
-				for (size_t i = 0; i < roomList.size (); i++)
+				for (size_t i = 0; i < roomModels.size (); i++)
 					if (roomBtns[i]->TestClick (x, y))
 					{
-						ridStr = (std::string) roomList[i];
+						ridStr = (std::string) roomModels[i].rid;
 						fnEnter ();
 						break;
 					}
@@ -538,7 +538,7 @@ namespace PokemonGameGUI
 				refresh ();
 			});
 
-			while (!wnd.IsClosed () && !hasStart)
+			while (!wnd.IsClosed () && !hasStarted)
 			{
 				auto tBeg = std::chrono::system_clock::now ();
 
@@ -549,11 +549,13 @@ namespace PokemonGameGUI
 					if (!hasEntered)
 					{
 						try
-						{ roomList = client.Rooms (); }
+						{
+							roomModels.clear ();
+							roomModels = client.Rooms ();
+						}
 						catch (const std::exception &ex)
 						{
-							if (std::string (ex.what ()) ==
-								PokemonGame::BadSession)
+							if (std::string (ex.what ()) == PokemonGame::BadSession)
 								throw;
 							promptStr = ex.what ();
 						}
@@ -562,7 +564,7 @@ namespace PokemonGameGUI
 					{
 						try
 						{
-							hasStart = true;
+							hasStarted = true;
 							ret.second = client.RoomReady (isReady);
 
 							std::ostringstream oss;
@@ -571,7 +573,8 @@ namespace PokemonGameGUI
 							for (const auto &player : ret.second)
 							{
 								if (!player.isReady)
-									hasStart = false;
+									hasStarted = false;
+
 								playerList.emplace_back (player.uid + " " +
 									(player.isReady ? "Ready" : "Unready"));
 
@@ -586,13 +589,16 @@ namespace PokemonGameGUI
 									<< " timeGap: " << pokemon.timeGap;
 								playerList.emplace_back (oss.str ());
 							}
+
+							if (ret.second.size () < 2)
+								hasStarted = false;
 						}
 						catch (const std::exception &ex)
 						{
-							if (std::string (ex.what ()) ==
-								PokemonGame::BadSession)
+							if (std::string (ex.what ()) == PokemonGame::BadSession)
 								throw;
-							hasStart = false;
+
+							hasStarted = false;
 							promptStr = ex.what ();
 						}
 					}
@@ -607,7 +613,7 @@ namespace PokemonGameGUI
 			// Ensure callback function quit
 			std::lock_guard<std::mutex> lg (mtx);
 
-			if (!hasStart)
+			if (!hasStarted)
 				throw std::runtime_error ("Close Window without Start Game");
 
 			return ret;
@@ -618,7 +624,7 @@ namespace PokemonGameGUI
 		//
 
 		static std::vector<PokemonGame::GameModel::ResultPlayer> GameWindow (
-			PokemonGame::PokemonClient &client,
+			PokemonGame::Client &client,
 			const PokemonGame::UserModel &curUser,
 			const std::vector<PokemonGame::RoomPlayer> &roomPlayers,
 			size_t worldW, size_t worldH,
@@ -628,10 +634,13 @@ namespace PokemonGameGUI
 				(curUser.uid + " - Playing").c_str ());
 			std::unique_ptr<EggAche::Canvas> bg;
 
+			// Room Players
 			std::unordered_map<
 				PokemonGame::UserID,
-				std::unique_ptr<PokemonGame::Pokemon>
-			> pokemons;
+				PokemonGame::RoomPlayer
+			> roomPlayerMap;
+
+			// Fetched Model
 			PokemonGame::GameModel gameModel;
 
 			// Error Prompt
@@ -656,12 +665,9 @@ namespace PokemonGameGUI
 			// Player Position
 			size_t posX = 0, posY = 0;
 
-			// Init Pokemons
+			// Init Room Players
 			for (const auto &player : roomPlayers)
-				pokemons.emplace (
-					player.uid,
-					PokemonGame::Pokemon::NewPokemon (player.pokemon.name)
-				);
+				roomPlayerMap.emplace (player.uid, player);
 
 			auto fixRectToRender = [&] (Rect &rect)
 			{
@@ -691,19 +697,18 @@ namespace PokemonGameGUI
 				// Render Players
 				for (const auto &player : gameModel.players)
 				{
-					const auto &pokemon = pokemons[player.uid];
-					const auto size = pokemon->GetSize ();
+					const auto &roomPlayer = roomPlayerMap[player.uid];
 					Rect rect {
 						(size_t) (player.x + fraction * player.vx),
 						(size_t) (player.y + fraction * player.vy),
-						size.first, size.second
+						roomPlayer.width, roomPlayer.height
 					};
 					fixRectToRender (rect);
 
 					bg->DrawRect (rect.x, rect.y, rect.x + rect.w, rect.y + rect.h);
 					bg->DrawTxt (rect.x, rect.y - 18, player.uid.c_str ());
 					bg->DrawTxt (rect.x, rect.y,
-						(pokemon->GetName () + " / " +
+						(roomPlayer.pokemon.name + " / " +
 						 std::to_string (player.curHp)).c_str ());
 				}
 
@@ -814,9 +819,11 @@ namespace PokemonGameGUI
 						auto atkx = 0, atky = 0;
 						if (isAtk)
 						{
-							const auto &pokemon = pokemons[curUser.uid];
-							const auto size = pokemon->GetSize ();
-							Rect rect { posX, posY, size.first, size.second };
+							const auto &roomPlayer = roomPlayerMap[curUser.uid];
+							Rect rect {
+								posX, posY,
+								roomPlayer.width, roomPlayer.height
+							};
 							fixRectToRender (rect);
 
 							atkx = mosX - rect.x + rect.w / 2;
@@ -825,13 +832,13 @@ namespace PokemonGameGUI
 
 						try
 						{
-							gameModel = client.GameSync (
-								cD - cA, cS - cW, atkx, atky, isDef);
+							gameModel = std::async (std::launch::async, [&] () {
+								return client.GameSync (cD - cA, cS - cW, atkx, atky, isDef);
+							}).get ();
 						}
 						catch (const std::exception &ex)
 						{
-							if (std::string (ex.what ()) ==
-								PokemonGame::BadSession)
+							if (std::string (ex.what ()) == PokemonGame::BadSession)
 								throw;
 							promptStr = ex.what ();
 							promptTick = Fps * 3;

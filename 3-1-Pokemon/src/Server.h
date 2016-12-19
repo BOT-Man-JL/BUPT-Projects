@@ -164,6 +164,7 @@ namespace PokemonGame
 		std::unordered_map<UserID, Player> players;
 		std::list<Damage> damages;
 
+		bool isStarted = false;
 		bool isOver = false;
 
 		static constexpr std::chrono::milliseconds tickGap { 200 };
@@ -171,12 +172,12 @@ namespace PokemonGame
 	};
 
 	// Server
-	class PokemonServer
+	class Server
 	{
 		using json = nlohmann::json;
 
 	public:
-		PokemonServer (unsigned short port)
+		Server (unsigned short port)
 		{
 			using namespace BOT_ORM;
 
@@ -459,7 +460,12 @@ namespace PokemonGame
 					throw std::runtime_error ("No Room Found");
 
 				for (const auto &room : rooms)
-					response.emplace_back (room.first);
+				{
+					response.emplace_back (json {
+						{ "rid", room.first },
+						{ "pending", !room.second.isOver && !room.second.isStarted }
+					});
+				}
 			});
 
 			SetHandler ("roomenter",
@@ -478,9 +484,16 @@ namespace PokemonGame
 					throw std::runtime_error ("Already in a Room");
 
 				auto &room = rooms[rid];
+
 				if (room.players.size () ==
 					RoomModel::Player::maxPlayerPerRoom)
 					throw std::runtime_error ("Room is Full");
+
+				if (room.isOver)
+					throw std::runtime_error ("Game is Over");
+
+				if (room.isStarted)
+					throw std::runtime_error ("Room is in Game");
 
 				auto pokemons = mapper.Query (pokemonModel)
 					.Where (
@@ -543,14 +556,23 @@ namespace PokemonGame
 				if (rid == RoomID {})
 					throw std::runtime_error ("Not in a Room");
 
+				rooms[rid].isStarted = rooms[rid].players.size () >= 2;
 				rooms[rid].players[sessions[sid].uid].isReady = isReady;
 
 				for (const auto &playerPair : rooms[rid].players)
 				{
 					const auto &player = playerPair.second;
+
+					if (!player.isReady)
+						rooms[rid].isStarted = false;
+
+					size_t width, height;
+					std::tie (width, height) = player.pokemon->GetSize ();
 					response.emplace_back (json {
 						{ "uid", playerPair.first },
 						{ "ready", player.isReady },
+						{ "width", width },
+						{ "height", height },
 						{ "pokemon", pokemonToJson (player.pokemonModel) }
 					});
 				}
@@ -577,20 +599,17 @@ namespace PokemonGame
 
 				auto &room = rooms[rid];
 
-				auto isStart = true;
+				// Not enough Players
+				if (!room.isStarted)
+					throw std::runtime_error ("Game is not started");
+
 				auto playerAlive = room.players.size ();
 				for (const auto &playerPair : room.players)
 				{
 					const auto &player = playerPair.second;
-					if (!player.isReady)
-						isStart = false;
 					if (player.pokemon->GetCurHP () == 0)
 						--playerAlive;
 				}
-
-				// Game Not Started
-				if (!isStart)
-					throw std::runtime_error ("Not all players ready");
 
 				// Handle Action
 				auto &pokemon = *room.players[sessions[sid].uid].pokemon;
@@ -724,7 +743,7 @@ namespace PokemonGame
 					player.latestUpdate = TimePointHelper::TimeNow ();
 				}
 
-				// Game Over
+				// Handle Game Over
 				if (playerAlive <= 1)
 				{
 					// Handle Game Over only once
@@ -738,9 +757,11 @@ namespace PokemonGame
 						// Change Owners
 						for (auto &playerPair : room.players)
 						{
-							auto &pokemon = playerPair.second.pokemonModel;
-							pokemon.uid = winner;
-							mapper.Update (pokemon);
+							mapper.Update (*PokemonModel::FromPokemon (
+								playerPair.second.pokemonModel.pid,
+								winner,
+								*playerPair.second.pokemon)
+							);
 						}
 					}
 

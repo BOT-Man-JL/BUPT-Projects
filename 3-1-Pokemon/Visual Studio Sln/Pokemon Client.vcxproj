@@ -19,22 +19,17 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\Client.cpp" />
+    <ClCompile Include="..\src\GUIClient.cpp" />
     <ClCompile Include="..\src\EggAche\EggAche.cpp" />
     <ClCompile Include="..\src\EggAche\Windows_Impl.cpp" />
-    <ClCompile Include="..\src\Pokemon.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\Client.h" />
     <ClInclude Include="..\src\EggAche\EggAche.h" />
     <ClInclude Include="..\src\EggAche\EggAche_Impl.h" />
     <ClInclude Include="..\src\EggAche\stb_image_write.h" />
     <ClInclude Include="..\src\GUIClient.h" />
-    <ClInclude Include="..\src\GUIGame.h" />
-    <ClInclude Include="..\src\GUIRoom.h" />
-    <ClInclude Include="..\src\GUIShared.h" />
-    <ClInclude Include="..\src\Pokemon.h" />
-    <ClInclude Include="..\src\PokemonClient.h" />
-    <ClInclude Include="..\src\PokemonClientGUI.h" />
+    <ClInclude Include="..\src\json\json.hpp" />
     <ClInclude Include="..\src\Shared.h" />
     <ClInclude Include="..\src\Socket.h" />
   </ItemGroup>

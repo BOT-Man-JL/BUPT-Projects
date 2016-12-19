@@ -2,7 +2,7 @@
 #include <thread>
 #include <iostream>
 
-#include "PokemonClient.h"
+#include "Client.h"
 
 #define IPADDR "127.0.0.1"
 #define PORT 5768
@@ -48,7 +48,7 @@ int main (int argc, char *argv[])
 		os << std::endl;
 	};
 
-	auto fnRegister = [] (PokemonGame::PokemonClient &client,
+	auto fnRegister = [] (PokemonGame::Client &client,
 						  const PokemonGame::UserID &uid,
 						  const PokemonGame::UserPwd &pwd)
 	{
@@ -61,7 +61,7 @@ int main (int argc, char *argv[])
 	};
 
 	auto fnLogin = [&printUser] (
-		PokemonGame::PokemonClient &client,
+		PokemonGame::Client &client,
 		const PokemonGame::UserID &uid,
 		const PokemonGame::UserPwd &pwd)
 	{
@@ -75,7 +75,7 @@ int main (int argc, char *argv[])
 		{ std::cerr << ex.what () << std::endl; }
 	};
 
-	auto fnLogout = [] (PokemonGame::PokemonClient &client)
+	auto fnLogout = [] (PokemonGame::Client &client)
 	{
 		try
 		{
@@ -86,7 +86,7 @@ int main (int argc, char *argv[])
 	};
 
 	auto fnPokemons = [&printPokemon] (
-		PokemonGame::PokemonClient &client)
+		PokemonGame::Client &client)
 	{
 		try
 		{
@@ -104,7 +104,7 @@ int main (int argc, char *argv[])
 	};
 
 	auto fnUsers = [&printUser] (
-		PokemonGame::PokemonClient &client)
+		PokemonGame::Client &client)
 	{
 		try
 		{
@@ -117,20 +117,21 @@ int main (int argc, char *argv[])
 		{ std::cerr << ex.what () << std::endl; }
 	};
 
-	auto fnRooms = [] (PokemonGame::PokemonClient &client)
+	auto fnRooms = [] (PokemonGame::Client &client)
 	{
 		try
 		{
 			auto rooms = client.Rooms ();
 			std::cout << "Rooms:\n";
 			for (const auto &room : rooms)
-				std::cout << "\t" << room << std::endl;
+				std::cout << "\t" << room.rid << " - "
+				<< (room.isPending ? "Pending" : "in Game") << std::endl;
 		}
 		catch (const std::exception &ex)
 		{ std::cerr << ex.what () << std::endl; }
 	};
 
-	auto fnRoomEnter = [] (PokemonGame::PokemonClient &client,
+	auto fnRoomEnter = [] (PokemonGame::Client &client,
 						   const PokemonGame::RoomID &rid,
 						   const PokemonGame::PokemonID &pid)
 	{
@@ -144,7 +145,7 @@ int main (int argc, char *argv[])
 		{ std::cerr << ex.what () << std::endl; }
 	};
 
-	auto fnRoomLeave = [] (PokemonGame::PokemonClient &client)
+	auto fnRoomLeave = [] (PokemonGame::Client &client)
 	{
 		try
 		{
@@ -155,7 +156,7 @@ int main (int argc, char *argv[])
 	};
 
 	auto fnRoomReady = [&printRoomPlayer] (
-		PokemonGame::PokemonClient &client,
+		PokemonGame::Client &client,
 		bool isReady)
 	{
 		try
@@ -169,9 +170,9 @@ int main (int argc, char *argv[])
 		{ std::cerr << ex.what () << std::endl; }
 	};
 
-	PokemonGame::PokemonClient client1 (IPADDR, PORT);
-	PokemonGame::PokemonClient client2 (IPADDR, PORT);
-	PokemonGame::PokemonClient client3 (IPADDR, PORT);
+	PokemonGame::Client client1 (IPADDR, PORT);
+	PokemonGame::Client client2 (IPADDR, PORT);
+	PokemonGame::Client client3 (IPADDR, PORT);
 
 	if (true)
 	{
