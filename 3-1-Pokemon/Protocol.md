@@ -62,6 +62,7 @@
 
 ``` json
 {
+  "did": did,
   "x": x, "y": y,
   "vx": vx, "vy": vy
 }

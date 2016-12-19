@@ -79,7 +79,7 @@ namespace PokemonGame
 		};
 
 		std::vector<GamePlayer> players;
-		std::vector<GameDamage> damages;
+		std::unordered_map<std::string, GameDamage> damages;
 		std::vector<ResultPlayer> results;
 		bool isOver = false;
 	};
@@ -242,7 +242,10 @@ namespace PokemonGame
 						ret.players.emplace_back (_JsonToGamePlayer (playerj));
 
 					for (const auto &damagej : response.at ("gamedamages"))
-						ret.damages.emplace_back (_JsonToDamage (damagej));
+						ret.damages.emplace (
+							damagej.at ("did").get<std::string> (),
+							_JsonToDamage (damagej)
+						);
 				}
 				else
 				{

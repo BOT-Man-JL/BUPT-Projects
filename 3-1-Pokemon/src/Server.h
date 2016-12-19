@@ -120,6 +120,7 @@ namespace PokemonGame
 			int vx, vy;
 			Pokemon::TimeGap timeTick;
 			UserID uid;
+			TimePoint did;
 		};
 
 		struct RigidBody
@@ -665,15 +666,17 @@ namespace PokemonGame
 
 							if (uid != damage.uid && rbDamage.IsOverlap (collider))
 							{
-								isHit = true;
-								auto isUpgraded = false;  // Todo
-
+								// Todo: Prompt upgrading
+								auto isUpgraded = false;
 								if (!room.players[uid].isDef)
 								{
 									std::tie (std::ignore, isUpgraded) =
 										room.players[damage.uid].pokemon->Attack (
 											*room.players[uid].pokemon);
 								}
+
+								isHit = true;
+								p = room.damages.erase (p);
 								break;
 							}
 						}
@@ -726,11 +729,12 @@ namespace PokemonGame
 					{
 						auto timeTick = (size_t) sqrt (
 							pokemon.GetAtk () * pokemon.GetTimeGap ());
+						fixVelocity (atkX, atkY, pokemon.GetAtk () * 2);
 
-						fixVelocity (atkX, atkY, pokemon.GetTimeGap ());
 						room.damages.emplace_back (RoomModel::Damage {
 							player.x, player.y, atkX, atkY,
-							timeTick, player.pokemonModel.uid
+							timeTick, player.pokemonModel.uid,
+							TimePointHelper::TimeNow ()
 						});
 
 						player.timeGap = pokemon.GetTimeGap ();
@@ -806,6 +810,7 @@ namespace PokemonGame
 				for (const auto &damage : room.damages)
 				{
 					gamedamagesj.emplace_back (json {
+						{ "did", TimePointHelper::ToStr (damage.did) },
 						{ "x", damage.x },
 						{ "y", damage.y },
 						{ "vx", damage.vx },
