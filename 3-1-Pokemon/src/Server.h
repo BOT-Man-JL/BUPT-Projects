@@ -701,30 +701,35 @@ namespace PokemonGame
 					};
 
 					// Move
-
-					// Add up last snapshot of Velocity
-					player.x += player.vx;
-					player.y += player.vy;
-
-					RoomModel::RigidBody rbPlayer { player };
-
-					fixVelocity (moveX, moveY, pokemon.GetVelocity ());
-					rbPlayer.x += moveX;
-					rbPlayer.y += moveY;
-
-					// Set Velocity if Inside the World
-					if (rbPlayer.IsInside (worldMap))
+					if (TimePointHelper::TimeNow () - player.latestUpdate >
+						RoomModel::tickGap)
 					{
-						player.vx = moveX;
-						player.vy = moveY;
-					}
-					else
-					{
-						player.vx = 0;
-						player.vy = 0;
+						player.x += player.vx;
+						player.y += player.vy;
+
+						fixVelocity (moveX, moveY, pokemon.GetVelocity ());
+
+						RoomModel::RigidBody rbPlayer { player };
+						rbPlayer.x += moveX;
+						rbPlayer.y += moveY;
+
+						// Set Velocity if Inside the World
+						if (rbPlayer.IsInside (worldMap))
+						{
+							player.vx = moveX;
+							player.vy = moveY;
+						}
+						else
+						{
+							player.vx = 0;
+							player.vy = 0;
+						}
+
+						// Update Move Gap
+						player.latestUpdate = TimePointHelper::TimeNow ();
 					}
 
-					// Attack
+					// Attack only if Not Defending
 					if (player.timeGap == 0 && !isDef && (atkX || atkY))
 					{
 						auto timeTick = (size_t) sqrt (
@@ -742,9 +747,6 @@ namespace PokemonGame
 
 					// Defend
 					player.isDef = isDef;
-
-					// Update Timestamp
-					player.latestUpdate = TimePointHelper::TimeNow ();
 				}
 
 				// Handle Game Over

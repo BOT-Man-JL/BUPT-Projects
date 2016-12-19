@@ -644,7 +644,7 @@ namespace PokemonGameGUI
 			PokemonGame::GameModel gameModel;
 
 			// Task
-			auto isTaskReady = false;
+			bool isTaskReady = false;
 			std::future<PokemonGame::GameModel> task;
 
 			// Error Prompt
@@ -669,6 +669,8 @@ namespace PokemonGameGUI
 			// Player Position
 			size_t posX = 0, posY = 0;
 
+			std::mutex mtx;
+
 			// Init Room Players
 			for (const auto &player : roomPlayers)
 				roomPlayerMap.emplace (player.uid, player);
@@ -689,7 +691,7 @@ namespace PokemonGameGUI
 				bg = std::make_unique<EggAche::Canvas> (width, height);
 				wnd.SetBackground (bg.get ());
 
-				// Prompt
+				// Render Prompt
 				if (promptTick > 0)
 				{
 					bg->DrawTxt (0, 0, promptStr.c_str ());
@@ -733,7 +735,53 @@ namespace PokemonGameGUI
 				wnd.Refresh ();
 			};
 
-			std::mutex mtx;
+			auto update = [&] ()
+			{
+				// Take a snapshot
+				auto oldPlayers = gameModel.players;
+				auto oldDamages = gameModel.damages;
+
+				// Update Model
+				gameModel = task.get ();
+
+				// Fix Damage
+				for (auto &damage : gameModel.damages)
+				{
+					if (oldDamages.find (damage.first) == oldDamages.end ())
+						continue;
+
+					auto newX = damage.second.x + damage.second.vx;
+					auto newY = damage.second.y + damage.second.vy;
+
+					damage.second.x = oldDamages[damage.first].x + oldDamages[damage.first].vx;
+					damage.second.y = oldDamages[damage.first].y + oldDamages[damage.first].vy;
+					damage.second.vx = newX - damage.second.x;
+					damage.second.vy = newY - damage.second.y;
+				}
+
+				// Some Players Quit...
+				if (oldPlayers.size () != gameModel.players.size ())
+					return;
+
+				// Fix Player
+				for (size_t i = 0; i < oldPlayers.size (); ++i)
+				{
+					auto newX = gameModel.players[i].x + gameModel.players[i].vx;
+					auto newY = gameModel.players[i].y + gameModel.players[i].vy;
+
+					gameModel.players[i].x = oldPlayers[i].x + oldPlayers[i].vx;
+					gameModel.players[i].y = oldPlayers[i].y + oldPlayers[i].vy;
+					gameModel.players[i].vx = newX - gameModel.players[i].x;
+					gameModel.players[i].vy = newY - gameModel.players[i].y;
+
+					// Update Player Position
+					if (gameModel.players[i].uid == curUser.uid)
+					{
+						posX = (gameModel.players[i].x + gameModel.players[i].vx) / 2;
+						posY = (gameModel.players[i].y + gameModel.players[i].vy) / 2;
+					}
+				}
+			};
 
 			wnd.OnResized ([&] (EggAche::Window *, size_t x, size_t y)
 			{
@@ -778,20 +826,10 @@ namespace PokemonGameGUI
 			});
 
 			// Atk
-			wnd.OnLButtonDown ([&] (EggAche::Window *, int x, int y)
-			{
-				std::lock_guard<std::mutex> lg (mtx);
-				isAtk = true; mosX = x; mosY = y;
-			});
 			wnd.OnLButtonUp ([&] (EggAche::Window *, int x, int y)
 			{
 				std::lock_guard<std::mutex> lg (mtx);
-				isAtk = false;
-			});
-			wnd.OnMouseMove ([&] (EggAche::Window *, int x, int y)
-			{
-				std::lock_guard<std::mutex> lg (mtx);
-				mosX = x; mosY = y;
+				isAtk = true; mosX = x; mosY = y;
 			});
 
 			// Def
@@ -811,16 +849,17 @@ namespace PokemonGameGUI
 			{
 				auto tBeg = std::chrono::system_clock::now ();
 
+				// Frame Control
+				if (curFrame < Fps) curFrame++;
+				else curFrame = 0;
+
+				// Sync
+				if (curFrame % Fpl == Fpl / 2)
 				{
-					std::lock_guard<std::mutex> lg (mtx);
-
-					// Frame Control
-					if (curFrame < Fps) curFrame++;
-					else curFrame = 0;
-
-					// Sync
-					if (curFrame % Fpl == Fpl / 2)
+					try
 					{
+						std::lock_guard<std::mutex> lg (mtx);
+
 						auto atkx = 0, atky = 0;
 						if (isAtk)
 						{
@@ -833,79 +872,52 @@ namespace PokemonGameGUI
 
 							atkx = mosX - rect.x + rect.w / 2;
 							atky = mosY - rect.y + rect.h / 2;
+
+							// Todo
+							std::cout << mosX << " " << mosY << std::endl;
+							std::cout << rect.x << " " << rect.y << std::endl;
+
+							isAtk = false;
 						}
 
-						try
-						{
-							task = std::async (std::launch::async, [&] () {
-								return client.GameSync (cD - cA, cS - cW, atkx, atky, isDef);
-							});
-							isTaskReady = false;
-						}
-						catch (const std::exception &ex)
-						{
-							if (std::string (ex.what ()) == PokemonGame::BadSession)
-								throw;
-							promptStr = ex.what ();
-							promptTick = Fps * 3;
-						}
-
-						for (const auto &player : gameModel.players)
-							if (player.uid == curUser.uid)
-							{
-								posX = player.x;
-								posY = player.y;
-							}
+						task = std::async (std::launch::async, [=, &client] () {
+							return client.GameSync (cD - cA, cS - cW, atkx, atky, isDef);
+						});
 					}
-
-					// Smooth Moving :-)
-					if (curFrame % Fpl == 0 && isTaskReady)
+					catch (const std::exception &ex)
 					{
-						auto oldPlayers = gameModel.players;
-						auto oldDamages = gameModel.damages;
-						gameModel = task.get ();
-
-						for (size_t i = 0; i < oldPlayers.size (); ++i)
-						{
-							auto newX = gameModel.players[i].x + gameModel.players[i].vx;
-							auto newY = gameModel.players[i].y + gameModel.players[i].vy;
-
-							gameModel.players[i].x = oldPlayers[i].x + oldPlayers[i].vx;
-							gameModel.players[i].y = oldPlayers[i].y + oldPlayers[i].vy;
-							gameModel.players[i].vx = newX - gameModel.players[i].x;
-							gameModel.players[i].vy = newY - gameModel.players[i].y;
-						}
-						for (auto &damage : gameModel.damages)
-						{
-							if (oldDamages.find (damage.first) == oldDamages.end ())
-								continue;
-
-							auto newX = damage.second.x + damage.second.vx;
-							auto newY = damage.second.y + damage.second.vy;
-
-							damage.second.x = oldDamages[damage.first].x + oldDamages[damage.first].vx;
-							damage.second.y = oldDamages[damage.first].y + oldDamages[damage.first].vy;
-							damage.second.vx = newX - damage.second.x;
-							damage.second.vy = newY - damage.second.y;
-						}
-
-						isTaskReady = false;
+						if (std::string (ex.what ()) == PokemonGame::BadSession)
+							throw;
+						promptStr = ex.what ();
+						promptTick = Fps * 3;
 					}
-
-					// Render
-					render ();
 				}
+
+				// Double Buffering
+				if (isTaskReady && curFrame % Fpl == 0)
+				{
+					update ();
+					isTaskReady = false;
+				}
+
+				// Render
+				render ();
 
 				auto tElapse = std::chrono::system_clock::now () - tBeg;
 				if (tSleep > tElapse)
 				{
-					if (isTaskReady || !task.valid ())
-						std::this_thread::sleep_for (tSleep - tElapse);
-					else
+					if (!isTaskReady && task.valid ())
 					{
 						auto waitResult = task.wait_for (tSleep - tElapse);
 						isTaskReady = (waitResult == std::future_status::ready);
+
+						// Sleep Again
+						tElapse = std::chrono::system_clock::now () - tBeg;
+						if (tSleep > tElapse)
+							std::this_thread::sleep_for (tSleep - tElapse);
 					}
+					else
+						std::this_thread::sleep_for (tSleep - tElapse);
 				}
 			}
 

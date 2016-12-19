@@ -177,7 +177,10 @@ namespace PokemonGame
 		static int _Rand (int min, int max)
 		{
 			static std::random_device rand;
-			return rand () % (max - min) + min;
+			if (max == min)
+				return max;
+			else
+				return rand () % (max - min) + min;
 		};
 
 		static unsigned _RandAttr (unsigned attr)
@@ -228,11 +231,11 @@ namespace PokemonGame
 
 	// Scaffold Pokemons
 	SCAFFOLD_POKEMON (Pikachu, SwiftPokemon,
-					  10, 20, 10,
-					  10, 7, 45, 8);
+					  10, 20, 20,
+					  10, 7, 45, 4);
 	SCAFFOLD_POKEMON (Charmander, StrengthPokemon,
-					  20, 25, 5,
-					  12, 7, 55, 10);
+					  20, 25, 14,
+					  15, 7, 55, 6);
 }
 
 #undef SCAFFOLD_POKEMON_TYPE
