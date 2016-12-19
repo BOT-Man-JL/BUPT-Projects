@@ -26,6 +26,7 @@ int main (int argc, char *argv[])
 
 	PokemonClient client = PokemonClient (IPADDR, PORT);
 
+	bool isPassiveOffline = false;
 	UserModel curUser;
 	PokemonID pidToPlay;
 	std::pair<size_t, size_t> worldSize;
@@ -44,11 +45,14 @@ int main (int argc, char *argv[])
 		case GUIState::Login:
 			try
 			{
-				curUser = GUIClient::LoginWindow (client);
+				curUser = GUIClient::LoginWindow (
+					client, isPassiveOffline);
+				isPassiveOffline = false;
 				guiState = GUIState::ViewInfo;
 			}
 			catch (const std::exception &)
 			{
+				client.Logout ();
 				guiState = GUIState::Quit;
 			}
 			break;
@@ -71,9 +75,15 @@ int main (int argc, char *argv[])
 					GUIClient::RoomWindow (client, curUser, pidToPlay);
 				guiState = GUIState::Game;
 			}
-			catch (const std::exception &)
+			catch (const std::exception &ex)
 			{
-				guiState = GUIState::ViewInfo;
+				if (std::string (ex.what ()) == BadSession)
+				{
+					guiState = GUIState::Login;
+					isPassiveOffline = true;
+				}
+				else
+					guiState = GUIState::ViewInfo;
 			}
 			break;
 
@@ -85,10 +95,18 @@ int main (int argc, char *argv[])
 					worldSize.first, worldSize.second);
 				guiState = GUIState::GameResult;
 			}
-			catch (const std::exception &)
+			catch (const std::exception &ex)
 			{
-				client.RoomLeave ();
-				guiState = GUIState::ViewInfo;
+				if (std::string (ex.what ()) == BadSession)
+				{
+					guiState = GUIState::Login;
+					isPassiveOffline = true;
+				}
+				else
+				{
+					client.RoomLeave ();
+					guiState = GUIState::ViewInfo;
+				}
 			}
 			break;
 

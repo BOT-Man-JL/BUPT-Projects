@@ -130,6 +130,7 @@ namespace PokemonGameGUI
 
 		static PokemonGame::UserModel LoginWindow (
 			PokemonGame::PokemonClient &client,
+			bool isPassiveOffline,
 			size_t width = 480, size_t height = 360)
 		{
 			const std::string uidHintStr = "<Input your User ID>";
@@ -150,7 +151,9 @@ namespace PokemonGameGUI
 			bool pwdInputActivated = false;
 
 			std::string uidStr, pwdStr;
-			std::string promptStr = "Welcome to Pokemon Game";
+			std::string promptStr = isPassiveOffline ?
+				"Your Account is Passive Loged out..." :
+				"Welcome to Pokemon Game";
 
 			auto hasLogin = false;
 			PokemonGame::UserModel ret;
@@ -432,7 +435,12 @@ namespace PokemonGameGUI
 						hasEntered = true;
 					}
 					catch (const std::exception &ex)
-					{ promptStr = ex.what (); }
+					{
+						if (std::string (ex.what ()) ==
+							PokemonGame::BadSession)
+							throw;
+						promptStr = ex.what ();
+					}
 				}
 				else
 				{
@@ -445,7 +453,12 @@ namespace PokemonGameGUI
 						hasEntered = false;
 					}
 					catch (const std::exception &ex)
-					{ promptStr = ex.what (); }
+					{
+						if (std::string (ex.what ()) ==
+							PokemonGame::BadSession)
+							throw;
+						promptStr = ex.what ();
+					}
 				}
 			};
 
@@ -538,7 +551,12 @@ namespace PokemonGameGUI
 						try
 						{ roomList = client.Rooms (); }
 						catch (const std::exception &ex)
-						{ promptStr = ex.what (); }
+						{
+							if (std::string (ex.what ()) ==
+								PokemonGame::BadSession)
+								throw;
+							promptStr = ex.what ();
+						}
 					}
 					else
 					{
@@ -571,6 +589,9 @@ namespace PokemonGameGUI
 						}
 						catch (const std::exception &ex)
 						{
+							if (std::string (ex.what ()) ==
+								PokemonGame::BadSession)
+								throw;
 							hasStart = false;
 							promptStr = ex.what ();
 						}
@@ -613,6 +634,10 @@ namespace PokemonGameGUI
 			> pokemons;
 			PokemonGame::GameModel gameModel;
 
+			// Error Prompt
+			size_t promptTick;
+			std::string promptStr;
+
 			// Frame Control
 			auto curFrame = 0;
 			constexpr auto Fps = 30;
@@ -629,7 +654,7 @@ namespace PokemonGameGUI
 			auto mosX = 0, mosY = 0;
 
 			// Player Position
-			size_t posX, posY;
+			size_t posX = 0, posY = 0;
 
 			// Init Pokemons
 			for (const auto &player : roomPlayers)
@@ -654,15 +679,25 @@ namespace PokemonGameGUI
 				bg = std::make_unique<EggAche::Canvas> (width, height);
 				wnd.SetBackground (bg.get ());
 
-				// Todo:
-				// curFrame
+				// Prompt
+				if (promptTick > 0)
+				{
+					bg->DrawTxt (0, 0, promptStr.c_str ());
+					promptTick--;
+				}
+
+				auto fraction = (double) (curFrame % Fpl) / Fpl;
 
 				// Render Players
 				for (const auto &player : gameModel.players)
 				{
 					const auto &pokemon = pokemons[player.uid];
 					const auto size = pokemon->GetSize ();
-					Rect rect { player.x, player.y, size.first, size.second };
+					Rect rect {
+						(size_t) (player.x + fraction * player.vx),
+						(size_t) (player.y + fraction * player.vy),
+						size.first, size.second
+					};
 					fixRectToRender (rect);
 
 					bg->DrawRect (rect.x, rect.y, rect.x + rect.w, rect.y + rect.h);
@@ -675,7 +710,13 @@ namespace PokemonGameGUI
 				// Render Damages
 				for (const auto &damage : gameModel.damages)
 				{
-					Rect rect { damage.x, damage.y, 10, 10 };
+					Rect rect {
+						(size_t) (damage.x + fraction * damage.vx),
+						(size_t) (damage.y + fraction * damage.vy),
+						10, 10
+					};
+					fixRectToRender (rect);
+
 					bg->DrawElps (rect.x, rect.y, rect.x + rect.w, rect.y + rect.h);
 				}
 
@@ -767,9 +808,6 @@ namespace PokemonGameGUI
 					if (curFrame < Fps) curFrame++;
 					else curFrame = 0;
 
-					// Render
-					render ();
-
 					// Sync
 					if (curFrame % Fpl == 0)
 					{
@@ -785,8 +823,19 @@ namespace PokemonGameGUI
 							atky = mosY - rect.y + rect.h / 2;
 						}
 
-						gameModel = client.GameSync (
-							cD - cA, cS - cW, atkx, atky, isDef);
+						try
+						{
+							gameModel = client.GameSync (
+								cD - cA, cS - cW, atkx, atky, isDef);
+						}
+						catch (const std::exception &ex)
+						{
+							if (std::string (ex.what ()) ==
+								PokemonGame::BadSession)
+								throw;
+							promptStr = ex.what ();
+							promptTick = Fps * 3;
+						}
 
 						for (const auto &player : gameModel.players)
 							if (player.uid == curUser.uid)
@@ -795,6 +844,9 @@ namespace PokemonGameGUI
 								posY = player.y;
 							}
 					}
+
+					// Render
+					render ();
 				}
 
 				auto tElapse = std::chrono::system_clock::now () - tBeg;

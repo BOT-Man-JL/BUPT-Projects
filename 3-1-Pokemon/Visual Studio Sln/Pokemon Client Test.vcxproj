@@ -71,6 +71,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)$(Configuration)\ClientTest</OutDir>
+    <IntDir>$(Configuration)\ClientTest</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -151,7 +153,6 @@
     <ClInclude Include="..\src\EggAche\EggAche_Impl.h" />
     <ClInclude Include="..\src\EggAche\stb_image_write.h" />
     <ClInclude Include="..\src\PokemonClient.h" />
-    <ClInclude Include="..\src\PokemonClientGUI.h" />
     <ClInclude Include="..\src\Shared.h" />
     <ClInclude Include="..\src\Socket.h" />
   </ItemGroup>

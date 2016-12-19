@@ -52,17 +52,16 @@ namespace PokemonGame
 		struct GamePlayer
 		{
 			UserID uid;
-			size_t x, y;
-			size_t vx, vy;
+			int x, y;
+			int vx, vy;
 			Pokemon::TimeGap timeGap;
 			Pokemon::HealthPoint curHp;
 		};
 
 		struct GameDamage
 		{
-			Pokemon::HealthPoint damage;
-			size_t x, y;
-			size_t vx, vy;
+			int x, y;
+			int vx, vy;
 		};
 
 		struct ResultPlayer
@@ -222,7 +221,7 @@ namespace PokemonGame
 			GameModel ret;
 			Request ("gamesync", { { "sid", _sessionID },
 								   { "movex", movex },
-								   { "movey", movex },
+								   { "movey", movey },
 								   { "atkx", atkx },
 								   { "atky", atky },
 								   { "def", isDef} },
@@ -233,8 +232,9 @@ namespace PokemonGame
 				{
 					for (const auto &playerj : response.at ("gameplayers"))
 						ret.players.emplace_back (_JsonToGamePlayer (playerj));
-					//for (const auto &damagej : response.at ("damages"))
-					//	ret.damages.emplace_back (_JsonToDamage (damagej));
+
+					for (const auto &damagej : response.at ("gamedamages"))
+						ret.damages.emplace_back (_JsonToDamage (damagej));
 				}
 				else
 				{
@@ -323,10 +323,10 @@ namespace PokemonGame
 		{
 			return GameModel::GamePlayer {
 				playerj.at ("uid").get<UserID> (),
-				playerj.at ("x").get<size_t> (),
-				playerj.at ("y").get<size_t> (),
-				playerj.at ("vx").get<size_t> (),
-				playerj.at ("vy").get<size_t> (),
+				playerj.at ("x").get<int> (),
+				playerj.at ("y").get<int> (),
+				playerj.at ("vx").get<int> (),
+				playerj.at ("vy").get<int> (),
 				playerj.at ("timegap").get<Pokemon::TimeGap> (),
 				playerj.at ("hp").get<Pokemon::HealthPoint> ()
 			};
@@ -335,11 +335,10 @@ namespace PokemonGame
 		GameModel::GameDamage _JsonToDamage (const json &damagej)
 		{
 			return GameModel::GameDamage {
-				damagej.at ("damage").get<Pokemon::HealthPoint> (),
-				damagej.at ("x").get<size_t> (),
-				damagej.at ("y").get<size_t> (),
-				damagej.at ("vx").get<size_t> (),
-				damagej.at ("vy").get<size_t> ()
+				damagej.at ("x").get<int> (),
+				damagej.at ("y").get<int> (),
+				damagej.at ("vx").get<int> (),
+				damagej.at ("vy").get<int> ()
 			};
 		}
 

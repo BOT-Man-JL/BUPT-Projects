@@ -2,6 +2,12 @@
 
 ## Object
 
+#### sesseion error
+
+``` json
+{"success": false, "response": "You haven't Login"}
+```
+
 #### user
 
 ``` json
@@ -46,7 +52,6 @@
 
 ``` json
 {
-  "damage": damage,
   "x": x, "y": y,
   "vx": vx, "vy": vy
 }

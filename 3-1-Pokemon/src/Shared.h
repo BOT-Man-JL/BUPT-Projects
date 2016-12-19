@@ -19,6 +19,8 @@ namespace PokemonGame
 	using SessionID = std::string;
 	using RoomID = std::string;
 
+	constexpr const char *BadSession = "You haven't Login";
+
 	using TimePoint = std::chrono::time_point<std::chrono::system_clock>;
 
 	struct TimePointHelper

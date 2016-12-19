@@ -8,6 +8,7 @@
 #include <memory>
 #include <chrono>
 #include <algorithm>
+#include <cmath>
 
 #include "ORM-Lite/ORMLite.h"
 #include "json/json.hpp"
@@ -15,8 +16,6 @@
 #include "Socket.h"
 #include "Shared.h"
 #include "Pokemon.h"
-
-//#include "PokemonPhysics.h"
 
 // Fix for the pollution by <windows.h>
 #ifdef max
@@ -104,17 +103,71 @@ namespace PokemonGame
 
 			bool isReady;
 
-			size_t x, y;
-			size_t vx, vy;
+			int x, y;
+			int vx, vy;
+			bool isDef;
 			Pokemon::TimeGap timeGap;
 
 			PokemonModel pokemonModel;
 			std::unique_ptr<Pokemon> pokemon;
+
+			TimePoint latestUpdate;
+		};
+
+		struct Damage
+		{
+			int x, y;
+			int vx, vy;
+			Pokemon::TimeGap timeTick;
+			UserID uid;
+		};
+
+		struct RigidBody
+		{
+			RigidBody (int width, int height)
+				: x { 0 }, y { 0 }, w { width }, h { height } {}
+
+			RigidBody (const RoomModel::Player &player)
+				: x { player.x }, y { player.y },
+				w { (int) player.pokemon->GetSize ().first },
+				h { (int) player.pokemon->GetSize ().second }
+			{}
+
+			RigidBody (const RoomModel::Damage &damage)
+				: x { damage.x }, y { damage.y },
+				w { 10 }, h { 10 }
+			{}
+
+			bool IsOverlap (const RigidBody &b) const
+			{
+				const auto &a = *this;
+				return
+					a.x <= b.x + b.w &&
+					a.y <= b.y + b.h &&
+					b.x <= a.x + a.w &&
+					b.y <= a.y + a.h;
+			}
+
+			bool IsInside (const RigidBody &b) const
+			{
+				const auto &a = *this;
+				return
+					a.x >= b.x &&
+					a.y >= b.y &&
+					a.x + a.w <= b.x + b.w &&
+					a.y + a.h <= b.y + b.h;
+			}
+
+			int x, y, w, h;
 		};
 
 		std::unordered_map<UserID, Player> players;
+		std::list<Damage> damages;
+
 		bool isOver = false;
-		std::mutex mtx;
+
+		static constexpr std::chrono::milliseconds tickGap { 200 };
+		TimePoint latestUpdate;
 	};
 
 	// Server
@@ -173,7 +226,7 @@ namespace PokemonGame
 			{
 				auto p = sessions.find (sid);
 				if (p == sessions.end ())
-					throw std::runtime_error ("You haven't Login");
+					throw std::runtime_error (BadSession);
 				(*p).second.heartbeat = TimePointHelper::TimeNow ();
 			};
 
@@ -322,6 +375,7 @@ namespace PokemonGame
 				for (const auto &session : sessions)
 					if (session.second.uid == uid)
 					{
+						leaveRoom (session.first);
 						sessions.erase (session.first);
 						break;
 					}
@@ -451,11 +505,13 @@ namespace PokemonGame
 				room.players[sessions[sid].uid] = RoomModel::Player
 				{
 					false,
-					initX, initY,
+					(int) initX, (int) initY,
 					0, 0,
+					false,
 					pokemon->GetTimeGap (),
 					std::move (pokemons.front ()),
-					std::move (pokemon)
+					std::move (pokemon),
+					TimePointHelper::TimeNow ()
 				};
 
 				response = json {
@@ -508,20 +564,18 @@ namespace PokemonGame
 						[&] (json &response, const json &request)
 			{
 				const auto sid = request.at ("sid").get<SessionID> ();
-				const auto moveX = request.at ("movex").get<int> ();
-				const auto moveY = request.at ("movey").get<int> ();
-				const auto atkX = request.at ("atkx").get<int> ();
-				const auto atkY = request.at ("atky").get<int> ();
-				const auto isDef = request.at ("def").get<bool> ();
+				auto moveX = request.at ("movex").get<int> ();
+				auto moveY = request.at ("movey").get<int> ();
+				auto atkX = request.at ("atkx").get<int> ();
+				auto atkY = request.at ("atky").get<int> ();
+				auto isDef = request.at ("def").get<bool> ();
 				keepSession (sid);
 
 				const auto &rid = sessions[sid].rid;
 				if (rid == RoomID {})
 					throw std::runtime_error ("Not in a Room");
 
-				// Make sure only one player manip. this room resource
 				auto &room = rooms[rid];
-				std::lock_guard<std::mutex> lg (room.mtx);
 
 				auto isStart = true;
 				auto playerAlive = room.players.size ();
@@ -534,15 +588,141 @@ namespace PokemonGame
 						--playerAlive;
 				}
 
-				// Handle Action
-				if (!room.isOver)
-				{
-					// Todo
-				}
-
 				// Game Not Started
 				if (!isStart)
 					throw std::runtime_error ("Not all players ready");
+
+				// Handle Action
+				auto &pokemon = *room.players[sessions[sid].uid].pokemon;
+				auto &player = room.players[sessions[sid].uid];
+
+				// World Map
+				const static RoomModel::RigidBody worldMap (
+					RoomModel::Player::maxX, RoomModel::Player::maxY);
+
+				// Update All Room Elements
+				if (TimePointHelper::TimeNow () -
+					room.latestUpdate > RoomModel::tickGap)
+				{
+					std::vector<
+						std::pair<UserID, RoomModel::RigidBody>
+					> playerRididBodys;
+
+					// Update Player TimeGap
+					for (auto &player : room.players)
+					{
+						if (player.second.timeGap > 0)
+							player.second.timeGap--;
+
+						playerRididBodys.emplace_back (
+							player.first,
+							RoomModel::RigidBody { player.second }
+						);
+					}
+
+					// Update Damages
+					for (auto p = room.damages.begin ();
+						 p != room.damages.end ();)
+					{
+						auto &damage = *p;
+
+						if (damage.timeTick == 0)
+						{
+							p = room.damages.erase (p);
+							continue;
+						}
+
+						damage.x += damage.vx;
+						damage.y += damage.vy;
+						damage.timeTick--;
+
+						RoomModel::RigidBody rbDamage { damage };
+						bool isHit = false;
+
+						for (size_t i = 0; i < room.players.size (); i++)
+						{
+							const auto &uid = playerRididBodys[i].first;
+							const auto &collider = playerRididBodys[i].second;
+
+							if (uid != damage.uid && rbDamage.IsOverlap (collider))
+							{
+								isHit = true;
+								auto isUpgraded = false;  // Todo
+
+								if (!room.players[uid].isDef)
+								{
+									std::tie (std::ignore, isUpgraded) =
+										room.players[damage.uid].pokemon->Attack (
+											*room.players[uid].pokemon);
+								}
+								break;
+							}
+						}
+
+						if (!isHit) ++p;
+					}
+
+					room.latestUpdate = TimePointHelper::TimeNow ();
+				}
+
+				// Handle only if this Player is alive
+				if (pokemon.GetCurHP () != 0)
+				{
+					auto fixVelocity = [] (int &vx, int &vy, int base)
+					{
+						if (vx != 0 || vy != 0)
+						{
+							auto len = sqrt (vx * vx + vy * vy);
+							vx = (int) (base * vx / len);
+							vy = (int) (base * vy / len);
+						}
+					};
+
+					// Move
+
+					// Add up last snapshot of Velocity
+					player.x += player.vx;
+					player.y += player.vy;
+
+					RoomModel::RigidBody rbPlayer { player };
+
+					fixVelocity (moveX, moveY, pokemon.GetVelocity ());
+					rbPlayer.x += moveX;
+					rbPlayer.y += moveY;
+
+					// Set Velocity if Inside the World
+					if (rbPlayer.IsInside (worldMap))
+					{
+						player.vx = moveX;
+						player.vy = moveY;
+					}
+					else
+					{
+						player.vx = 0;
+						player.vy = 0;
+					}
+
+					// Attack
+					if (player.timeGap == 0 && !isDef && (atkX || atkY))
+					{
+						auto timeTick = (size_t) sqrt (
+							pokemon.GetAtk () * pokemon.GetTimeGap ());
+
+						fixVelocity (atkX, atkY, pokemon.GetTimeGap ());
+						room.damages.emplace_back (RoomModel::Damage {
+							player.x, player.y, atkX, atkY,
+							timeTick, player.pokemonModel.uid
+						});
+
+						player.timeGap = pokemon.GetTimeGap ();
+					}
+
+					// Defend
+					player.isDef = isDef;
+
+					// Update Timestamp
+					player.latestUpdate = TimePointHelper::TimeNow ();
+				}
 
 				// Game Over
 				if (playerAlive <= 1)
@@ -563,6 +743,7 @@ namespace PokemonGame
 							mapper.Update (pokemon);
 						}
 					}
+
 					// Set Game Over
 					room.isOver = true;
 				}
@@ -600,9 +781,16 @@ namespace PokemonGame
 						{ "hp", player.pokemon->GetCurHP () }
 					});
 				}
-
-				// Todo
 				json gamedamagesj;
+				for (const auto &damage : room.damages)
+				{
+					gamedamagesj.emplace_back (json {
+						{ "x", damage.x },
+						{ "y", damage.y },
+						{ "vx", damage.vx },
+						{ "vy", damage.vy }
+					});
+				}
 
 				response = {
 					{ "over", false },
@@ -617,12 +805,20 @@ namespace PokemonGame
 			BOT_Socket::Server (port, [&] (const std::string &request,
 										   std::string &response)
 			{
+				std::mutex mtx;
 				try
 				{
 					const json req = json::parse (request.c_str ());
 					json res { { "success", true } };
-					_handlers.at (req.at ("request")) (
-						res["response"], req.at ("param"));
+
+					{
+						// Make sure only one thread is Handling
+						std::lock_guard<std::mutex> lg (mtx);
+
+						_handlers.at (req.at ("request")) (
+							res["response"], req.at ("param"));
+					}
+
 					response = res.dump ();
 				}
 				catch (const std::logic_error &)
