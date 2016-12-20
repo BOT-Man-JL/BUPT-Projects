@@ -484,6 +484,16 @@ namespace PokemonGame
 				if (ridInSession != RoomID {})
 					throw std::runtime_error ("Already in a Room");
 
+				// Remember to Check if this Pokemon belonging to this User
+				auto pokemons = mapper.Query (pokemonModel)
+					.Where (
+						field (pokemonModel.pid) == pid &&
+						field (pokemonModel.uid) == sessions[sid].uid
+					)
+					.ToList ();
+				if (pokemons.empty ())
+					throw std::runtime_error ("It's NOT your Poekmon");
+
 				auto &room = rooms[rid];
 
 				if (room.players.size () ==
@@ -495,17 +505,6 @@ namespace PokemonGame
 
 				if (room.isStarted)
 					throw std::runtime_error ("Room is in Game");
-
-				auto pokemons = mapper.Query (pokemonModel)
-					.Where (
-						field (pokemonModel.pid) == pid &&
-						field (pokemonModel.uid) == sessions[sid].uid
-					)
-					.ToList ();
-
-				// Remember to Check if this Pokemon belonging to this User
-				if (pokemons.empty ())
-					throw std::runtime_error ("It's NOT your Poekmon");
 
 				auto pokemon = pokemons.front ().ToPokemon ();
 				std::random_device rand;
@@ -557,6 +556,7 @@ namespace PokemonGame
 				if (rid == RoomID {})
 					throw std::runtime_error ("Not in a Room");
 
+				auto oldIsStarted = rooms[rid].isStarted;
 				rooms[rid].isStarted = rooms[rid].players.size () >= 2;
 				rooms[rid].players[sessions[sid].uid].isReady = isReady;
 
@@ -577,6 +577,9 @@ namespace PokemonGame
 						{ "pokemon", pokemonToJson (player.pokemonModel) }
 					});
 				}
+
+				if (!oldIsStarted && rooms[rid].isStarted)
+					rooms[rid].latestUpdate = TimePointHelper::TimeNow ();
 			});
 
 #pragma endregion
@@ -621,8 +624,8 @@ namespace PokemonGame
 					RoomModel::Player::maxX, RoomModel::Player::maxY);
 
 				// Update All Room Elements
-				if (TimePointHelper::TimeNow () -
-					room.latestUpdate > RoomModel::tickGap)
+				while (TimePointHelper::TimeNow () -
+					   room.latestUpdate > RoomModel::tickGap)
 				{
 					std::vector<
 						std::pair<UserID, RoomModel::RigidBody>
@@ -684,7 +687,7 @@ namespace PokemonGame
 						if (!isHit) ++p;
 					}
 
-					room.latestUpdate = TimePointHelper::TimeNow ();
+					room.latestUpdate += RoomModel::tickGap;
 				}
 
 				// Handle only if this Player is alive
@@ -734,7 +737,9 @@ namespace PokemonGame
 					{
 						auto timeTick = (size_t) sqrt (
 							pokemon.GetAtk () * pokemon.GetTimeGap ());
-						fixVelocity (atkX, atkY, pokemon.GetAtk () * 2);
+						fixVelocity (
+							atkX, atkY,
+							pokemon.GetTimeGap () * 2 + pokemon.GetVelocity ());
 
 						room.damages.emplace_back (RoomModel::Damage {
 							player.x, player.y, atkX, atkY,
@@ -755,20 +760,56 @@ namespace PokemonGame
 					// Handle Game Over only once
 					if (!room.isOver && playerAlive > 0)
 					{
+						// Find Winner
 						UserID winner;
 						for (const auto &playerPair : room.players)
 							if (playerPair.second.pokemon->GetCurHP () != 0)
 								winner = playerPair.first;
 
-						// Change Owners
-						for (auto &playerPair : room.players)
+						mapper.Transaction ([&] ()
 						{
-							mapper.Update (*PokemonModel::FromPokemon (
-								playerPair.second.pokemonModel.pid,
-								winner,
-								*playerPair.second.pokemon)
-							);
-						}
+							// Set Cond for this Room
+							auto p = room.players.begin ();
+							auto cond = field (userModel.uid) == (*p).first;
+							for (++p; p != room.players.end (); ++p)
+								cond = cond || field (userModel.uid) == (*p).first;
+
+							// Set Won Rate
+							auto users = mapper.Query (userModel)
+								.Where (cond).ToList ();
+							for (auto &user : users)
+							{
+								if (user.uid == winner) user.won++;
+								else user.los++;
+							}
+							mapper.UpdateRange (users);
+
+							// Update Pokemons
+							for (const auto &playerPair : room.players)
+							{
+								const auto &player = playerPair.second;
+
+								// Change owner & Update
+								mapper.Update (*PokemonModel::FromPokemon (
+									player.pokemonModel.pid,
+									winner,
+									*player.pokemon)
+								);
+
+								// Check if this Player has no pokemon...
+								if (mapper.Query (pokemonModel)
+									.Where (field (pokemonModel.uid) == playerPair.first)
+									.Aggregate (Expression::Count ()) == 0)
+								{
+									// Give this Player a new one...
+									mapper.Insert (
+										*PokemonModel::FromPokemon (
+											0, playerPair.first,
+											*Pokemon::NewPokemon ()),
+										false);
+								}
+							}
+						});
 					}
 
 					// Set Game Over

@@ -11,9 +11,9 @@ enum class GUIState
 {
 	Quit,
 	Login,
-	ViewInfo,
-	Pokemons,
+	Start,
 	Users,
+	Pokemons,
 	Rooms,
 	Game,
 	GameResult
@@ -48,24 +48,51 @@ int main (int argc, char *argv[])
 				curUser = GUIClient::LoginWindow (
 					client, isPassiveOffline);
 				isPassiveOffline = false;
-				guiState = GUIState::ViewInfo;
+				guiState = GUIState::Start;
 			}
 			catch (const std::exception &)
 			{
-				client.Logout ();
+				try { client.Logout (); }
+				catch (...) {}
 				guiState = GUIState::Quit;
 			}
 			break;
 
-		case GUIState::ViewInfo:
-			pidToPlay = curUser.pokemons.front ().pid;
-			guiState = GUIState::Rooms;
-			break;
-
-		case GUIState::Pokemons:
+		case GUIState::Start:
+			try
+			{
+				size_t action;
+				std::tie (action, pidToPlay) =
+					GUIClient::StartWindow (client, curUser);
+				switch (action)
+				{
+				case 0: guiState = GUIState::Rooms; break;
+				case 1: guiState = GUIState::Users; break;
+				case 2: guiState = GUIState::Pokemons; break;
+				default: break;
+				}
+			}
+			catch (const std::exception &ex)
+			{
+				if (std::string (ex.what ()) == BadSession)
+					isPassiveOffline = true;
+				else
+				{
+					try { client.Logout (); }
+					catch (...) {}
+				}
+				guiState = GUIState::Login;
+			}
 			break;
 
 		case GUIState::Users:
+			GUIClient::UsersWindow (client);
+			guiState = GUIState::Start;
+			break;
+
+		case GUIState::Pokemons:
+			GUIClient::PokemonsWindow (client);
+			guiState = GUIState::Start;
 			break;
 
 		case GUIState::Rooms:
@@ -79,14 +106,14 @@ int main (int argc, char *argv[])
 			{
 				if (std::string (ex.what ()) == BadSession)
 				{
-					guiState = GUIState::Login;
 					isPassiveOffline = true;
+					guiState = GUIState::Login;
 				}
 				else
 				{
-					guiState = GUIState::ViewInfo;
 					try { client.RoomLeave (); }
 					catch (...) {}
+					guiState = GUIState::Start;
 				}
 			}
 			break;
@@ -103,20 +130,37 @@ int main (int argc, char *argv[])
 			{
 				if (std::string (ex.what ()) == BadSession)
 				{
-					guiState = GUIState::Login;
 					isPassiveOffline = true;
+					guiState = GUIState::Login;
 				}
 				else
 				{
-					client.RoomLeave ();
-					guiState = GUIState::ViewInfo;
+					try { client.RoomLeave (); }
+					catch (...) {}
+					guiState = GUIState::Start;
 				}
 			}
 			break;
 
 		case GUIState::GameResult:
-			client.RoomLeave ();
-			guiState = GUIState::ViewInfo;
+			try
+			{
+				// Update curUser State
+				auto updatedUsers = client.Users ();
+				for (const auto &user : updatedUsers)
+					if (user.uid == curUser.uid)
+					{
+						curUser = user;
+						break;
+					}
+
+				GUIClient::ResultWindow (gameResults);
+				guiState = GUIState::Start;
+
+				// Begin to Leave
+				client.RoomLeave ();
+			}
+			catch (const std::exception &) {}
 			break;
 
 		default:
