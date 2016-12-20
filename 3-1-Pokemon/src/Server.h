@@ -797,9 +797,10 @@ namespace PokemonGame
 								);
 
 								// Check if this Player has no pokemon...
-								if (mapper.Query (pokemonModel)
+								auto pokemonLeft = mapper.Query (pokemonModel)
 									.Where (field (pokemonModel.uid) == playerPair.first)
-									.Aggregate (Expression::Count ()) == 0)
+									.Aggregate (Expression::Count ());
+								if (pokemonLeft.Value () == 0)
 								{
 									// Give this Player a new one...
 									mapper.Insert (
@@ -871,10 +872,10 @@ namespace PokemonGame
 #pragma endregion
 
 			// Run
+			std::mutex mtx;
 			BOT_Socket::Server (port, [&] (const std::string &request,
 										   std::string &response)
 			{
-				std::mutex mtx;
 				try
 				{
 					const json req = json::parse (request.c_str ());

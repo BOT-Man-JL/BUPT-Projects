@@ -24,7 +24,9 @@ int main (int argc, char *argv[])
 	using namespace PokemonGame;
 	using namespace PokemonGameGUI;
 
-	Client client (IPADDR, PORT);
+	auto clientIP = IPADDR;
+	if (argc > 1) clientIP = argv[1];
+	Client client (clientIP, PORT);
 
 	bool isPassiveOffline = false;
 	UserModel curUser;
@@ -160,7 +162,20 @@ int main (int argc, char *argv[])
 				// Begin to Leave
 				client.RoomLeave ();
 			}
-			catch (const std::exception &) {}
+			catch (const std::exception &ex)
+			{
+				if (std::string (ex.what ()) == BadSession)
+				{
+					isPassiveOffline = true;
+					guiState = GUIState::Login;
+				}
+				else
+				{
+					try { client.RoomLeave (); }
+					catch (...) {}
+					guiState = GUIState::Start;
+				}
+			}
 			break;
 
 		default:

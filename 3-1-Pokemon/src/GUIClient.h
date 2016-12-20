@@ -144,6 +144,7 @@ namespace PokemonGameGUI
 			std::unique_ptr<EggAche::Canvas> bg;
 
 			std::vector<std::string> textList;
+			bool isClose = false;
 			std::mutex mtx;
 
 			auto refresh = [&] ()
@@ -174,7 +175,14 @@ namespace PokemonGameGUI
 				refresh ();
 			});
 
-			while (!wnd.IsClosed ())
+			wnd.OnPress ([&] (EggAche::Window *, char ch)
+			{
+				std::lock_guard<std::mutex> lg (mtx);
+
+				if (ch == '\r') isClose = true;
+			});
+
+			while (!wnd.IsClosed () && !isClose)
 			{
 				auto tBeg = std::chrono::system_clock::now ();
 
@@ -1002,7 +1010,7 @@ namespace PokemonGameGUI
 			PokemonGame::GameModel gameModel;
 
 			// Task
-			bool isTaskReady = false;
+			bool isTaskReady = false, isSending = false;
 			std::future<PokemonGame::GameModel> task;
 
 			// Error Prompt
@@ -1226,9 +1234,13 @@ namespace PokemonGameGUI
 					try
 					{
 						std::lock_guard<std::mutex> lg (mtx);
-						task = std::async (std::launch::async, [=, &client] () {
-							return client.GameSync (cD - cA, cS - cW, atkX, atkY, isDef);
-						});
+						if (!isSending)
+						{
+							task = std::async (std::launch::async, [=, &client] () {
+								return client.GameSync (cD - cA, cS - cW, atkX, atkY, isDef);
+							});
+							isSending = true;
+						}
 						atkX = atkY = 0;
 					}
 					catch (const std::exception &ex)
@@ -1245,6 +1257,7 @@ namespace PokemonGameGUI
 				{
 					update ();
 					isTaskReady = false;
+					isSending = false;
 				}
 
 				// Render
@@ -1253,7 +1266,7 @@ namespace PokemonGameGUI
 				auto tElapse = std::chrono::system_clock::now () - tBeg;
 				if (tSleep > tElapse)
 				{
-					if (!isTaskReady && task.valid ())
+					if (!isTaskReady && isSending)
 					{
 						auto waitResult = task.wait_for (tSleep - tElapse);
 						isTaskReady = (waitResult == std::future_status::ready);
