@@ -1229,18 +1229,15 @@ namespace PokemonGameGUI
 				else curFrame = 0;
 
 				// Sync
-				if (curFrame % Fpl == Fpl / 2)
+				if (curFrame % Fpl == Fpl / 2 && !isSending)
 				{
 					try
 					{
 						std::lock_guard<std::mutex> lg (mtx);
-						if (!isSending)
-						{
-							task = std::async (std::launch::async, [=, &client] () {
-								return client.GameSync (cD - cA, cS - cW, atkX, atkY, isDef);
-							});
-							isSending = true;
-						}
+						task = std::async (std::launch::async, [=, &client] () {
+							return client.GameSync (cD - cA, cS - cW, atkX, atkY, isDef);
+						});
+						isSending = true;
 						atkX = atkY = 0;
 					}
 					catch (const std::exception &ex)

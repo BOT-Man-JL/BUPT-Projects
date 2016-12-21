@@ -186,6 +186,7 @@ namespace PokemonGame
 			std::unordered_map<SessionID, SessionModel> sessions;
 			std::unordered_map<RoomID, RoomModel> rooms;
 
+			// Persistent Data
 			ORMapper mapper ("Pokemon.db");
 			UserModel userModel;
 			BadgeModel badgeModel;
