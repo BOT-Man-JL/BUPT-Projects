@@ -149,6 +149,7 @@
   <ItemGroup>
     <ClInclude Include="..\src\Client.h" />
     <ClInclude Include="..\src\json\json.hpp" />
+    <ClInclude Include="..\src\Pokemon.h" />
     <ClInclude Include="..\src\Shared.h" />
     <ClInclude Include="..\src\Socket.h" />
   </ItemGroup>

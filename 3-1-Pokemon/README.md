@@ -1,5 +1,19 @@
 ﻿# 宠物小精灵对战游戏
 
+> 2014211306 李俊宁 2014211288
+
+- 参考
+  *[CppCoreGuidelines](https://github.com/isocpp/CppCoreGuidelines)*，
+  使用Modern C++编写；
+- 使用 更好的数据库ORM和图形库：
+  *[ORM Lite](https://github.com/BOT-Man-JL/ORM-Lite)* &
+  *[EggAche GL](https://github.com/BOT-Man-JL/EggAche-GL)*；
+- 使用 lambda表达式 和 callback方式，实现**低耦合 可扩展**的 C/S 设计；
+- 使用 `unique_ptr` 和 reference方式，**消除**潜在的**内存泄露**；
+- 使用 Template Method 和 virtual function，实现**可扩展**的类设计；
+- 使用 `exception` 实现灵活的**错误处理**；
+- 使用 `json` 提高**协议**的**可扩展性**；
+
 ## 题目要求及项目文件
 
 ### 题目一：宠物小精灵的加入
@@ -49,6 +63,7 @@
   - Server.h
   - Server.cpp
 - Client
+  - Pokemon.h
   - Client.h
   - TestClient.cpp
 
@@ -92,6 +107,7 @@
   - Server.h
   - Server.cpp
 - Client
+  - Pokemon.h
   - Client.h
   - GUIClient.h
   - GUIClient.cpp
@@ -263,6 +279,82 @@
 
 ## 设计
 
+### `Socket.h`
+
+- 代码组织于 `namespace BOT_Socket`；
+
+#### `class Server`
+
+``` cpp
+Server (unsigned short port,
+        std::function<void (const std::string &request,
+                            std::string &response)> callback);
+```
+
+参数：
+- `port` 为监听端口；
+- `callback` 为业务逻辑处理**回调函数**；
+
+返回值：
+- 无 （构造函数）
+
+功能：
+- 构造一个 Socket Server，为每一个 accept 到的 socket 建立新的线程；
+- 每个线程的每个请求，通过回调函数接受 `request`，写入 `response` 处理；
+- 实现 `recv` 时，使用 `stringstream` 进行**动态buffer**接收；
+
+#### `class Client`
+
+``` cpp
+Client (const std::string &ipAddr,
+        unsigned short port);
+```
+
+参数：
+- `ipAddr` 为服务器 IP；
+- `port` 为服务器端口；
+
+返回值：
+- 无 （构造函数）
+
+功能：
+- 构造一个 Socket Client，连接到服务器的对应主机端口上；
+
+``` cpp
+std::string Client::Request (const std::string &request);
+```
+
+参数：
+- `request` 发给 Server 的 string；
+
+返回值：
+- Server 响应该请求时返回的 string；
+
+功能：
+- 使用 `this` 的连接的 socket 进行数据收发；
+- 实现 `recv` 时，使用 `stringstream` 进行**动态buffer**接收；
+
+### `Shared.h`
+
+- 代码组织于 `namespace PokemonGame`；
+- 用于定义
+  - 所有server和client共享的**数据格式**；
+  - 关于**被迫掉线**的返回消息；
+
+``` cpp
+using PokemonID = size_t;
+using PokemonName = std::string;
+
+using UserID = std::string;
+using UserPwd = std::string;
+using UserBadge = std::string;
+
+using SessionID = std::string;
+using RoomID = std::string;
+
+constexpr const char *BadSession = "You haven't Login";
+```
+
 ### `Pokemon.h/cpp`
 
 - 代码组织于 `namespace PokemonGame`；
@@ -391,62 +483,6 @@ SCAFFOLD_POKEMON (Charmander, StrengthPokemon,
 #define NAMEOF(CLASSNAME)
 ```
 
-### `Socket.h`
-
-- 代码组织于 `namespace BOT_Socket`；
-- `class Server` 实现一个简单的Socket Server接口
-  - 传入 `port` 为监听端口；
-  - 传入 `callback` 为业务逻辑处理**回调函数**；
-  - 回调函数接受 `request`，写入 `response`；
-
-``` cpp
-Server (unsigned short port,
-        std::function<void (const std::string &request,
-                            std::string &response)> callback);
-```
-
-- `class Client` 实现一个简单的Socket Client接口
-  - 传入 `ipAddr` 为服务器ip，`port` 为服务器端口；
-  - `Request` 接收 `request` 发给server，并返回收到的string
-
-``` cpp
-Client (const std::string &ipAddr,
-        unsigned short port);
-std::string Client::Request (const std::string &request);
-```
-
-- 实现 `recv` 时，使用 `stringstream` 进行动态**buffer**接收；
-
-### `Shared.h`
-
-- 代码组织于 `namespace PokemonGame`；
-- 用于定义
-  - 所有server和client共享的**数据格式**；
-  - 和时间相关的**帮助函数**；
-
-``` cpp
-using PokemonID = size_t;
-using PokemonName = std::string;
-
-using UserID = std::string;
-using UserPwd = std::string;
-using UserBadge = std::string;
-
-using SessionID = std::string;
-using RoomID = std::string;
-
-constexpr const char *BadSession = "You haven't Login";
-
-using TimePoint = std::chrono::time_point<std::chrono::system_clock>;
-
-struct TimePointHelper
-{
-	static inline TimePoint TimeNow ();
-	static inline std::string ToStr (const TimePoint &timePoint);
-	static inline TimePoint FromStr (const std::string &str);
-};
-```
-
 ### `Server.h/cpp`
 
 - 依赖于
@@ -458,6 +494,7 @@ struct TimePointHelper
 
 数据库模型：
 
+- `TimePoint/TimePointHelper` 定义时间相关的数据类型；
 - `struct PokemonModel` 定义用于**持久化**的 `Pokemon` 数据模型；
   - `ToPokemon` 用于从 `PokemonModel` 生成对应 `Pokemon`；
   - `FromPokemon` 用于从 `Pokemon` 生成对应 `PokemonModel`；

@@ -10,6 +10,7 @@
     <ClInclude Include="..\src\json\json.hpp">
       <Filter>json</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\Pokemon.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="json">
