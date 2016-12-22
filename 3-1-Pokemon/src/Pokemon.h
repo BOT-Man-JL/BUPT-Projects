@@ -77,30 +77,11 @@ namespace PokemonGame
 	class Pokemon
 	{
 	public:
-		// Get Type & Name
-		virtual std::string GetType () const = 0;
-		virtual std::string GetName () const = 0;
-
-		// Get Physics
-		virtual std::pair<size_t, size_t> GetSize () const = 0;
-		virtual size_t GetVelocity () const = 0;
-
-		// Attribute
-		typedef unsigned Level;
-		typedef unsigned ExpPoint;
-		typedef unsigned HealthPoint;
-		typedef unsigned TimeGap;
-
-		// Get Attr
-		Level GetLevel () const { return _level; }
-		Level GetExp () const { return _expPoint; }
-		HealthPoint GetAtk () const { return _atk; }
-		HealthPoint GetDef () const { return _def; }
-		TimeGap GetTimeGap () const { return _timeGap; }
-		HealthPoint GetHP () const { return _hp; }
-
-		// Runtime Attr
-		HealthPoint GetCurHP () const { return _curHp; }
+		// Attribute Types
+		using Level = unsigned;
+		using ExpPoint = unsigned;
+		using HealthPoint = unsigned;
+		using TimeGap = unsigned;
 
 		// Factory
 		static const std::vector<std::string> &PokemonNames ();
@@ -115,6 +96,25 @@ namespace PokemonGame
 			HealthPoint def,
 			HealthPoint hp,
 			TimeGap timeGap);
+
+		// Get Type & Name
+		virtual std::string GetType () const = 0;
+		virtual std::string GetName () const = 0;
+
+		// Get Physics
+		virtual std::pair<size_t, size_t> GetSize () const = 0;
+		virtual size_t GetVelocity () const = 0;
+
+		// Get Attributes
+		Level GetLevel () const { return _level; }
+		Level GetExp () const { return _expPoint; }
+		HealthPoint GetAtk () const { return _atk; }
+		HealthPoint GetDef () const { return _def; }
+		TimeGap GetTimeGap () const { return _timeGap; }
+		HealthPoint GetHP () const { return _hp; }
+
+		// Runtime Attr
+		HealthPoint GetCurHP () const { return _curHp; }
 
 		// this Pokemon Attack opPokemon
 		// Return <isKilling, isUpgraded>

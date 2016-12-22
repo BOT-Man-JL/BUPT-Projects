@@ -383,11 +383,10 @@ namespace PokemonGameGUI
 
 		//
 		// Start Window
-		// 0: Play Game, 1: View Players, 2: View Pokemons
+		// 0: Play Game, 1: View Users, 2: View Pokemons
 		//
 
 		static std::pair<size_t, PokemonGame::PokemonID> StartWindow (
-			PokemonGame::Client &client,
 			const PokemonGame::UserModel &curUser,
 			size_t width = 640, size_t height = 720)
 		{

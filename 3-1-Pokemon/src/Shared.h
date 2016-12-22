@@ -1,10 +1,6 @@
 ﻿#ifndef POKEMON_SHARED_H
 #define POKEMON_SHARED_H
 
-//#include <ctime>
-//#include <sstream>
-
-#include <chrono>
 #include <string>
 
 namespace PokemonGame

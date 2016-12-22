@@ -4,17 +4,18 @@
 
 - 参考
   *[CppCoreGuidelines](https://github.com/isocpp/CppCoreGuidelines)*，
-  使用Modern C++编写；
-- 使用 更好的数据库ORM和图形库：
+  使用 **Modern C++** 编写；
+- 设计 更好的数据库ORM和图形库：
   *[ORM Lite](https://github.com/BOT-Man-JL/ORM-Lite)* &
   *[EggAche GL](https://github.com/BOT-Man-JL/EggAche-GL)*；
-- 使用 lambda表达式 和 callback方式，实现**低耦合 可扩展**的 C/S 设计；
+- 使用 lambda 表达式 和 callback 方式，实现**低耦合 可扩展**的 C/S 设计；
 - 使用 `unique_ptr` 和 reference方式，**消除**潜在的**内存泄露**；
-- 使用 Template Method 和 virtual function，实现**可扩展**的类设计；
+- 使用 Template Method 和 virtual function，实现**可扩展**的**类设计**；
+- 使用 **线程池 / 帧率控制技术 / 客户端预测技术** 渲染高性能画面；
 - 使用 `exception` 实现灵活的**错误处理**；
 - 使用 `json` 提高**协议**的**可扩展性**；
 
-## 题目要求及项目文件
+## 需求
 
 ### 题目一：宠物小精灵的加入
 
@@ -32,7 +33,7 @@
 
 - Pokemon.h
 - Pokemon.cpp
-- TestPokemon.cpp
+- TestPokemon.cpp（测试）
 
 ### 题目二：用户注册与平台登录
 
@@ -65,7 +66,7 @@
 - Client
   - Pokemon.h
   - Client.h
-  - TestClient.cpp
+  - TestClient.cpp（测试）
 
 ### 题目三：游戏对战的设计
 
@@ -112,17 +113,32 @@
   - GUIClient.h
   - GUIClient.cpp
 
-## 框架
+## 业务
 
-### 服务器
+### 操作原语
 
-### 客户端
+- 保证所有操作为 `transaction`；
+- 账户管理
+  - 注册
+  - 登录
+  - 登出
+- 查询
+  - 查询用户
+  - 查询小精灵
+- 房间
+  - 查询房间
+  - 进入房间
+  - 离开房间
+- 游戏
+  - 房间内玩家状态
+  - 游戏状态
 
 ### 传输协议
 
 - 使用 `json` 交换信息；
 - 使用 `stateless` 传输方式；
 - 使用 `session` 保持状态；
+- 不规定包长度，以 `0` 结尾；
 
 ``` json
 "user":
@@ -279,11 +295,11 @@
 
 ## 设计
 
-### `Socket.h`
+![Layout](Layout.png)
 
-- 代码组织于 `namespace BOT_Socket`；
+### `BOT_Socket::Server` (Socket.h)
 
-#### `class Server`
+#### `Server::Server`
 
 ``` cpp
 Server (unsigned short port,
@@ -292,18 +308,22 @@ Server (unsigned short port,
 ```
 
 参数：
-- `port` 为监听端口；
-- `callback` 为业务逻辑处理**回调函数**；
+- `port` 为监听端口，默认监听所有 IP；
+- `callback` 为处理业务逻辑的**回调函数**；
 
-返回值：
-- 无 （构造函数）
+异常：
+- 建立 Server 失败，抛出 `runtime_error`；
 
 功能：
-- 构造一个 Socket Server，为每一个 accept 到的 socket 建立新的线程；
-- 每个线程的每个请求，通过回调函数接受 `request`，写入 `response` 处理；
+- 构造一个 Socket Server，为每一个 accept 的 socket 建立新的线程；
+- 每个线程的每个请求 `request`，调用回调函数处理；
+- 传给回调函数 `request`，并将回调函数写入的 `response` 发回给客户端；
+- 当连接断开后，结束对应的线程；
 - 实现 `recv` 时，使用 `stringstream` 进行**动态buffer**接收；
 
-#### `class Client`
+### `BOT_Socket::Client` (Socket.h)
+
+#### `Client::Client`
 
 ``` cpp
 Client (const std::string &ipAddr,
@@ -314,11 +334,22 @@ Client (const std::string &ipAddr,
 - `ipAddr` 为服务器 IP；
 - `port` 为服务器端口；
 
-返回值：
-- 无 （构造函数）
+异常：
+- 建立 Client 失败，抛出 `runtime_error`；
 
 功能：
 - 构造一个 Socket Client，连接到服务器的对应主机端口上；
+
+#### `Client::~Client`
+
+``` cpp
+Client::~Client ();
+```
+
+功能：
+- 断开 `this` 连接的 socket；
+
+#### `Client::Request`
 
 ``` cpp
 std::string Client::Request (const std::string &request);
@@ -330,133 +361,168 @@ std::string Client::Request (const std::string &request);
 返回值：
 - Server 响应该请求时返回的 string；
 
+异常：
+- Server 关闭连接 / 发送失败，抛出 `runtime_error`；
+
 功能：
-- 使用 `this` 的连接的 socket 进行数据收发；
+- 使用 `this` 连接的 socket 进行数据收发；
 - 实现 `recv` 时，使用 `stringstream` 进行**动态buffer**接收；
 
-### `Shared.h`
-
-- 代码组织于 `namespace PokemonGame`；
-- 用于定义
-  - 所有server和client共享的**数据格式**；
-  - 关于**被迫掉线**的返回消息；
+### `Shared` （Shared.h)
 
 ``` cpp
-using PokemonID = size_t;
-using PokemonName = std::string;
-
-using UserID = std::string;
-using UserPwd = std::string;
-using UserBadge = std::string;
-
-using SessionID = std::string;
-using RoomID = std::string;
-
-constexpr const char *BadSession = "You haven't Login";
-```
-
-### `Pokemon.h/cpp`
-
-- 代码组织于 `namespace PokemonGame`；
-
-#### 抽象类 `class Pokemon`
-
-``` cpp
-class Pokemon
+namespace PokemonGame
 {
-public:
-    // Get Type & Name
-    virtual std::string GetType () const = 0;
-    virtual std::string GetName () const = 0;
+    using PokemonID = size_t;
+    using PokemonName = std::string;
 
-    // Get Physics
-    virtual std::pair<size_t, size_t> GetSize () const = 0;
-    virtual size_t GetVelocity () const = 0;
+    using UserID = std::string;
+    using UserPwd = std::string;
+    using UserBadge = std::string;
 
-    // Attribute
-    typedef unsigned Level;
-    typedef unsigned ExpPoint;
-    typedef unsigned HealthPoint;
-    typedef unsigned TimeGap;
+    using SessionID = std::string;
+    using RoomID = std::string;
 
-    // Get Attr
-    Level GetLevel () const { return _level; }
-    Level GetExp () const { return _expPoint; }
-    HealthPoint GetAtk () const { return _atk; }
-    HealthPoint GetDef () const { return _def; }
-    TimeGap GetTimeGap () const { return _timeGap; }
-    HealthPoint GetHP () const { return _hp; }
-
-    // Runtime Attr
-    HealthPoint GetCurHP () const { return _curHp; }
-
-    // Factory
-    static const std::vector<std::string> &PokemonNames ();
-    static std::unique_ptr<Pokemon> NewPokemon ();
-    static std::unique_ptr<Pokemon> NewPokemon (
-        const std::string &name);
-    static std::unique_ptr<Pokemon> NewPokemon (
-        const std::string &name,
-        Level level,
-        ExpPoint expPoint,
-        HealthPoint atk,
-        HealthPoint def,
-        HealthPoint hp,
-        TimeGap timeGap);
-
-    // this Pokemon Attack opPokemon
-    // Return <isKilling, isUpgraded>
-    std::pair<bool, bool> Attack (Pokemon &opPokemon);
-
-    // Reset cur Hp to Full Hp
-    void Recover ();
-
-protected:
-    // Properties
-    Level _level;
-    ExpPoint _expPoint;
-    HealthPoint _atk;
-    HealthPoint _def;
-    TimeGap _timeGap;
-    HealthPoint _hp;
-
-    // Runtime
-    HealthPoint _curHp;
-
-    // Constructor
-    Pokemon (Level level,
-             ExpPoint expPoint,
-             HealthPoint atk,
-             HealthPoint def,
-             HealthPoint hp,
-             TimeGap timeGap)
-        : _level (level), _expPoint (expPoint),
-        _atk (atk), _def (def), _timeGap (timeGap),
-        _hp (hp), _curHp (hp)
-    {}
-
-    // Abstract Functions
-    virtual HealthPoint _GetDamagePoint (
-        const Pokemon &opPokemon) const = 0;
-    virtual void _OnUpgrade () = 0;
-};
+    constexpr const char *BadSession = "You haven't Login";
+}
 ```
 
-- `Attack` 使用 **Template Method Pattern**，通过重载 `_GetDamagePoint`
-  和 `_OnUpgrade` 实现具体的伤害计算和升级；
-- `NewPokemon` 作为精灵工厂，随机产生/根据名字随机产生/构造产生
-  一个pokemon实例，并用 `unique_ptr` 标识所有权；
+- 定义所有 server 和 client 共享数据的**格式**；
+- 定义**被迫掉线**时 server 的返回消息；
 
-#### 宏展开派生类
+### `PokemonGame::Pokemon` (Pokemon.h/cpp)
 
-- `SCAFFOLD_POKEMON_TYPE` 重写 `GetType`, `_GetDamagePoint`；
-- `SCAFFOLD_POKEMON` 重写 `GetName`, `GetSize`, `GetVelocity`, `_OnUpgrade`；
-- 具体的函数逻辑在 `Pokemon.cpp` 定义；
+Pokemon 抽象类；
+
+#### `Pokemon::Level/ExpPoint/HealthPoint/TimeGap`
+
+``` cpp
+using Level = unsigned;
+using ExpPoint = unsigned;
+using HealthPoint = unsigned;
+using TimeGap = unsigned;
+```
+
+#### `Pokemon::PokemonNames`
+
+``` cpp
+static const std::vector<std::string> &PokemonNames ();
+```
+
+返回值：
+- 所有存在的小精灵的名字列表；
+- 可以用于随机产生小精灵；
+
+#### `Pokemon::NewPokemon`
+
+``` cpp
+static std::unique_ptr<Pokemon> NewPokemon ();
+static std::unique_ptr<Pokemon> NewPokemon (
+    const std::string &name);
+static std::unique_ptr<Pokemon> NewPokemon (
+    const std::string &name,
+    Level level,
+    ExpPoint expPoint,
+    HealthPoint atk,
+    HealthPoint def,
+    HealthPoint hp,
+    TimeGap timeGap);
+```
+
+参数：
+- `name` 为小精灵的名字；
+- `level` 为小精灵的等级；
+- `expPoint` 为小精灵的经验；
+- `atk` 为小精灵的攻击力；
+- `def` 为小精灵的防御力；
+- `hp` 为小精灵的生命值；
+- `timeGap` 为小精灵的攻击间隔；
+
+返回值：
+- 生成的小精灵的对象，使用 `unique_ptr` 标识所有权；
+- 第一个函数随机产生一个小精灵；
+- 第二个函数根据名字随机产生一个小精灵；
+- 第三个函数根据名字/属性构造一个小精灵；
+
+异常：
+- 第二第三个函数，小精灵名字不存在，抛出 `runtime_error`；
+
+功能：
+- 作为**精灵工厂**，构造小精灵子类的对象；
+- 使用 `unique_ptr` 避免潜在的内存泄露；
+- 在 `Pokemon.cpp` 中使用宏展开代码：
+
+``` cpp
+#define SCAFFOLD_NEW_POKEMON_FROM_NAME_WITH_ATTR(CLASSNAME)
+#define SCAFFOLD_NEW_POKEMON_FROM_NAME(CLASSNAME)
+```
+
+#### `Pokemon::GetType/GetName/GetSize/GetVelocity`
+
+``` cpp
+// Get Type & Name
+virtual std::string GetType () const = 0;
+virtual std::string GetName () const = 0;
+
+// Get Physics
+virtual std::pair<size_t, size_t> GetSize () const = 0;
+virtual size_t GetVelocity () const = 0;
+```
+
+返回值：
+- 小精灵的类型/名字的 string；
+- 小精灵的宽度/高度；
+- 小精灵的移动速度；
+- 虚函数，根据不同对象返回不同的属性；
+
+#### `Pokemon::Get*`
+
+``` cpp
+Level GetLevel () const;
+Level GetExp () const;
+HealthPoint GetAtk () const;
+HealthPoint GetDef () const;
+TimeGap GetTimeGap () const;
+HealthPoint GetHP () const;
+HealthPoint GetCurHP () const;
+```
+
+返回值：
+- 小精灵的等级/经验/攻击力/防御力/攻击间隔/生命值/剩余生命值；
+- 非虚函数，返回对象的属性值；
+
+#### `Pokemon::Attack`
+
+``` cpp
+std::pair<bool, bool> Attack (Pokemon &opPokemon);
+```
+
+参数：
+- `opPokemon` 为被攻击的小精灵；
+
+返回值：
+- `first` 是否杀死对方小精灵；
+- `second` 是否升级；
+
+功能：
+- 使用 **Template Method Pattern**，提高可扩展性；
+- 通过重载 `_GetDamagePoint` 和 `_OnUpgrade` 实现具体的伤害计算和升级；
+
+#### `Pokemon::Recover`
+
+``` cpp
+void Recover ();
+```
+
+功能：
+- 恢复当前小精灵的生命值；
+
+### `PokemonGame::*Pokemon` (Pokemon.h/cpp)
+
+Pokemon 种类的半抽象类；
 
 ``` cpp
 #define SCAFFOLD_POKEMON_TYPE(CLASSNAME)
-#define SCAFFOLD_POKEMON(
-    CLASSNAME, TYPE, W, H, V, ATK, DEF, HP, TG)
 
 // Scaffold 4 Types of Pokemons
 SCAFFOLD_POKEMON_TYPE (StrengthPokemon);
@@ -464,6 +530,19 @@ SCAFFOLD_POKEMON_TYPE (DefendingPokemon);
 SCAFFOLD_POKEMON_TYPE (TankPokemon);
 SCAFFOLD_POKEMON_TYPE (SwiftPokemon);
 ...
+```
+
+- 重写虚函数 `GetType`，返回 `#CLASSNAME`；
+- 重写虚函数 `_GetDamagePoint`，根据对手小精灵种类，返回伤害值；
+- `_GetDamagePoint` 中，使用 `dynamic_cast` 判断对手小精灵种类；
+
+### `PokemonGame::*Pokemon` (Pokemon.h/cpp)
+
+Pokemon 对象子类；
+
+``` cpp
+#define SCAFFOLD_POKEMON(
+    CLASSNAME, TYPE, W, H, V, ATK, DEF, HP, TG)
 
 // Scaffold Pokemons
 SCAFFOLD_POKEMON (Pikachu, SwiftPokemon,
@@ -475,64 +554,76 @@ SCAFFOLD_POKEMON (Charmander, StrengthPokemon,
 ...
 ```
 
-而在 `Pokemon.cpp` 中，使用三个宏展开代码：
+- 重写虚函数 `GetName`，返回 `#CLASSNAME`；
+- 重写虚函数 `GetSize`/`GetVelocity`，返回 `W, H / V`；
+- 重写虚函数 `_OnUpgrade`，个性化每个小精灵升级的属性提升；
 
-``` cpp
-#define SCAFFOLD_NEW_POKEMON_FROM_NAME_WITH_ATTR(CLASSNAME)
-#define SCAFFOLD_NEW_POKEMON_FROM_NAME(CLASSNAME)
-#define NAMEOF(CLASSNAME)
-```
+### `PokemonGame::Server` (Server.h)
 
-### `Server.h/cpp`
+- 依赖于 `ORM Lite` `json`；
+- 实现实际的服务器业务逻辑；
 
-- 依赖于
-  - `ORM Lite` `json`；
-  - `Socket.h` `Shared.h` `Pokemon.h`；
-- 代码组织于 `namespace PokemonGame`；
-
-#### 定义server-side模型
+#### Server-side Model
 
 数据库模型：
 
-- `TimePoint/TimePointHelper` 定义时间相关的数据类型；
 - `struct PokemonModel` 定义用于**持久化**的 `Pokemon` 数据模型；
-  - `ToPokemon` 用于从 `PokemonModel` 生成对应 `Pokemon`；
-  - `FromPokemon` 用于从 `Pokemon` 生成对应 `PokemonModel`；
+  - `PokemonModel::ToPokemon` 从 `PokemonModel` 生成 `Pokemon`；
+  - `PokemonModel::FromPokemon` 从 `Pokemon` 生成 `PokemonModel`；
 - `struct BadgeModel` 定义用于**持久化**的 Badge 数据模型；
 - `struct UserModel` 定义用于**持久化**的 User 数据模型；
-  - 每个 User 有多个 Badge 和 Pokemon；
+  - 每个 User 有多个 Badge 和 Pokemon，形成一对多关系；
 
 运行时模型：
 
+- `TimePoint/TimePointHelper` 定义时间相关的 数据类型；
 - `struct SessionModel` 定义 会话 模型；
 - `struct RoomModel` 定义 房间/游戏时 模型；
+  - `struct RoomModel::Player` 定义 玩家 模型；
+  - `struct RoomModel::Damage` 定义 伤害 模型；
+  - `struct RoomModel::RigidBody` 定义 刚体 模型；
+    - `RigidBody::IsOverlap` 判断两个刚体是否重叠；
+    - `RigidBody::IsInside` 判断刚体是否包含于另一个刚体；
 
-#### `class Server` 实现业务逻辑
-
-- 对象构造时产生Pokemon服务器对象；
-- server的处理流程：
-  - 初始化运行时 `SessionModel` 和 `RoomModel` 数组；
-  - 初始化数据库；
-  - 初始化各个业务的 `Handler`；
-  - 运行一个 `BOT_Socket::Server` 实例
-    并根据业务逻辑，将消息分发到不同的 `Handler`；
-
-#### `Server.cpp` 运行服务器
-
-生成 `PokemonGame::Server` 实例，运行服务器；
+#### `Server::Server`
 
 ``` cpp
-PokemonGame::Server (PORT);
+Server (unsigned short port);
 ```
 
-### `Client.h`
+参数：
+- `port` 为监听端口，用于构造 `BOT_Socket::Server`；
 
-- 依赖于
-  - `json`；
-  - `Socket.h` `Shared.h` `Pokemon.h`；
-- 代码组织于 `namespace PokemonGame`；
+功能：
+- 启动处理业务逻辑的服务器；
 
-#### 定义client-side模型
+实现细节：
+- 启动流程：
+  - 初始化 `SessionModel` 和 `RoomModel` 列表；
+  - 初始化数据库；
+  - 注册各个业务的 `Handler`；
+  - 运行一个 `BOT_Socket::Server` 实例
+  - 根据业务逻辑，通过回调，将消息分发到不同的 `Handler`；
+- 数据库使用 `ORM Lite`，实现 对象-关系 映射；
+- 使用 lambda 表达式，实现局部性函数定义；
+- `Handler` 定义为
+  `std::function<void (json &response, const json &request)>`，
+  将客户端 请求 转为 json 的 `request` 传给回调函数，
+  把 `response` 转化为 响应，传给客户端；
+- `Handler` 回调函数通过 `throw exception` 进行**错误处理**；
+- `SetHandler` 注册业务逻辑回调函数，放入
+  `std::unordered_map<std::string, Handler>` 中，实现**高可复用**；
+
+### `Server main` (Server.cpp)
+
+- 启动一个 `PokemonGame::Server` 的实例；
+
+### `PokemonGame::Client` (Client.h)
+
+- 依赖于 `json`；
+- 实现客户端对 协议 的封装；
+
+#### Client-side Model
 
 - `struct PokemonModel` 定义 `Pokemon` 数据模型；
 - `struct UserModel` 定义 `User` 数据模型；
@@ -545,54 +636,383 @@ PokemonGame::Server (PORT);
   - `struct ResultPlayer` 定义 游戏结束后结果 模型；
   - `bool isOver` 判断 游戏是否结束；
 
-#### `class Client` 实现协议
+#### `Client::Client`
 
-- 使用socket装包/拆包json格式的数据；
-- **构造**返回相应的client-side模型；
+``` cpp
+Client (const std::string &ipAddr,
+        unsigned short port);
+```
+
+参数：
+- `ipAddr` 为服务器 IP；
+- `port` 为服务器端口；
+
+异常：
+- 建立 `BOT_Socket::Client` 失败，抛出 `runtime_error`；
+
+功能：
+- 构造一个 `BOT_Socket::Client`；
+
+#### `Client::Register`
 
 ``` cpp
 std::string Register (const UserID &uid,
                       const UserPwd &pwd);
+```
+
+参数：
+- `uid` 为用户名；
+- `pwd` 为用户密码；
+
+返回值：
+- 成功消息；
+
+异常：
+- 发送失败 / 服务器返回错误信息，抛出 `runtime_error`；
+
+功能：
+- 根据用户名/密码，注册用户；
+
+#### `Client::Login`
+
+``` cpp
 UserModel Login (const UserID &uid,
                  const UserPwd &pwd);
+```
+
+参数：
+- `uid` 为用户名；
+- `pwd` 为用户密码；
+
+返回值：
+- 当前用户的用户模型；
+
+异常：
+- 发送失败 / 服务器返回错误信息，抛出 `runtime_error`；
+
+功能：
+- 根据用户名/密码，登录用户；
+- 使用服务器返回的 `session` 标识当前 `Client` 的登录状态；
+
+#### `Client::Logout`
+
+``` cpp
 std::string Logout ();
+```
 
+返回值：
+- 成功消息；
+
+异常：
+- 发送失败 / 服务器返回错误信息，抛出 `runtime_error`；
+
+功能：
+- 登出当前 `Client`；
+
+#### `Client::Pokemons`
+
+``` cpp
 std::vector<PokemonModel> Pokemons ();
-std::vector<UserModel> Users ();
+```
 
+返回值：
+- 所有存在的小精灵模型；
+
+异常：
+- 发送失败 / 服务器返回错误信息，抛出 `runtime_error`；
+
+功能：
+- 查询当前所有用户的所有小精灵；
+
+#### `Client::Users`
+
+``` cpp
+std::vector<UserModel> Users ();
+```
+
+返回值：
+- 所有用户的模型；
+
+异常：
+- 发送失败 / 服务器返回错误信息，抛出 `runtime_error`；
+
+功能：
+- 查询当前所有用户；
+
+#### `Client::Rooms`
+
+``` cpp
 std::vector<RoomModel> Rooms ();
+```
+
+返回值：
+- 所有有效房间的模型；
+
+异常：
+- 发送失败 / 服务器返回错误信息，抛出 `runtime_error`；
+
+功能：
+- 查询当前所有房间；
+
+#### `Client::RoomEnter`
+
+``` cpp
 std::pair<size_t, size_t> RoomEnter (const RoomID &rid,
                                      const PokemonID &pid);
+```
+
+参数：
+- `rid` 为要进入房间的 ID；
+- `pid` 为用于战斗的小精灵的 ID；
+
+返回值：
+- 进入的房间地图的大小；
+
+异常：
+- 发送失败 / 服务器返回错误信息，抛出 `runtime_error`；
+
+功能：
+- 使用一个小精灵进入一个房间；
+
+#### `Client::RoomLeave`
+
+``` cpp
 std::string RoomLeave ();
+```
+
+返回值：
+- 成功消息；
+
+异常：
+- 发送失败 / 服务器返回错误信息，抛出 `runtime_error`；
+
+功能：
+- 离开进入的房间；
+
+#### `Client::RoomReady`
+
+``` cpp
 std::vector<RoomPlayer> RoomReady (bool isReady);
+```
+
+参数：
+- `isReady` 为是否准备完成；
+
+返回值：
+- 房间内所有玩家模型；
+
+异常：
+- 发送失败 / 服务器返回错误信息，抛出 `runtime_error`；
+
+功能：
+- 标记当前玩家是否准备完成；
+- 查询房间内所有玩家的状态；
+
+#### `Client::GameSync`
+
+``` cpp
 GameModel GameSync (
     const int movex, const int movey,
     const int atkx, const int atky, const bool isDef);
 ```
 
-### `GUIClient.h/cpp`
+参数：
+- `movex` 为移动的 x 方向速度；
+- `movey` 为移动的 y 方向速度；
+- `atkx` 为攻击的 x 方向速度；
+- `atky` 为攻击的 y 方向速度；
+- `isDef` 为是否防御；
 
-- 依赖于
-  - `ORM Lite` `json`；
-  - `Client.h`；
-- 代码组织于 `namespace PokemonGameGUI`；
+返回值：
+- 当前游戏状态；
 
-#### `class GUIClient` 实现业务逻辑
+异常：
+- 发送失败 / 服务器返回错误信息，抛出 `runtime_error`；
 
-- 使用 GUI 封装 `class Client` 实现的协议，进一步实现业务逻辑；
-- `GUIClient::LoginWindow` 传入 `Client`，
-  返回当前用户的 `UserModel`；
-- `GUIClient::StartWindow` 传入 `Client` 和 当前用户的 `UserModel`，
-  返回 导航到的页面号 和 选中的小精灵的 `PokemonID`；
-- `GUIClient::UsersWindow` 传入 `Client` 渲染所有用户列表；
-- `GUIClient::PokemonsWindow` 传入 `Client` 渲染所有小精灵列表；
-- `GUIClient::RoomWindow` 传入 `Client`，当前用户的 `UserModel` 和
-  选中进入游戏的 `Pokemon`，返回 房间游戏地图大小 和 `RoomPlayer` 列表；
-- `GUIClient::GameWindow` 传入 `Client`，当前用户的 `UserModel`，
-  房间游戏地图大小 和 `RoomPlayer` 列表，返回 游戏结果；
-- `GUIClient::ResultWindow` 传入 渲染 游戏结果；
+功能：
+- 同步当前玩家的状态；
+- 获取当前游戏的状态；
 
-#### `GUIClient.cpp` 运行客户端
+### `PokemonGameGUI::GUIClient` (GUIClient.h)
 
-- 使用 `enum class GUIState` 自动机，进行界面之间的导航；
+- 依赖于 `EggAche`；
+- 使用 GUI，实现实际的客户端业务逻辑；
+- 支持 鼠标 或 键盘 完全控制；
+
+#### `GUIClient::LoginWindow`
+
+``` cpp
+static PokemonGame::UserModel LoginWindow (
+    PokemonGame::Client &client,
+    bool isPassiveOffline,
+    size_t width = 480, size_t height = 360);
+```
+
+参数：
+- `client` 为传入的 `PokemonGame::Client`；
+- `isPassiveOffline` 为是否之前被迫掉线；
+- `width` `height` 为窗口尺寸；
+
+返回值：
+- 当前用户的用户模型；
+
+异常：
+- 主动关闭了窗口，抛出 `runtime_error`；
+
+功能：
+- 使用 GUI 封装 `PokemonGame::Client` 的 `Login` / `Register`；
+- 提示是否之前被迫掉线；
+
+#### `GUIClient::StartWindow`
+
+``` cpp
+static std::pair<size_t, PokemonGame::PokemonID> StartWindow (
+    const PokemonGame::UserModel &curUser,
+    size_t width = 640, size_t height = 720);
+```
+
+参数：
+- `curUser` 为当前用户的用户模型；
+- `width` `height` 为窗口尺寸；
+
+返回值：
+- `first` 为导航到下一页标号；
+  - `0` 为到 Room Window；
+  - `1` 为到 Users Window；
+  - `2` 为到 Poekmons Window；
+- `second` 为到 Room Window 时，选择的小精灵 ID；
+
+异常：
+- 主动关闭了窗口 / 被迫掉线，抛出 `runtime_error`；
+
+功能：
+- 实现开始界面，让用户选择功能；
+
+#### `GUIClient::UsersWindow / PokemonsWindow`
+
+``` cpp
+static void UsersWindow (PokemonGame::Client &client);
+
+static void PokemonsWindow (PokemonGame::Client &client);
+```
+
+参数：
+- `client` 为传入的 `PokemonGame::Client`；
+
+功能：
+- 使用 GUI 封装 `PokemonGame::Client` 的 `Users` / `Pokemons`；
+
+#### `GUIClient::RoomWindow`
+
+``` cpp
+static std::pair<
+    std::pair<size_t, size_t>,
+    std::vector<PokemonGame::RoomPlayer>
+> RoomWindow (
+    PokemonGame::Client &client,
+    const PokemonGame::UserModel &curUser,
+    const PokemonGame::PokemonID &pidToPlay,
+    size_t width = 640, size_t height = 640);
+```
+
+参数：
+- `client` 为传入的 `PokemonGame::Client`；
+- `curUser` 为当前用户的用户模型；
+- `pidToPlay` 为选择进入房间的小精灵 ID；
+- `width` `height` 为窗口尺寸；
+
+返回值：
+- `first` 为进入的房间地图大小；
+- `second` 为房间内所有玩家模型；
+
+异常：
+- 主动关闭了窗口 / 被迫掉线，抛出 `runtime_error`；
+
+功能：
+- 使用 GUI 封装 `PokemonGame::Client` 的 `Room*`；
+- 进入房间；
+
+#### `GUIClient::GameWindow`
+
+``` cpp
+static std::vector<PokemonGame::GameModel::ResultPlayer>
+GameWindow (
+    PokemonGame::Client &client,
+    const PokemonGame::UserModel &curUser,
+    const std::vector<PokemonGame::RoomPlayer> &roomPlayers,
+    size_t worldW, size_t worldH,
+    size_t width = 640, size_t height = 480);
+```
+
+参数：
+- `client` 为传入的 `PokemonGame::Client`；
+- `curUser` 为当前用户的用户模型；
+- `roomPlayers` 为房间内所有玩家模型；
+- `worldW` `worldH` 为进入的房间地图大小；
+- `width` `height` 为窗口尺寸；
+
+返回值：
+- 玩家结果列表；
+
+异常：
+- 主动关闭了窗口 / 被迫掉线，抛出 `runtime_error`；
+
+功能：
+- 使用 GUI 封装 `PokemonGame::Client` 的 `GameSync`；
+- 进行游戏；
+- 使用**帧率控制**，锁定帧率为30fps；
+- 使用 `std::async` 线程池，将**同步帧插入渲染帧**，高效同步；
+- 使用 **Client-side Prediction**，渲染平滑画面；
+
+#### `GUIClient::ResultWindow`
+
+``` cpp
+static void ResultWindow (const std::vector<PokemonGame::
+    GameModel::ResultPlayer> &results);
+```
+
+参数：
+- `results` 为玩家结果列表；
+
+功能：
+- 显示游戏结果；
+
+### `Client main` (GUIClient.cpp)
+
+- 使用 `enum class GUIState` 状态机，进行界面之间的导航；
 - 在对应的状态，打开对应界面，根据返回值或异常判断如何导航；
+
+#### 状态机
+
+初始状态为 Login；
+
+- `GUIState::Quit`
+  - 退出游戏
+- `GUIState::Login`
+  - 登陆成功 -> `Start`
+  - 关闭窗口 -> `Quit`
+- `GUIState::Start`
+  - 查看用户 -> `Users`
+  - 查看小精灵 -> `Pokemons`
+  - 选择小精灵 -> `Rooms`
+  - 被迫下线 -> `Login`
+  - 关闭窗口 -> `Login`
+- `GUIState::Users`
+  - 关闭窗口 -> `Start`
+- `GUIState::Pokemons`
+  - 关闭窗口 -> `Start`
+- `GUIState::Rooms`
+  - 进入游戏 -> `Game`
+  - 被迫下线 -> `Login`
+  - 关闭窗口 -> `Start`
+- `GUIState::Game`
+  - 游戏结束 -> `GameResult`
+  - 被迫下线 -> `Login`
+  - 关闭窗口 -> `Start`
+- `GUIState::GameResult`
+  - 关闭窗口 -> `Start`
+
+## 设计 `ORM Lite` `EggAche`
+
+- *[ORM Lite](https://github.com/BOT-Man-JL/ORM-Lite)*
+- *[EggAche GL](https://github.com/BOT-Man-JL/EggAche-GL)*

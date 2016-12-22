@@ -65,7 +65,7 @@ int main (int argc, char *argv[])
 			{
 				size_t action;
 				std::tie (action, pidToPlay) =
-					GUIClient::StartWindow (client, curUser);
+					GUIClient::StartWindow (curUser);
 				switch (action)
 				{
 				case 0: guiState = GUIState::Rooms; break;

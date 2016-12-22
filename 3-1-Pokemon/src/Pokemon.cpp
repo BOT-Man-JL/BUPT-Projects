@@ -86,10 +86,14 @@ namespace PokemonGame
 	// Define _OnUpgrade
 
 	void Pikachu::_OnUpgrade ()
-	{}
+	{
+		// Currently No Attribute Improvement
+	}
 
 	void Charmander::_OnUpgrade ()
-	{}
+	{
+		// Currently No Attribute Improvement
+	}
 
 	// Define Pokemon Factory
 

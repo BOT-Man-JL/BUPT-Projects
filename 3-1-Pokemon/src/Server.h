@@ -10,6 +10,9 @@
 #include <algorithm>
 #include <cmath>
 
+//#include <ctime>
+//#include <sstream>
+
 #include "ORM-Lite/ORMLite.h"
 #include "json/json.hpp"
 
@@ -27,40 +30,6 @@
 
 namespace PokemonGame
 {
-	using TimePoint = std::chrono::time_point<std::chrono::system_clock>;
-
-	struct TimePointHelper
-	{
-		static inline TimePoint TimeNow ()
-		{
-			return std::chrono::system_clock::now ();
-		}
-
-		static inline std::string ToStr (const TimePoint &timePoint)
-		{
-			//auto now_c = std::chrono::system_clock::to_time_t (timePoint);
-			//std::ostringstream ss;
-			//ss << std::put_time (std::gmtime (&now_c), "%Y_%m_%d_%H_%M_%S");
-			//return ss.str ();
-
-			auto msCount = std::chrono::duration_cast<
-				std::chrono::milliseconds>(timePoint.time_since_epoch ()).count ();
-			return std::to_string (msCount);
-		}
-
-		static inline TimePoint FromStr (const std::string &str)
-		{
-			//std::tm t;
-			//std::istringstream ss (str);
-			//ss >> std::get_time (&t, "%Y_%m_%d_%H_%M_%S");
-			//auto tt = std::mktime (&t);
-			//return std::chrono::system_clock::from_time_t (tt);
-
-			auto msCount = std::stoll (str);
-			return TimePoint (std::chrono::milliseconds (msCount));
-		}
-	};
-
 	// Pokemon Model
 	struct PokemonModel
 	{
@@ -117,6 +86,41 @@ namespace PokemonGame
 		size_t los;
 
 		ORMAP ("User", uid, pwd, won, los);
+	};
+
+	// Time Type
+	using TimePoint = std::chrono::time_point<std::chrono::system_clock>;
+
+	struct TimePointHelper
+	{
+		static inline TimePoint TimeNow ()
+		{
+			return std::chrono::system_clock::now ();
+		}
+
+		static inline std::string ToStr (const TimePoint &timePoint)
+		{
+			//auto now_c = std::chrono::system_clock::to_time_t (timePoint);
+			//std::ostringstream ss;
+			//ss << std::put_time (std::gmtime (&now_c), "%Y_%m_%d_%H_%M_%S");
+			//return ss.str ();
+
+			auto msCount = std::chrono::duration_cast<
+				std::chrono::milliseconds>(timePoint.time_since_epoch ()).count ();
+			return std::to_string (msCount);
+		}
+
+		static inline TimePoint FromStr (const std::string &str)
+		{
+			//std::tm t;
+			//std::istringstream ss (str);
+			//ss >> std::get_time (&t, "%Y_%m_%d_%H_%M_%S");
+			//auto tt = std::mktime (&t);
+			//return std::chrono::system_clock::from_time_t (tt);
+
+			auto msCount = std::stoll (str);
+			return TimePoint (std::chrono::milliseconds (msCount));
+		}
 	};
 
 	// Session
@@ -915,7 +919,6 @@ namespace PokemonGame
 				{
 					const json req = json::parse (request.c_str ());
 					json res { { "success", true } };
-
 					{
 						// Make sure only one thread is Handling
 						std::lock_guard<std::mutex> lg (mtx);
@@ -923,7 +926,6 @@ namespace PokemonGame
 						_handlers.at (req.at ("request")) (
 							res["response"], req.at ("param"));
 					}
-
 					response = res.dump ();
 				}
 				catch (const std::logic_error &)
