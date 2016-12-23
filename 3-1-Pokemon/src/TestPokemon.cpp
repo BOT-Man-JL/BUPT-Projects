@@ -5,7 +5,8 @@ int main (int argc, char *argv[])
 {
 	using namespace PokemonGame;
 
-	auto pika = Pokemon::NewPokemon ("Pikachu");
+	auto pika1 = Pokemon::NewPokemon ("Pikachu");
+	auto pika2 = Pokemon::NewPokemon ("Pikachu");
 	auto cmd = Pokemon::NewPokemon ("Charmander");
 
 	auto fnAttack = [&] (Pokemon &p1, Pokemon &p2)
@@ -17,7 +18,9 @@ int main (int argc, char *argv[])
 		std::cout << "HP:\t" << p1.GetHP () << "\t"
 			<< p2.GetHP () << std::endl
 			<< "LV: \t" << p1.GetLevel () << "\t"
-			<< p2.GetLevel () << std::endl;
+			<< p2.GetLevel () << std::endl
+			<< "Exp: \t" << p1.GetExp () << "\t"
+			<< p2.GetExp () << std::endl;
 
 		if (result.first)
 			std::cout << p1.GetName () << " defeated "
@@ -56,10 +59,19 @@ int main (int argc, char *argv[])
 		p2.Recover ();
 	};
 
-	fnRound (*pika, *cmd);
-	fnRound (*cmd, *pika);
-	fnRound (*pika, *cmd);
-	fnRound (*cmd, *pika);
+	std::cout << "Test 1.1 & 1.2\n";
+
+	// Case 1
+	fnRound (*pika1, *cmd);
+	fnRound (*cmd, *pika1);
+
+	// Case 2
+	fnRound (*cmd, *pika2);
+	fnRound (*pika2, *cmd);
+
+	// Case 3
+	fnRound (*pika1, *pika2);
+	fnRound (*pika2, *pika1);
 
 	getchar ();
 	return 0;

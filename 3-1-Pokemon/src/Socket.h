@@ -6,6 +6,7 @@
 
 // Logging
 #include <mutex>
+#include <chrono>
 #include <iostream>
 
 #include <string>
@@ -102,6 +103,14 @@ namespace BOT_Socket
 				throw std::runtime_error ("Failed at listen");
 			}
 
+			auto timeStamp = [] (std::ostream &os)
+				-> std::ostream &
+			{
+				auto timePoint = std::chrono::system_clock::now ();
+				auto now_c = std::chrono::system_clock::to_time_t (timePoint);
+				return os << std::put_time (std::gmtime (&now_c), "%Y-%m-%d-%H:%M:%S");
+			};
+
 			std::mutex ioLock;
 			auto clientCount = 0;
 			while (true)
@@ -111,7 +120,8 @@ namespace BOT_Socket
 				if (connectSock == -1)
 					continue;
 
-				std::thread ([&ioLock, &clientCount, &callback, connectSock] ()
+				std::thread (
+					[&ioLock, &timeStamp, &clientCount, &callback, connectSock] ()
 				{
 					auto curClientCount = 0;
 #ifdef LOGGING
@@ -121,6 +131,7 @@ namespace BOT_Socket
 						curClientCount = ++clientCount;
 						std::cout << "\n<" << curClientCount
 							<< "> Connected...\n";
+						timeStamp (std::cout) << std::endl;
 					}
 #endif
 					while (true)
@@ -161,8 +172,10 @@ namespace BOT_Socket
 						{
 							std::lock_guard<std::mutex> lck (ioLock);
 							std::cout << "\n<" << curClientCount
-								<< ">\n  <Request>\n" << recvBuf <<
-								"\n  <Response>\n" << response << "\n";
+								<< ">\n";
+							timeStamp (std::cout) << std::endl;
+							std::cout << "<Request>\n" << recvBuf <<
+								"\n<Response>\n" << response << "\n";
 						}
 #endif
 					}
@@ -179,6 +192,7 @@ namespace BOT_Socket
 						std::lock_guard<std::mutex> lck (ioLock);
 						std::cout << "\n<" << curClientCount
 							<< "> Disconnected...\n";
+						timeStamp (std::cout) << std::endl;
 					}
 #endif
 				}).detach ();

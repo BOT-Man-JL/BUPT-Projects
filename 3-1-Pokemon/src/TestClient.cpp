@@ -9,7 +9,7 @@
 
 int main (int argc, char *argv[])
 {
-	std::cout << "Pokemon Client\n";
+	std::cout << "Pokemon Client Test\n";
 
 	auto printPokemon = [] (
 		std::ostream &os,
@@ -137,8 +137,8 @@ int main (int argc, char *argv[])
 	{
 		try
 		{
-			std::cout << "Enter the Room of size ";
 			auto size = client.RoomEnter (rid, pid);
+			std::cout << "Enter the Room of size ";
 			std::cout << size.first << ", " << size.second << std::endl;
 		}
 		catch (const std::exception &ex)
@@ -161,8 +161,8 @@ int main (int argc, char *argv[])
 	{
 		try
 		{
-			std::cout << "Ready:\n";
 			auto players = client.RoomReady (isReady);
+			std::cout << "Ready:\n";
 			for (const auto &player : players)
 				printRoomPlayer (std::cout, player);
 		}
@@ -176,7 +176,8 @@ int main (int argc, char *argv[])
 
 	if (true)
 	{
-		std::cout << "Client 1:\n";
+		std::cout << "\nTest 2.1\n\n";
+
 		fnRegister (client1, "Johnny", "John");
 		fnRegister (client1, "Johnny", "Johnny");
 		fnRegister (client1, "Johnny", "Johnny");
@@ -186,17 +187,17 @@ int main (int argc, char *argv[])
 		fnLogout (client1);
 		fnLogout (client1);
 
-		std::cout << "Client 2:\n";
 		fnRegister (client2, "John", "LeeLee");
 		fnLogin (client2, "John", "LeeLee");
 
-		std::cout << "Client 3:\n";
 		fnRegister (client3, "BOT", "ManMan");
 		fnLogin (client3, "BOT", "ManMan");
 	}
 
 	if (true)
 	{
+		std::cout << "\nTest 2.2\n\n";
+
 		fnPokemons (client1);
 		fnUsers (client1);
 
@@ -206,6 +207,8 @@ int main (int argc, char *argv[])
 
 	if (true)
 	{
+		std::cout << "\nTest 2.3\n\n";
+
 		fnRoomEnter (client2, "Hello", 1);
 		fnRoomEnter (client2, "Hello", 5);
 		fnRoomLeave (client2);
@@ -225,12 +228,13 @@ int main (int argc, char *argv[])
 		fnRoomLeave (client2);
 		fnRoomEnter (client2, "Hello", 5);
 		fnRoomReady (client2, false);
+		fnRooms (client2);
+		fnRoomLeave (client3);
 	}
 
 	if (true)
 	{
-		fnRoomLeave (client2);
-		fnRoomLeave (client3);
+		std::cout << "\nTest 2 Clean up\n\n";
 
 		fnLogout (client2);
 		fnLogout (client3);

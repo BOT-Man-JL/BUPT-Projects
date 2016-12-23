@@ -5,15 +5,13 @@
 - 参考
   *[CppCoreGuidelines](https://github.com/isocpp/CppCoreGuidelines)*，
   使用 **Modern C++** 编写；
-- 设计 更好的数据库ORM和图形库：
+- 设计 更好的数据库 ORM 和 图形库：
   *[ORM Lite](https://github.com/BOT-Man-JL/ORM-Lite)* &
   *[EggAche GL](https://github.com/BOT-Man-JL/EggAche-GL)*；
-- 使用 lambda 表达式 和 callback 方式，实现**低耦合 可扩展**的 C/S 设计；
-- 使用 `unique_ptr` 和 reference方式，**消除**潜在的**内存泄露**；
-- 使用 Template Method 和 virtual function，实现**可扩展**的**类设计**；
+- 使用 `unique_ptr` + **reference** 方式，**消除**潜在的**内存泄露**；
+- 使用 **Inversion of Control** 模式，实现**低耦合 可扩展**的服务器设计；
+- 使用 **Template Method** 模式，实现**可扩展**的**类设计**；
 - 使用 **线程池 / 帧率控制技术 / 客户端预测技术** 渲染高性能画面；
-- 使用 `exception` 实现灵活的**错误处理**；
-- 使用 `json` 提高**协议**的**可扩展性**；
 
 ## 需求
 
@@ -297,76 +295,10 @@
 
 ![Layout](Layout.png)
 
-### `BOT_Socket::Server` (Socket.h)
+### 设计 `ORM Lite` `EggAche`
 
-#### `Server::Server`
-
-``` cpp
-Server (unsigned short port,
-        std::function<void (const std::string &request,
-                            std::string &response)> callback);
-```
-
-参数：
-- `port` 为监听端口，默认监听所有 IP；
-- `callback` 为处理业务逻辑的**回调函数**；
-
-异常：
-- 建立 Server 失败，抛出 `runtime_error`；
-
-功能：
-- 构造一个 Socket Server，为每一个 accept 的 socket 建立新的线程；
-- 每个线程的每个请求 `request`，调用回调函数处理；
-- 传给回调函数 `request`，并将回调函数写入的 `response` 发回给客户端；
-- 当连接断开后，结束对应的线程；
-- 实现 `recv` 时，使用 `stringstream` 进行**动态buffer**接收；
-
-### `BOT_Socket::Client` (Socket.h)
-
-#### `Client::Client`
-
-``` cpp
-Client (const std::string &ipAddr,
-        unsigned short port);
-```
-
-参数：
-- `ipAddr` 为服务器 IP；
-- `port` 为服务器端口；
-
-异常：
-- 建立 Client 失败，抛出 `runtime_error`；
-
-功能：
-- 构造一个 Socket Client，连接到服务器的对应主机端口上；
-
-#### `Client::~Client`
-
-``` cpp
-Client::~Client ();
-```
-
-功能：
-- 断开 `this` 连接的 socket；
-
-#### `Client::Request`
-
-``` cpp
-std::string Client::Request (const std::string &request);
-```
-
-参数：
-- `request` 发给 Server 的 string；
-
-返回值：
-- Server 响应该请求时返回的 string；
-
-异常：
-- Server 关闭连接 / 发送失败，抛出 `runtime_error`；
-
-功能：
-- 使用 `this` 连接的 socket 进行数据收发；
-- 实现 `recv` 时，使用 `stringstream` 进行**动态buffer**接收；
+- *[ORM Lite](https://github.com/BOT-Man-JL/ORM-Lite)*
+- *[EggAche GL](https://github.com/BOT-Man-JL/EggAche-GL)*
 
 ### `Shared` （Shared.h)
 
@@ -402,6 +334,8 @@ using ExpPoint = unsigned;
 using HealthPoint = unsigned;
 using TimeGap = unsigned;
 ```
+
+- 定义小精灵的属性数据类型；
 
 #### `Pokemon::PokemonNames`
 
@@ -558,6 +492,30 @@ SCAFFOLD_POKEMON (Charmander, StrengthPokemon,
 - 重写虚函数 `GetSize`/`GetVelocity`，返回 `W, H / V`；
 - 重写虚函数 `_OnUpgrade`，个性化每个小精灵升级的属性提升；
 
+### `BOT_Socket::Server` (Socket.h)
+
+#### `Server::Server`
+
+``` cpp
+Server (unsigned short port,
+        std::function<void (const std::string &request,
+                            std::string &response)> callback);
+```
+
+参数：
+- `port` 为监听端口，默认监听所有 IP；
+- `callback` 为处理业务逻辑的**回调函数**；
+
+异常：
+- 建立 Server 失败，抛出 `runtime_error`；
+
+功能：
+- 构造一个 Socket Server，为每一个 accept 的 socket 建立新的线程；
+- 每个线程的每个请求 `request`，调用回调函数处理；
+- 传给回调函数 `request`，并将回调函数写入的 `response` 发回给客户端；
+- 当连接断开后，结束对应的线程；
+- 实现 `recv` 时，使用 `stringstream` 进行**动态buffer**接收；
+
 ### `PokemonGame::Server` (Server.h)
 
 - 依赖于 `ORM Lite` `json`；
@@ -603,20 +561,65 @@ Server (unsigned short port);
   - 初始化数据库；
   - 注册各个业务的 `Handler`；
   - 运行一个 `BOT_Socket::Server` 实例
-  - 根据业务逻辑，通过回调，将消息分发到不同的 `Handler`；
+  - 根据业务逻辑，通过回调，将消息分发到不同的 `Handler` (IoC 模式)；
 - 数据库使用 `ORM Lite`，实现 对象-关系 映射；
-- 使用 lambda 表达式，实现局部性函数定义；
 - `Handler` 定义为
   `std::function<void (json &response, const json &request)>`，
   将客户端 请求 转为 json 的 `request` 传给回调函数，
-  把 `response` 转化为 响应，传给客户端；
-- `Handler` 回调函数通过 `throw exception` 进行**错误处理**；
-- `SetHandler` 注册业务逻辑回调函数，放入
-  `std::unordered_map<std::string, Handler>` 中，实现**高可复用**；
+  把 `response` 转化为 正确的响应，传给客户端；
+- `Handler` 通过 `throw exception` 进行**错误处理**，
+  把 `response` 转化为 错误的响应，传给客户端；
 
 ### `Server main` (Server.cpp)
 
 - 启动一个 `PokemonGame::Server` 的实例；
+
+### `BOT_Socket::Client` (Socket.h)
+
+#### `Client::Client`
+
+``` cpp
+Client (const std::string &ipAddr,
+        unsigned short port);
+```
+
+参数：
+- `ipAddr` 为服务器 IP；
+- `port` 为服务器端口；
+
+异常：
+- 建立 Client 失败，抛出 `runtime_error`；
+
+功能：
+- 构造一个 Socket Client，连接到服务器的对应主机端口上；
+
+#### `Client::~Client`
+
+``` cpp
+Client::~Client ();
+```
+
+功能：
+- 断开 `this` 连接的 socket；
+
+#### `Client::Request`
+
+``` cpp
+std::string Client::Request (const std::string &request);
+```
+
+参数：
+- `request` 发给 Server 的 string；
+
+返回值：
+- Server 响应该请求时返回的 string；
+
+异常：
+- Server 关闭连接 / 发送失败，抛出 `runtime_error`；
+
+功能：
+- 使用 `this` 连接的 socket 进行数据收发；
+- 实现 `recv` 时，使用 `stringstream` 进行**动态buffer**接收；
 
 ### `PokemonGame::Client` (Client.h)
 
@@ -861,7 +864,7 @@ static PokemonGame::UserModel LoginWindow (
 
 功能：
 - 使用 GUI 封装 `PokemonGame::Client` 的 `Login` / `Register`；
-- 提示是否之前被迫掉线；
+- 实现 登录、注册 界面，并提示是否之前被迫掉线；
 
 #### `GUIClient::StartWindow`
 
@@ -879,14 +882,14 @@ static std::pair<size_t, PokemonGame::PokemonID> StartWindow (
 - `first` 为导航到下一页标号；
   - `0` 为到 Room Window；
   - `1` 为到 Users Window；
-  - `2` 为到 Poekmons Window；
+  - `2` 为到 Pokemons Window；
 - `second` 为到 Room Window 时，选择的小精灵 ID；
 
 异常：
 - 主动关闭了窗口 / 被迫掉线，抛出 `runtime_error`；
 
 功能：
-- 实现开始界面，让用户选择功能；
+- 实现 开始 界面，让用户选择下一步的功能；
 
 #### `GUIClient::UsersWindow / PokemonsWindow`
 
@@ -901,6 +904,7 @@ static void PokemonsWindow (PokemonGame::Client &client);
 
 功能：
 - 使用 GUI 封装 `PokemonGame::Client` 的 `Users` / `Pokemons`；
+- 实现 列举所有用户、所有小精灵 界面；
 
 #### `GUIClient::RoomWindow`
 
@@ -930,7 +934,7 @@ static std::pair<
 
 功能：
 - 使用 GUI 封装 `PokemonGame::Client` 的 `Room*`；
-- 进入房间；
+- 实现 进入房间、离开房间、准备、查询房间状态 界面；
 
 #### `GUIClient::GameWindow`
 
@@ -959,8 +963,8 @@ GameWindow (
 
 功能：
 - 使用 GUI 封装 `PokemonGame::Client` 的 `GameSync`；
-- 进行游戏；
-- 使用**帧率控制**，锁定帧率为30fps；
+- 实现 游戏 主界面；
+- 使用 **帧率控制**，锁定帧率为30fps；
 - 使用 `std::async` 线程池，将**同步帧插入渲染帧**，高效同步；
 - 使用 **Client-side Prediction**，渲染平滑画面；
 
@@ -975,7 +979,7 @@ static void ResultWindow (const std::vector<PokemonGame::
 - `results` 为玩家结果列表；
 
 功能：
-- 显示游戏结果；
+- 显示 游戏结果；
 
 ### `Client main` (GUIClient.cpp)
 
@@ -1012,7 +1016,22 @@ static void ResultWindow (const std::vector<PokemonGame::
 - `GUIState::GameResult`
   - 关闭窗口 -> `Start`
 
-## 设计 `ORM Lite` `EggAche`
+## 不足
 
-- *[ORM Lite](https://github.com/BOT-Man-JL/ORM-Lite)*
-- *[EggAche GL](https://github.com/BOT-Man-JL/EggAche-GL)*
+由于时间限制，仍有部分功能有待完善：
+
+- Pokemon Game
+  - 增加 服务器 后台管理；
+  - 增加 客户端 日志；
+  - 提升 客户端 渲染效果和性能；
+  - 修缮 客户端 用户界面；
+  - 添加 更多游戏模式；
+- [ORM Lite](https://github.com/BOT-Man-JL/ORM-Lite)
+  - 支持更多的数据库；
+  - 支持自定义主键；
+  - 支持 blob 和 日期时间 相关数据类型；
+  - 支持 sub query；
+- [Egg Ache GL](https://github.com/BOT-Man-JL/EggAche-GL)
+  - 完成 unix 下的 XWindow 支持；
+  - 实现更高效的 C++ 接口；
+  - 支持更多的图片格式；

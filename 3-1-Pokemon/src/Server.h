@@ -531,7 +531,7 @@ namespace PokemonGame
 					)
 					.ToList ();
 				if (pokemons.empty ())
-					throw std::runtime_error ("It's NOT your Poekmon");
+					throw std::runtime_error ("It's NOT your Pokemon");
 
 				auto &room = rooms[rid];
 
