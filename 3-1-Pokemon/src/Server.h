@@ -269,6 +269,14 @@ namespace PokemonGame
 				if (rid == RoomID {})
 					return false;
 
+				// Mark offline User dead
+				if (rooms[rid].isStarted && !rooms[rid].isOver)
+				{
+					// Following code maybe Unreachable...
+					rooms[rid].players[sessions[sid].uid].pokemon->Die ();
+					return false;
+				}
+
 				// Remove Player from Game
 				rooms[rid].players.erase (sessions[sid].uid);
 

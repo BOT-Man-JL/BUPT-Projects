@@ -144,6 +144,12 @@ namespace PokemonGame
 			_curHp = _hp;
 		}
 
+		// Set cur Hp to 0
+		void Die ()
+		{
+			_curHp = 0;
+		}
+
 	protected:
 		// Properties
 		Level _level;

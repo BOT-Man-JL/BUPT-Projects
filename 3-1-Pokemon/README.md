@@ -450,14 +450,16 @@ std::pair<bool, bool> Attack (Pokemon &opPokemon);
 - 使用 **Template Method Pattern**，提高可扩展性；
 - 通过重载 `_GetDamagePoint` 和 `_OnUpgrade` 实现具体的伤害计算和升级；
 
-#### `Pokemon::Recover`
+#### `Pokemon::Recover / Die`
 
 ``` cpp
 void Recover ();
+void Die ();
 ```
 
 功能：
 - 恢复当前小精灵的生命值；
+- 杀死当前小精灵，用于处理掉线用户；
 
 ### `PokemonGame::*Pokemon` (Pokemon.h/cpp)
 
@@ -577,6 +579,7 @@ Server (unsigned short port);
   把 `response` 转化为 正确的响应，传给客户端；
 - `Handler` 通过 `throw exception` 进行**错误处理**，
   把 `response` 转化为 错误的响应，传给客户端；
+- 业务逻辑处理时，考虑可能发生的情况，**防止客户端作弊**；
 
 ### `Server main` (Server.cpp)
 
@@ -878,7 +881,7 @@ GameModel GameSync (
 #### `GUIClient::LoginWindow`
 
 ``` cpp
-static PokemonGame::UserModel LoginWindow (
+static void LoginWindow (
     PokemonGame::Client &client,
     bool isPassiveOffline,
     size_t width = 480, size_t height = 360);
@@ -888,9 +891,6 @@ static PokemonGame::UserModel LoginWindow (
 - `client` 为传入的 `PokemonGame::Client`；
 - `isPassiveOffline` 为是否之前被迫掉线；
 - `width` `height` 为窗口尺寸；
-
-返回值：
-- 当前用户的用户模型；
 
 异常：
 - 主动关闭了窗口，抛出 `runtime_error`；
@@ -903,12 +903,12 @@ static PokemonGame::UserModel LoginWindow (
 
 ``` cpp
 static std::pair<size_t, PokemonGame::PokemonID> StartWindow (
-    const PokemonGame::UserModel &curUser,
+    PokemonGame::Client &client,
     size_t width = 640, size_t height = 720);
 ```
 
 参数：
-- `curUser` 为当前用户的用户模型；
+- `client` 为传入的 `PokemonGame::Client`；
 - `width` `height` 为窗口尺寸；
 
 返回值：
@@ -924,21 +924,6 @@ static std::pair<size_t, PokemonGame::PokemonID> StartWindow (
 功能：
 - 实现 开始 界面，让用户选择下一步的功能；
 
-#### `GUIClient::UsersWindow / PokemonsWindow`
-
-``` cpp
-static void UsersWindow (PokemonGame::Client &client);
-
-static void PokemonsWindow (PokemonGame::Client &client);
-```
-
-参数：
-- `client` 为传入的 `PokemonGame::Client`；
-
-功能：
-- 使用 GUI 封装 `PokemonGame::Client` 的 `Users` / `Pokemons`；
-- 实现 列举所有用户、所有小精灵 界面；
-
 #### `GUIClient::RoomWindow`
 
 ``` cpp
@@ -947,14 +932,12 @@ static std::pair<
     std::vector<PokemonGame::RoomPlayer>
 > RoomWindow (
     PokemonGame::Client &client,
-    const PokemonGame::UserModel &curUser,
     const PokemonGame::PokemonID &pidToPlay,
     size_t width = 640, size_t height = 640);
 ```
 
 参数：
 - `client` 为传入的 `PokemonGame::Client`；
-- `curUser` 为当前用户的用户模型；
 - `pidToPlay` 为选择进入房间的小精灵 ID；
 - `width` `height` 为窗口尺寸；
 
@@ -975,7 +958,6 @@ static std::pair<
 static std::vector<PokemonGame::GameModel::ResultPlayer>
 GameWindow (
     PokemonGame::Client &client,
-    const PokemonGame::UserModel &curUser,
     const std::vector<PokemonGame::RoomPlayer> &roomPlayers,
     size_t worldW, size_t worldH,
     size_t width = 640, size_t height = 480);
@@ -983,7 +965,6 @@ GameWindow (
 
 参数：
 - `client` 为传入的 `PokemonGame::Client`；
-- `curUser` 为当前用户的用户模型；
 - `roomPlayers` 为房间内所有玩家模型；
 - `worldW` `worldH` 为进入的房间地图大小；
 - `width` `height` 为窗口尺寸；
@@ -1001,18 +982,23 @@ GameWindow (
 - 使用 `std::async` 线程池，将**同步帧插入渲染帧**，高效同步；
 - 使用 **Client-side Prediction**，渲染平滑画面；
 
-#### `GUIClient::ResultWindow`
+#### `GUIClient::UsersWindow / PokemonsWindow / ResultWindow`
 
 ``` cpp
-static void ResultWindow (const std::vector<PokemonGame::
-    GameModel::ResultPlayer> &results);
+static void UsersWindow (PokemonGame::Client &client);
+
+static void PokemonsWindow (PokemonGame::Client &client);
+
+static void ResultWindow (PokemonGame::Client &client);
 ```
 
 参数：
-- `results` 为玩家结果列表；
+- `client` 为传入的 `PokemonGame::Client`；
 
 功能：
-- 显示 游戏结果；
+- 使用 GUI 封装 `PokemonGame::Client` 的 `Users` / `Pokemons`；
+- 实现 列举所有用户、所有小精灵、游戏结果 界面；
+- 实现中，使用私有函数 `ListWindow` 作为框架渲染；
 
 ### `Client main` (GUIClient.cpp)
 
@@ -1035,8 +1021,10 @@ static void ResultWindow (const std::vector<PokemonGame::
   - 被迫下线 -> `Login`
   - 关闭窗口 -> `Login`
 - `GUIState::Users`
+  - 被迫下线 -> `Login`
   - 关闭窗口 -> `Start`
 - `GUIState::Pokemons`
+  - 被迫下线 -> `Login`
   - 关闭窗口 -> `Start`
 - `GUIState::Rooms`
   - 进入游戏 -> `Game`
@@ -1047,6 +1035,7 @@ static void ResultWindow (const std::vector<PokemonGame::
   - 被迫下线 -> `Login`
   - 关闭窗口 -> `Start`
 - `GUIState::GameResult`
+  - 被迫下线 -> `Login`
   - 关闭窗口 -> `Start`
 
 ## 测试

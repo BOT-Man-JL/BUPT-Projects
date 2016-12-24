@@ -36,7 +36,7 @@ together with [**buptczq**](https://github.com/buptczq/RE_Bupt_Computer_Network_
 ## Year 3
 
 - C++ Practice & Programming Practice
-  - [Pokemon Game](/3-1-Pokemon)
+  - Project - [Pokemon Game](/3-1-Pokemon)
 - Compiler Principles
   - [Lexer](/3-1-Compiler-Principles/Lexer)
   - [LL (1) Parser](/3-1-Compiler-Principles/LL1Parser)

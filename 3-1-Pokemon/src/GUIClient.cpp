@@ -26,7 +26,17 @@ int main (int argc, char *argv[])
 
 	auto clientIP = IPADDR;
 	if (argc > 1) clientIP = argv[1];
-	Client client (clientIP, PORT);
+	std::unique_ptr<Client> client;
+
+	try
+	{
+		client = std::make_unique<Client> (clientIP, PORT);
+	}
+	catch (const std::exception &ex)
+	{
+		std::cerr << ex.what () << std::endl;
+		return 0;
+	}
 
 	bool isPassiveOffline = false;
 	PokemonID pidToPlay;
@@ -46,13 +56,13 @@ int main (int argc, char *argv[])
 			try
 			{
 				GUIClient::LoginWindow (
-					client, isPassiveOffline);
+					(*client), isPassiveOffline);
 				isPassiveOffline = false;
 				guiState = GUIState::Start;
 			}
 			catch (const std::exception &)
 			{
-				try { client.Logout (); }
+				try { (*client).Logout (); }
 				catch (...) {}
 				guiState = GUIState::Quit;
 			}
@@ -63,7 +73,7 @@ int main (int argc, char *argv[])
 			{
 				size_t action;
 				std::tie (action, pidToPlay) =
-					GUIClient::StartWindow (client);
+					GUIClient::StartWindow ((*client));
 				switch (action)
 				{
 				case 0: guiState = GUIState::Rooms; break;
@@ -78,7 +88,7 @@ int main (int argc, char *argv[])
 					isPassiveOffline = true;
 				else
 				{
-					try { client.Logout (); }
+					try { (*client).Logout (); }
 					catch (...) {}
 				}
 				guiState = GUIState::Login;
@@ -88,7 +98,7 @@ int main (int argc, char *argv[])
 		case GUIState::Users:
 			try
 			{
-				GUIClient::UsersWindow (client);
+				GUIClient::UsersWindow ((*client));
 				guiState = GUIState::Start;
 			}
 			catch (const std::exception &)
@@ -101,7 +111,7 @@ int main (int argc, char *argv[])
 		case GUIState::Pokemons:
 			try
 			{
-				GUIClient::PokemonsWindow (client);
+				GUIClient::PokemonsWindow ((*client));
 				guiState = GUIState::Start;
 			}
 			catch (const std::exception &)
@@ -115,7 +125,7 @@ int main (int argc, char *argv[])
 			try
 			{
 				std::tie (worldSize, roomPlayers) =
-					GUIClient::RoomWindow (client, pidToPlay);
+					GUIClient::RoomWindow ((*client), pidToPlay);
 				guiState = GUIState::Game;
 			}
 			catch (const std::exception &ex)
@@ -127,7 +137,7 @@ int main (int argc, char *argv[])
 				}
 				else
 				{
-					try { client.RoomLeave (); }
+					try { (*client).RoomLeave (); }
 					catch (...) {}
 					guiState = GUIState::Start;
 				}
@@ -138,7 +148,7 @@ int main (int argc, char *argv[])
 			try
 			{
 				GUIClient::GameWindow (
-					client, roomPlayers,
+					(*client), roomPlayers,
 					worldSize.first, worldSize.second);
 				guiState = GUIState::GameResult;
 			}
@@ -151,9 +161,9 @@ int main (int argc, char *argv[])
 				}
 				else
 				{
-					try { client.RoomLeave (); }
+					try { (*client).RoomLeave (); }
 					catch (...) {}
-					guiState = GUIState::Start;
+					guiState = GUIState::GameResult;
 				}
 			}
 			break;
@@ -161,11 +171,11 @@ int main (int argc, char *argv[])
 		case GUIState::GameResult:
 			try
 			{
-				GUIClient::ResultWindow (client);
+				GUIClient::ResultWindow ((*client));
 				guiState = GUIState::Start;
 
 				// Time to Leave
-				client.RoomLeave ();
+				(*client).RoomLeave ();
 			}
 			catch (const std::exception &ex)
 			{
@@ -176,7 +186,7 @@ int main (int argc, char *argv[])
 				}
 				else
 				{
-					try { client.RoomLeave (); }
+					try { (*client).RoomLeave (); }
 					catch (...) {}
 					guiState = GUIState::Start;
 				}

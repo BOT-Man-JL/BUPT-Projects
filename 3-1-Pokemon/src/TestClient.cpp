@@ -246,14 +246,6 @@ int main (int argc, char *argv[])
 		fnRoomLeave (client3);
 	}
 
-	if (true)
-	{
-		std::cout << "\nTest 2 Clean up\n\n";
-
-		fnLogout (client2);
-		fnLogout (client3);
-	}
-
 	getchar ();
 	return 0;
 }
