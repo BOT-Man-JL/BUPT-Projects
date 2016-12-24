@@ -1,5 +1,5 @@
 # BUPT-Projects
-Collection of Codes by **BOT Man** during the College Life in BUPT :smile:
+A collection of Code by **BOT Man** during the College Life in BUPT :smile:
 
 ## Year 1
 

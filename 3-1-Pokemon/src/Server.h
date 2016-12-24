@@ -272,7 +272,6 @@ namespace PokemonGame
 				// Mark offline User dead
 				if (rooms[rid].isStarted && !rooms[rid].isOver)
 				{
-					// Following code maybe Unreachable...
 					rooms[rid].players[sessions[sid].uid].pokemon->Die ();
 					return false;
 				}
@@ -280,36 +279,65 @@ namespace PokemonGame
 				// Remove Player from Game
 				rooms[rid].players.erase (sessions[sid].uid);
 
-				// Clear Room if Empty
-				if (rooms[rid].players.empty ())
-					rooms.erase (rid);
-
 				// Mark user's Room ID as Invalid
 				rid = RoomID {};
 				return true;
 			};
 
-			auto keepSession = [&sessions, &leaveRoom] (const SessionID &sid)
+			auto keepSession = [&sessions, &rooms, &leaveRoom] (const SessionID &sid)
 			{
 				static const auto offlineGap = std::chrono::seconds { 30 };
 				auto timeNow = TimePointHelper::TimeNow ();
 
 				// Clear Session
 				for (auto p = sessions.begin (); p != sessions.end ();)
+				{
 					if (timeNow - p->second.heartbeat > offlineGap)
 					{
+						// Leave and Clear rid in Sessions
 						leaveRoom (p->first);
 						p = sessions.erase (p);
 					}
 					else ++p;
+				}
 
-					// Check Session
-					auto p = sessions.find (sid);
-					if (p == sessions.end ())
-						throw std::runtime_error (BadSession);
+				// Clear Room
+				for (auto p = rooms.begin (); p != rooms.end ();)
+				{
+					// Clear Over & Timeout Room
+					if (p->second.isOver &&
+						timeNow - p->second.latestUpdate > offlineGap)
+					{
+						// Clear Players inside
+						for (auto pPlayer = p->second.players.begin ();
+							 pPlayer != p->second.players.end ();)
+						{
+							const auto &pSid = sessions.find (pPlayer->first);
+							if (pSid != sessions.end ())
+							{
+								// Leave and Clear rid in Sessions
+								leaveRoom ((*pSid).first);
+								++pPlayer;
+							}
+							else
+								// Erase only
+								pPlayer = p->second.players.erase (pPlayer);
+						}
+					}
 
-					// Update Heartbeat
-					(*p).second.heartbeat = TimePointHelper::TimeNow ();
+					// Clear Empty Room
+					if (p->second.players.empty ())
+						p = rooms.erase (p);
+					else ++p;
+				}
+
+				// Check Session
+				auto p = sessions.find (sid);
+				if (p == sessions.end ())
+					throw std::runtime_error (BadSession);
+
+				// Update Heartbeat
+				(*p).second.heartbeat = TimePointHelper::TimeNow ();
 			};
 
 			auto pokemonToJson = [] (const PokemonModel &pokemon)
