@@ -174,7 +174,7 @@ int main (int argc, char *argv[])
 				GUIClient::ResultWindow ((*client));
 				guiState = GUIState::Start;
 
-				// Time to Leave
+				// Leave Here
 				(*client).RoomLeave ();
 			}
 			catch (const std::exception &ex)

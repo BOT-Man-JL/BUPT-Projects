@@ -210,6 +210,8 @@ namespace PokemonGame
 		TimePoint latestUpdate;
 	};
 
+	constexpr const char *intraServerErr = "Intra-Server Error";
+
 	// Server
 	class Server
 	{
@@ -489,7 +491,7 @@ namespace PokemonGame
 					.ToList ();
 
 				if (pokemons.empty ())
-					throw std::runtime_error ("No Pokemon Found");
+					throw std::runtime_error (intraServerErr);
 
 				for (const auto &pokemon : pokemons)
 					response.emplace_back (pokemonToJson (pokemon));
@@ -505,7 +507,7 @@ namespace PokemonGame
 					.ToList ();
 
 				if (users.empty ())
-					throw std::runtime_error ("No User Found");
+					throw std::runtime_error (intraServerErr);
 
 				std::unordered_map<UserID, bool> isOnline;
 				for (const auto &session : sessions)
@@ -526,7 +528,7 @@ namespace PokemonGame
 					.ToList ();
 
 				if (users.empty ())
-					throw std::runtime_error ("Intra-Server Error");
+					throw std::runtime_error (intraServerErr);
 
 				response = userToJson (users.front (), true);
 			});
@@ -584,10 +586,7 @@ namespace PokemonGame
 					RoomModel::Player::maxPlayerPerRoom)
 					throw std::runtime_error ("Room is Full");
 
-				if (room.isOver)
-					throw std::runtime_error ("Game is Over");
-
-				if (room.isStarted)
+				if (room.isStarted || room.isOver)
 					throw std::runtime_error ("Room is in Game");
 
 				auto pokemon = pokemons.front ().ToPokemon ();
@@ -640,7 +639,6 @@ namespace PokemonGame
 				if (rid == RoomID {})
 					throw std::runtime_error ("Not in a Room");
 
-				auto oldIsStarted = rooms[rid].isStarted;
 				rooms[rid].isStarted = rooms[rid].players.size () >= 2;
 				rooms[rid].players[sessions[sid].uid].isReady = isReady;
 
@@ -662,8 +660,8 @@ namespace PokemonGame
 					});
 				}
 
-				if (!oldIsStarted && rooms[rid].isStarted)
-					rooms[rid].latestUpdate = TimePointHelper::TimeNow ();
+				// Update Timestamp
+				rooms[rid].latestUpdate = TimePointHelper::TimeNow ();
 			});
 
 #pragma endregion
@@ -691,6 +689,7 @@ namespace PokemonGame
 				if (!room.isStarted)
 					throw std::runtime_error ("Game is not started");
 
+				// Count alive players
 				auto playerAlive = room.players.size ();
 				for (const auto &playerPair : room.players)
 				{
@@ -699,7 +698,6 @@ namespace PokemonGame
 						--playerAlive;
 				}
 
-				// Handle Action
 				auto &pokemon = *room.players[sessions[sid].uid].pokemon;
 				auto &player = room.players[sessions[sid].uid];
 
@@ -838,11 +836,61 @@ namespace PokemonGame
 					player.isDef = isDef;
 				}
 
-				// Handle Game Over
-				if (playerAlive <= 1)
+				auto gameOver = [&] (const UserID &winner)
 				{
-					// Handle Game Over only once
-					if (!room.isOver && playerAlive > 0)
+					// Transactional
+					mapper.Transaction ([&] ()
+					{
+						// Set Cond for this Room
+						auto p = room.players.begin ();
+						auto cond = field (userModel.uid) == (*p).first;
+						for (++p; p != room.players.end (); ++p)
+							cond = cond || field (userModel.uid) == (*p).first;
+
+						// Set Won Rate
+						auto users = mapper.Query (userModel)
+							.Where (cond).ToList ();
+						for (auto &user : users)
+						{
+							if (user.uid == winner) user.won++;
+							else user.los++;
+						}
+						mapper.UpdateRange (users);
+
+						// Update Pokemons
+						for (const auto &playerPair : room.players)
+						{
+							const auto &player = playerPair.second;
+
+							// Change owner & Update
+							mapper.Update (*PokemonModel::FromPokemon (
+								player.pokemonModel.pid,
+								winner,
+								*player.pokemon)
+							);
+
+							// Check if this Player has no pokemon...
+							auto pokemonLeft = mapper.Query (pokemonModel)
+								.Where (field (pokemonModel.uid) == playerPair.first)
+								.Aggregate (Expression::Count ()).Value ();
+							if (pokemonLeft != 0)
+								continue;
+
+							// Give this Player a new one...
+							mapper.Insert (
+								*PokemonModel::FromPokemon (
+									0, playerPair.first,
+									*Pokemon::NewPokemon ()),
+								false);
+						}
+					});
+				};
+
+				// Handle Game Over
+				if (!room.isOver && playerAlive <= 1)
+				{
+					// Handle only if there is winner
+					if (playerAlive == 1)
 					{
 						// Find Winner
 						UserID winner;
@@ -850,54 +898,11 @@ namespace PokemonGame
 							if (playerPair.second.pokemon->GetCurHP () != 0)
 								winner = playerPair.first;
 
-						mapper.Transaction ([&] ()
-						{
-							// Set Cond for this Room
-							auto p = room.players.begin ();
-							auto cond = field (userModel.uid) == (*p).first;
-							for (++p; p != room.players.end (); ++p)
-								cond = cond || field (userModel.uid) == (*p).first;
-
-							// Set Won Rate
-							auto users = mapper.Query (userModel)
-								.Where (cond).ToList ();
-							for (auto &user : users)
-							{
-								if (user.uid == winner) user.won++;
-								else user.los++;
-							}
-							mapper.UpdateRange (users);
-
-							// Update Pokemons
-							for (const auto &playerPair : room.players)
-							{
-								const auto &player = playerPair.second;
-
-								// Change owner & Update
-								mapper.Update (*PokemonModel::FromPokemon (
-									player.pokemonModel.pid,
-									winner,
-									*player.pokemon)
-								);
-
-								// Check if this Player has no pokemon...
-								auto pokemonLeft = mapper.Query (pokemonModel)
-									.Where (field (pokemonModel.uid) == playerPair.first)
-									.Aggregate (Expression::Count ());
-								if (pokemonLeft.Value () == 0)
-								{
-									// Give this Player a new one...
-									mapper.Insert (
-										*PokemonModel::FromPokemon (
-											0, playerPair.first,
-											*Pokemon::NewPokemon ()),
-										false);
-								}
-							}
-						});
+						// Transactional Handling
+						try { gameOver (winner); }
+						catch (...) { throw std::runtime_error (intraServerErr); }
 					}
-
-					// Set Game Over
+					// Handle Game Over only once
 					room.isOver = true;
 				}
 
