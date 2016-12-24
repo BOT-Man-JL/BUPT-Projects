@@ -121,7 +121,8 @@
   - 登录
   - 登出
 - 查询
-  - 查询用户
+  - 查询当前用户
+  - 查询所有用户
   - 查询小精灵
 - 房间
   - 查询房间
@@ -202,7 +203,7 @@
 
 {"request": "login", "param": {"uid": uid, "pwd": pwd}}
 
-{"success": true, "response": {"sid": sid, "user": thisuser}
+{"success": true, "response": {"sid": sid}
 {"success": false, "response": msg}
 
 // logout
@@ -232,6 +233,13 @@
 {"request": "users", "param": {"sid": sid}}
 
 {"success": true, "response": [user]}
+{"success": false, "response": msg}
+
+// userthis
+
+{"request": "userthis", "param": {"sid": sid}}
+
+{"success": true, "response": user}
 {"success": false, "response": msg}
 ```
 
@@ -295,7 +303,7 @@
 
 ![Layout](Layout.png)
 
-### 设计 `ORM Lite` `EggAche`
+### `ORM Lite` `EggAche`
 
 - *[ORM Lite](https://github.com/BOT-Man-JL/ORM-Lite)*
 - *[EggAche GL](https://github.com/BOT-Man-JL/EggAche-GL)*
@@ -656,6 +664,18 @@ Client (const std::string &ipAddr,
 功能：
 - 构造一个 `BOT_Socket::Client`；
 
+#### `Client::GetUserID`
+
+``` cpp
+const UserID &GetUserID () const;
+```
+
+返回值：
+- 返回当前 `Client` 登录的用户名；
+
+功能：
+- 获取登录的 `Client` 用户名；
+
 #### `Client::Register`
 
 ``` cpp
@@ -679,16 +699,13 @@ std::string Register (const UserID &uid,
 #### `Client::Login`
 
 ``` cpp
-UserModel Login (const UserID &uid,
-                 const UserPwd &pwd);
+void Login (const UserID &uid,
+            const UserPwd &pwd);
 ```
 
 参数：
 - `uid` 为用户名；
 - `pwd` 为用户密码；
-
-返回值：
-- 当前用户的用户模型；
 
 异常：
 - 发送失败 / 服务器返回错误信息，抛出 `runtime_error`；
@@ -696,6 +713,7 @@ UserModel Login (const UserID &uid,
 功能：
 - 根据用户名/密码，登录用户；
 - 使用服务器返回的 `session` 标识当前 `Client` 的登录状态；
+- 使用登录时的 `uid` 标识当前 `Client`；
 
 #### `Client::Logout`
 
@@ -740,7 +758,22 @@ std::vector<UserModel> Users ();
 - 发送失败 / 服务器返回错误信息，抛出 `runtime_error`；
 
 功能：
-- 查询当前所有用户；
+- 查询所有用户；
+
+#### `Client::UserThis`
+
+``` cpp
+UserModel UserThis ();
+```
+
+返回值：
+- 当前用户的模型；
+
+异常：
+- 发送失败 / 服务器返回错误信息，抛出 `runtime_error`；
+
+功能：
+- 查询当前用户；
 
 #### `Client::Rooms`
 
@@ -1015,6 +1048,10 @@ static void ResultWindow (const std::vector<PokemonGame::
   - 关闭窗口 -> `Start`
 - `GUIState::GameResult`
   - 关闭窗口 -> `Start`
+
+## 测试
+
+[测试文档](TestReport.md)
 
 ## 不足
 

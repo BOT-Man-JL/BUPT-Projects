@@ -263,14 +263,6 @@ namespace PokemonGame
 
 			// Helper Functions
 
-			auto keepSession = [&sessions] (const SessionID &sid)
-			{
-				auto p = sessions.find (sid);
-				if (p == sessions.end ())
-					throw std::runtime_error (BadSession);
-				(*p).second.heartbeat = TimePointHelper::TimeNow ();
-			};
-
 			auto leaveRoom = [&sessions, &rooms] (const SessionID &sid)
 			{
 				auto &rid = sessions[sid].rid;
@@ -284,23 +276,32 @@ namespace PokemonGame
 				if (rooms[rid].players.empty ())
 					rooms.erase (rid);
 
+				// Mark user's Room ID as Invalid
 				rid = RoomID {};
 				return true;
 			};
 
-			auto clearSession = [&sessions, &leaveRoom] ()
+			auto keepSession = [&sessions, &leaveRoom] (const SessionID &sid)
 			{
-				static const auto timeGap = std::chrono::minutes { 1 };
-
+				static const auto offlineGap = std::chrono::seconds { 30 };
 				auto timeNow = TimePointHelper::TimeNow ();
+
+				// Clear Session
 				for (auto p = sessions.begin (); p != sessions.end ();)
-					if (timeNow - p->second.heartbeat > timeGap)
+					if (timeNow - p->second.heartbeat > offlineGap)
 					{
 						leaveRoom (p->first);
 						p = sessions.erase (p);
 					}
-					else
-						++p;
+					else ++p;
+
+					// Check Session
+					auto p = sessions.find (sid);
+					if (p == sessions.end ())
+						throw std::runtime_error (BadSession);
+
+					// Update Heartbeat
+					(*p).second.heartbeat = TimePointHelper::TimeNow ();
 			};
 
 			auto pokemonToJson = [] (const PokemonModel &pokemon)
@@ -425,11 +426,7 @@ namespace PokemonGame
 				auto sid = uid + TimePointHelper::ToStr (timeNow);
 				sessions[sid] = SessionModel { uid, RoomID {}, timeNow };
 
-				response = json
-				{
-					{ "sid", sid },
-					{ "user", userToJson (users.front (), true) }
-				};
+				response = json { { "sid", sid } };
 			});
 
 			SetHandler ("logout",
@@ -474,16 +471,28 @@ namespace PokemonGame
 				if (users.empty ())
 					throw std::runtime_error ("No User Found");
 
-				// Lazy loading:
-				// Remove offine users
-				clearSession ();
-
 				std::unordered_map<UserID, bool> isOnline;
 				for (const auto &session : sessions)
 					isOnline[session.second.uid] = true;
 
 				for (const auto &user : users)
 					response.emplace_back (userToJson (user, isOnline[user.uid]));
+			});
+
+			SetHandler ("userthis",
+						[&] (json &response, const json &request)
+			{
+				const auto sid = request.at ("sid").get<SessionID> ();
+				keepSession (sid);
+
+				auto users = mapper.Query (userModel)
+					.Where (field (userModel.uid) == sessions[sid].uid)
+					.ToList ();
+
+				if (users.empty ())
+					throw std::runtime_error ("Intra-Server Error");
+
+				response = userToJson (users.front (), true);
 			});
 
 #pragma endregion

@@ -95,6 +95,8 @@ namespace PokemonGame
 			: _sockClient (ipAddr, port)
 		{}
 
+		const UserID &GetUserID () const { return _userID; }
+
 #pragma region Accounting
 
 		std::string Register (const UserID &uid,
@@ -110,18 +112,16 @@ namespace PokemonGame
 			return ret;
 		}
 
-		UserModel Login (const UserID &uid,
-						 const UserPwd &pwd)
+		void Login (const UserID &uid,
+					const UserPwd &pwd)
 		{
-			UserModel ret;
 			Request ("login", { { "uid", uid },
 								{ "pwd", pwd } },
 					 [&] (const json &response)
 			{
 				_sessionID = response.at ("sid").get<SessionID> ();
-				ret = _JsonToUser (response.at ("user"));
+				_userID = uid;
 			});
-			return ret;
 		}
 
 		std::string Logout ()
@@ -159,6 +159,17 @@ namespace PokemonGame
 			{
 				for (const auto &userj : response)
 					ret.emplace_back (_JsonToUser (userj));
+			});
+			return ret;
+		}
+
+		UserModel UserThis ()
+		{
+			UserModel ret;
+			Request ("userthis", { { "sid", _sessionID } },
+					 [&] (const json &response)
+			{
+				ret = _JsonToUser (response);
 			});
 			return ret;
 		}
@@ -373,6 +384,7 @@ namespace PokemonGame
 
 		BOT_Socket::Client _sockClient;
 		SessionID _sessionID;
+		UserID _userID;
 	};
 }
 

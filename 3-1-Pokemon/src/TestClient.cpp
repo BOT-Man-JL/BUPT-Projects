@@ -67,9 +67,8 @@ int main (int argc, char *argv[])
 	{
 		try
 		{
-			auto userModel = client.Login (uid, pwd);
+			client.Login (uid, pwd);
 			std::cout << "Login Successfully:\n";
-			printUser (std::cout, userModel);
 		}
 		catch (const std::exception &ex)
 		{ std::cerr << ex.what () << std::endl; }
@@ -112,6 +111,19 @@ int main (int argc, char *argv[])
 			std::cout << "All Users:\n";
 			for (const auto &user : users)
 				printUser (std::cout, user);
+		}
+		catch (const std::exception &ex)
+		{ std::cerr << ex.what () << std::endl; }
+	};
+
+	auto fnUserThis = [&printUser] (
+		PokemonGame::Client &client)
+	{
+		try
+		{
+			auto userthis = client.UserThis ();
+			std::cout << "This Users:\n";
+			printUser (std::cout, userthis);
 		}
 		catch (const std::exception &ex)
 		{ std::cerr << ex.what () << std::endl; }
@@ -200,9 +212,11 @@ int main (int argc, char *argv[])
 
 		fnPokemons (client1);
 		fnUsers (client1);
+		fnUserThis (client1);
 
 		fnPokemons (client2);
 		fnUsers (client3);
+		fnUserThis (client2);
 	}
 
 	if (true)

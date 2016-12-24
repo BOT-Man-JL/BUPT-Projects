@@ -132,7 +132,7 @@ namespace PokemonGameGUI
 		//
 
 		static void ListWindow (
-			const std::string &titleStr,
+			std::string titleStr,
 			std::function<void (
 				std::vector<std::string> &textList)
 			> refreshCallback,
@@ -142,6 +142,9 @@ namespace PokemonGameGUI
 
 			EggAche::Window wnd (width, height, titleStr.c_str ());
 			std::unique_ptr<EggAche::Canvas> bg;
+
+			// Update Title to Render
+			titleStr += "    (Close the Window to Go Back)";
 
 			std::vector<std::string> textList;
 			bool isClose = false;
@@ -187,10 +190,17 @@ namespace PokemonGameGUI
 				auto tBeg = std::chrono::system_clock::now ();
 
 				textList.clear ();
-				refreshCallback (textList);
+				try
 				{
+					refreshCallback (textList);
 					std::lock_guard<std::mutex> lg (mtx);
 					refresh ();
+				}
+				catch (const std::exception &ex)
+				{
+					if (std::string (ex.what ()) == PokemonGame::BadSession)
+						throw;
+					titleStr = ex.what ();
 				}
 
 				auto tElapse = std::chrono::system_clock::now () - tBeg;
@@ -208,7 +218,7 @@ namespace PokemonGameGUI
 		// Login Window
 		//
 
-		static PokemonGame::UserModel LoginWindow (
+		static void LoginWindow (
 			PokemonGame::Client &client,
 			bool isPassiveOffline,
 			size_t width = 480, size_t height = 360)
@@ -238,7 +248,6 @@ namespace PokemonGameGUI
 				"Welcome to Pokemon Game";
 
 			auto hasLogin = false;
-			PokemonGame::UserModel ret;
 
 			std::mutex mtx;
 
@@ -284,7 +293,7 @@ namespace PokemonGameGUI
 
 				try
 				{
-					ret = client.Login (uidStr, pwdStr);
+					client.Login (uidStr, pwdStr);
 					hasLogin = true;
 					promptStr = logedinPrompt;
 				}
@@ -377,8 +386,6 @@ namespace PokemonGameGUI
 
 			if (!hasLogin)
 				throw std::runtime_error (CloseWindow);
-
-			return ret;
 		}
 
 		//
@@ -387,7 +394,7 @@ namespace PokemonGameGUI
 		//
 
 		static std::pair<size_t, PokemonGame::PokemonID> StartWindow (
-			const PokemonGame::UserModel &curUser,
+			PokemonGame::Client &client,
 			size_t width = 640, size_t height = 720)
 		{
 			const std::string pidHintStr = "<PID>";
@@ -397,7 +404,7 @@ namespace PokemonGameGUI
 			constexpr auto tSleep = std::chrono::milliseconds (500);
 
 			EggAche::Window wnd (width, height,
-				(curUser.uid + " - Welcome").c_str ());
+				(client.GetUserID () + " - Welcome").c_str ());
 			std::unique_ptr<EggAche::Canvas> bg;
 
 			std::vector<std::unique_ptr<Button>> pokemonBtns;
@@ -408,6 +415,7 @@ namespace PokemonGameGUI
 			std::string promptStr = "Choose a Pokemon to Play";
 
 			std::string pidStr;
+			PokemonGame::UserModel curUser;
 			auto ret = std::make_pair (3u, PokemonGame::PokemonID {});
 
 			std::mutex mtx;
@@ -567,7 +575,26 @@ namespace PokemonGameGUI
 			});
 
 			while (!wnd.IsClosed () && ret.first >= 3)
-				std::this_thread::sleep_for (tSleep);
+			{
+				auto tBeg = std::chrono::system_clock::now ();
+
+				try
+				{
+					std::lock_guard<std::mutex> lg (mtx);
+					curUser = client.UserThis ();
+					refresh ();
+				}
+				catch (const std::exception &ex)
+				{
+					if (std::string (ex.what ()) == PokemonGame::BadSession)
+						throw;
+					promptStr = ex.what ();
+				}
+
+				auto tElapse = std::chrono::system_clock::now () - tBeg;
+				if (tSleep > tElapse)
+					std::this_thread::sleep_for (tSleep - tElapse);
+			}
 
 			// Ensure callback function quit
 			std::lock_guard<std::mutex> lg (mtx);
@@ -584,47 +611,40 @@ namespace PokemonGameGUI
 
 		static void UsersWindow (PokemonGame::Client &client)
 		{
-			ListWindow ("View Users",
+			ListWindow (client.GetUserID () + " - View Users",
 						[&] (std::vector<std::string> &textList)
 			{
-				try
-				{
-					auto users = client.Users ();
+				auto users = client.Users ();
 
-					std::ostringstream oss;
-					for (const auto &user : users)
+				std::ostringstream oss;
+				for (const auto &user : users)
+				{
+					oss.str ("");
+					oss << user.uid
+						<< (user.online ? " [online]" : " [offline]")
+						<< " - Won Rate: " << user.wonRate;
+					textList.emplace_back (oss.str ());
+
+					oss.str ("");
+					oss << "  Badges: ";
+					for (const auto &badge : user.badges)
+						oss << "[" << badge << "] ";
+					textList.emplace_back (oss.str ());
+
+					textList.emplace_back ("  Pokemons:");
+					for (const auto &pokemon : user.pokemons)
 					{
 						oss.str ("");
-						oss << user.uid
-							<< (user.online ? " [online]" : " [offline]")
-							<< " - Won Rate: " << user.wonRate;
+						oss << "    " << std::setw (10) << std::left
+							<< pokemon.name
+							<< " - level: " << pokemon.level
+							<< " exp: " << pokemon.expPoint
+							<< " atk: " << pokemon.atk
+							<< " def: " << pokemon.def
+							<< " hp: " << pokemon.hp
+							<< " timeGap: " << pokemon.timeGap;
 						textList.emplace_back (oss.str ());
-
-						oss.str ("");
-						oss << "  Badges: ";
-						for (const auto &badge : user.badges)
-							oss << "[" << badge << "] ";
-						textList.emplace_back (oss.str ());
-
-						textList.emplace_back ("  Pokemons:");
-						for (const auto &pokemon : user.pokemons)
-						{
-							oss.str ("");
-							oss << "    " << std::setw (10) << std::left
-								<< pokemon.name
-								<< " - level: " << pokemon.level
-								<< " exp: " << pokemon.expPoint
-								<< " atk: " << pokemon.atk
-								<< " def: " << pokemon.def
-								<< " hp: " << pokemon.hp
-								<< " timeGap: " << pokemon.timeGap;
-							textList.emplace_back (oss.str ());
-						}
 					}
-				}
-				catch (const std::exception &ex)
-				{
-					textList.emplace_back (ex.what ());
 				}
 			});
 		}
@@ -635,32 +655,25 @@ namespace PokemonGameGUI
 
 		static void PokemonsWindow (PokemonGame::Client &client)
 		{
-			ListWindow ("View Pokemons",
+			ListWindow (client.GetUserID () + " - View Pokemons",
 						[&] (std::vector<std::string> &textList)
 			{
-				try
-				{
-					auto pokemons = client.Pokemons ();
+				auto pokemons = client.Pokemons ();
 
-					std::ostringstream oss;
-					for (const auto &pokemon : pokemons)
-					{
-						oss.str ("");
-						oss << std::setw (10) << std::left
-							<< pokemon.name
-							<< " - owner: " << pokemon.uid
-							<< " level: " << pokemon.level
-							<< " exp: " << pokemon.expPoint
-							<< " atk: " << pokemon.atk
-							<< " def: " << pokemon.def
-							<< " hp: " << pokemon.hp
-							<< " timeGap: " << pokemon.timeGap;
-						textList.emplace_back (oss.str ());
-					}
-				}
-				catch (const std::exception &ex)
+				std::ostringstream oss;
+				for (const auto &pokemon : pokemons)
 				{
-					textList.emplace_back (ex.what ());
+					oss.str ("");
+					oss << std::setw (10) << std::left
+						<< pokemon.name
+						<< " - owner: " << pokemon.uid
+						<< " level: " << pokemon.level
+						<< " exp: " << pokemon.expPoint
+						<< " atk: " << pokemon.atk
+						<< " def: " << pokemon.def
+						<< " hp: " << pokemon.hp
+						<< " timeGap: " << pokemon.timeGap;
+					textList.emplace_back (oss.str ());
 				}
 			});
 		}
@@ -674,7 +687,6 @@ namespace PokemonGameGUI
 			std::vector<PokemonGame::RoomPlayer>
 		> RoomWindow (
 			PokemonGame::Client &client,
-			const PokemonGame::UserModel &curUser,
 			const PokemonGame::PokemonID &pidToPlay,
 			size_t width = 640, size_t height = 640)
 		{
@@ -691,7 +703,7 @@ namespace PokemonGameGUI
 			constexpr auto tSleep = std::chrono::milliseconds (500);
 
 			EggAche::Window wnd (width, height,
-				(curUser.uid + " - Room").c_str ());
+				(client.GetUserID () + " - Room").c_str ());
 			std::unique_ptr<EggAche::Canvas> bg;
 
 			std::vector<std::unique_ptr<Button>> roomBtns;
@@ -988,15 +1000,14 @@ namespace PokemonGameGUI
 		// Game Window
 		//
 
-		static std::vector<PokemonGame::GameModel::ResultPlayer> GameWindow (
+		static void GameWindow (
 			PokemonGame::Client &client,
-			const PokemonGame::UserModel &curUser,
 			const std::vector<PokemonGame::RoomPlayer> &roomPlayers,
 			size_t worldW, size_t worldH,
 			size_t width = 640, size_t height = 480)
 		{
 			EggAche::Window wnd (width, height,
-				(curUser.uid + " - Playing").c_str ());
+				(client.GetUserID () + " - Playing").c_str ());
 			std::unique_ptr<EggAche::Canvas> bg;
 
 			// Room Players
@@ -1141,9 +1152,9 @@ namespace PokemonGameGUI
 					gameModel.players[i].vy = newY - gameModel.players[i].y;
 
 					// Update Player Position
-					if (gameModel.players[i].uid == curUser.uid)
+					if (gameModel.players[i].uid == client.GetUserID ())
 					{
-						const auto &roomPlayer = roomPlayerMap[curUser.uid];
+						const auto &roomPlayer = roomPlayerMap[client.GetUserID ()];
 						Rect rect {
 							(size_t) gameModel.players[i].x + gameModel.players[i].vx / 2,
 							(size_t) gameModel.players[i].y + gameModel.players[i].vy / 2,
@@ -1282,8 +1293,6 @@ namespace PokemonGameGUI
 
 			if (!gameModel.isOver)
 				throw std::runtime_error (CloseWindow);
-
-			return gameModel.results;
 		}
 
 		//
@@ -1291,12 +1300,13 @@ namespace PokemonGameGUI
 		//
 
 		static void ResultWindow (
-			const std::vector<PokemonGame::GameModel::ResultPlayer> &results)
+			PokemonGame::Client &client)
 		{
-			ListWindow ("Game Result",
+			ListWindow (client.GetUserID () + " - Game Result",
 						[&] (std::vector<std::string> &textList)
 			{
 				std::ostringstream oss;
+				auto results = client.GameSync (0, 0, 0, 0, false).results;
 				for (const auto &result : results)
 				{
 					oss.str ("");
