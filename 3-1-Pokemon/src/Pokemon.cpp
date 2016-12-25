@@ -1,4 +1,9 @@
 
+//
+// Pokemon Game - Pokemon Module Impl
+// BOT Man, 2016
+//
+
 #include "Pokemon.h"
 
 #define SCAFFOLD_NEW_POKEMON_FROM_NAME_WITH_ATTR(CLASSNAME)	\
@@ -20,7 +25,10 @@ if (name == #CLASSNAME)										\
 
 namespace PokemonGame
 {
+	//
 	// Define _GetDamagePoint
+	// using dynamic_cast to detect type of opPokemon
+	//
 
 	Pokemon::HealthPoint StrengthPokemon::_GetDamagePoint (
 		const Pokemon &opPokemon) const
@@ -83,7 +91,9 @@ namespace PokemonGame
 		return std::max (ret, HealthPoint {});
 	}
 
+	//
 	// Define _OnUpgrade
+	//
 
 	void Pikachu::_OnUpgrade ()
 	{
@@ -95,7 +105,9 @@ namespace PokemonGame
 		// Currently No Attribute Improvement
 	}
 
+	//
 	// Define Pokemon Factory
+	//
 
 	const std::vector<std::string> &Pokemon::PokemonNames ()
 	{

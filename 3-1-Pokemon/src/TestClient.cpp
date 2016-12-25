@@ -1,4 +1,9 @@
 ﻿
+//
+// Pokemon Game - C/S Module Test
+// BOT Man, 2016
+//
+
 #include <thread>
 #include <iostream>
 

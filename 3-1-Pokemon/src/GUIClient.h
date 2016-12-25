@@ -1,4 +1,10 @@
-﻿#ifndef POKEMON_GUI_CLIENT_H
+﻿
+//
+// Pokemon Game - GUI Client
+// BOT Man, 2016
+//
+
+#ifndef POKEMON_GUI_CLIENT_H
 #define POKEMON_GUI_CLIENT_H
 
 #include <memory>
@@ -43,10 +49,12 @@ namespace PokemonGameGUI
 					size_t w = 20, size_t h = 18)
 				: _rect { x, y, w, h }
 			{
+				// Draw Text
 				canvas.DrawTxt (_rect.x + _rect.w / 2,
 								_rect.y + (_rect.h - 18) / 2,
 								text.c_str ());
 
+				// Draw Border
 				_rect.w += canvas.GetTxtWidth (text.c_str ());
 				canvas.DrawRdRt (_rect.x, _rect.y,
 								 _rect.x + _rect.w,
@@ -76,7 +84,7 @@ namespace PokemonGameGUI
 				   size_t w, size_t h = 18)
 				: _rect { x, y, w + 4, h + 2 }
 			{
-				// Clear and Draw Bounder
+				// Draw Border
 				canvas.SetBrush (false, 255, 255, 255);
 				canvas.DrawRect (_rect.x, _rect.y,
 								 _rect.x + _rect.w,
@@ -114,14 +122,17 @@ namespace PokemonGameGUI
 								 char ch,
 								 size_t textSize = 16)
 		{
+			// Invalid input
 			if (ch != '\x08' && !isalnum (ch) && ch != '_')
 				return false;
 
+			// Input \esc
 			if (ch == '\x08')
 			{
 				if (!text.empty ())
 					text.pop_back ();
 			}
+			// Input char
 			else if (text.size () < textSize)
 				text.push_back (ch);
 			return true;
@@ -192,6 +203,7 @@ namespace PokemonGameGUI
 				textList.clear ();
 				try
 				{
+					// Callback
 					refreshCallback (textList);
 					std::lock_guard<std::mutex> lg (mtx);
 					refresh ();

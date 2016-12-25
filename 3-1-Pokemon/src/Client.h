@@ -1,3 +1,9 @@
+
+//
+// Pokemon Game - Protocol Client
+// BOT Man, 2016
+//
+
 #ifndef POKEMON_CLIENT_H
 #define POKEMON_CLIENT_H
 
@@ -95,6 +101,7 @@ namespace PokemonGame
 			: _sockClient (ipAddr, port)
 		{}
 
+		// Get User ID associated with this Client
 		const UserID &GetUserID () const { return _userID; }
 
 #pragma region Accounting
@@ -277,19 +284,23 @@ namespace PokemonGame
 		{
 			try
 			{
+				// Send & Recv
 				auto response = _sockClient.Request (json {
 					{ "request", request }, { "param", param }
 				}.dump ());
 
+				// Check is succeeded
 				const json res = json::parse (response.c_str ());
 				if (!res.at ("success").get<bool> ())
 					throw std::runtime_error (
 						res.at ("response").get<std::string> ());
 
+				// Callback
 				if (callback) callback (res.at ("response"));
 			}
 			catch (const std::logic_error &)
 			{
+				// Exception of json
 				throw std::runtime_error ("Bad Response");
 			}
 			catch (const std::runtime_error &)

@@ -1,3 +1,9 @@
+
+//
+// Pokemon Game - Server
+// BOT Man, 2016
+//
+
 #ifndef POKEMON_SERVER_H
 #define POKEMON_SERVER_H
 
@@ -44,6 +50,7 @@ namespace PokemonGame
 		Pokemon::HealthPoint hp;
 		Pokemon::TimeGap timeGap;
 
+		// To Pokemon Object
 		inline auto ToPokemon ()
 		{
 			return Pokemon::NewPokemon (
@@ -51,6 +58,7 @@ namespace PokemonGame
 				atk, def, hp, timeGap);
 		}
 
+		// From Pokemon Object
 		static auto FromPokemon (
 			PokemonID pid, UserID uid,
 			const Pokemon &pokemon)
@@ -63,6 +71,7 @@ namespace PokemonGame
 				}};
 		}
 
+		// ORM
 		ORMAP ("Pokemon", pid, uid, name, level, expPoint,
 			   atk, def, hp, timeGap);
 	};
@@ -74,6 +83,7 @@ namespace PokemonGame
 		UserID uid;
 		UserBadge badge;
 
+		// ORM
 		ORMAP ("Badge", bid, uid, badge);
 	};
 
@@ -85,6 +95,7 @@ namespace PokemonGame
 		size_t won;
 		size_t los;
 
+		// ORM
 		ORMAP ("User", uid, pwd, won, los);
 	};
 
@@ -136,7 +147,10 @@ namespace PokemonGame
 	{
 		struct Player
 		{
+			// Map Size
 			static constexpr size_t maxX = 300, maxY = 200;
+
+			// Room Size
 			static constexpr size_t maxPlayerPerRoom = 3;
 
 			bool isReady;
@@ -177,28 +191,11 @@ namespace PokemonGame
 				w { 10 }, h { 10 }
 			{}
 
-			bool IsOverlap (const RigidBody &b) const
-			{
-				const auto &a = *this;
-				return
-					a.x <= b.x + b.w &&
-					a.y <= b.y + b.h &&
-					b.x <= a.x + a.w &&
-					b.y <= a.y + a.h;
-			}
-
-			bool IsInside (const RigidBody &b) const
-			{
-				const auto &a = *this;
-				return
-					a.x >= b.x &&
-					a.y >= b.y &&
-					a.x + a.w <= b.x + b.w &&
-					a.y + a.h <= b.y + b.h;
-			}
-
 			int x, y, w, h;
 		};
+
+		// Clock
+		static constexpr std::chrono::milliseconds tickGap { 200 };
 
 		std::unordered_map<UserID, Player> players;
 		std::list<Damage> damages;
@@ -206,7 +203,6 @@ namespace PokemonGame
 		bool isStarted = false;
 		bool isOver = false;
 
-		static constexpr std::chrono::milliseconds tickGap { 200 };
 		TimePoint latestUpdate;
 	};
 
@@ -223,6 +219,7 @@ namespace PokemonGame
 			using namespace BOT_ORM;
 
 			// Shared Runtime Data
+			// These data could be moved to Redis for caching.
 			std::unordered_map<SessionID, SessionModel> sessions;
 			std::unordered_map<RoomID, RoomModel> rooms;
 
@@ -701,9 +698,26 @@ namespace PokemonGame
 				auto &pokemon = *room.players[sessions[sid].uid].pokemon;
 				auto &player = room.players[sessions[sid].uid];
 
-				// World Map
-				const static RoomModel::RigidBody worldMap (
-					RoomModel::Player::maxX, RoomModel::Player::maxY);
+				auto isOverlap = [] (const RoomModel::RigidBody &a,
+									 const RoomModel::RigidBody &b)
+				{
+					return
+						a.x <= b.x + b.w &&
+						a.y <= b.y + b.h &&
+						b.x <= a.x + a.w &&
+						b.y <= a.y + a.h;
+				};
+
+				auto isInMap = [] (const RoomModel::RigidBody &a)
+				{
+					const static RoomModel::RigidBody worldMap (
+						RoomModel::Player::maxX, RoomModel::Player::maxY);
+					return
+						a.x >= worldMap.x &&
+						a.y >= worldMap.y &&
+						a.x + a.w <= worldMap.x + worldMap.w &&
+						a.y + a.h <= worldMap.y + worldMap.h;
+				};
 
 				// Update All Room Elements
 				while (TimePointHelper::TimeNow () -
@@ -749,7 +763,7 @@ namespace PokemonGame
 							const auto &uid = playerRididBodys[i].first;
 							const auto &collider = playerRididBodys[i].second;
 
-							if (uid != damage.uid && rbDamage.IsOverlap (collider))
+							if (uid != damage.uid && isOverlap (rbDamage, collider))
 							{
 								// Todo: Prompt upgrading
 								auto isUpgraded = false;
@@ -799,7 +813,7 @@ namespace PokemonGame
 						rbPlayer.y += moveY;
 
 						// Set Velocity if Inside the World
-						if (rbPlayer.IsInside (worldMap))
+						if (isInMap (rbPlayer))
 						{
 							player.vx = moveX;
 							player.vy = moveY;
@@ -973,13 +987,17 @@ namespace PokemonGame
 						// Make sure only one thread is Handling
 						std::lock_guard<std::mutex> lg (mtx);
 
+						// Callback
 						_handlers.at (req.at ("request")) (
 							res["response"], req.at ("param"));
 					}
+
+					// Write back response
 					response = res.dump ();
 				}
 				catch (const std::logic_error &)
 				{
+					// Exception of json
 					response = json {
 						{ "success", false },
 						{ "response", "Bad Request" }

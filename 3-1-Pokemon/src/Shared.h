@@ -1,4 +1,10 @@
-﻿#ifndef POKEMON_SHARED_H
+﻿
+//
+// Pokemon Game - Shared Module
+// BOT Man, 2016
+//
+
+#ifndef POKEMON_SHARED_H
 #define POKEMON_SHARED_H
 
 #include <string>

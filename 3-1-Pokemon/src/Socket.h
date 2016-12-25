@@ -1,3 +1,9 @@
+
+//
+// Pokemon Game - Socket Module
+// BOT Man, 2016
+//
+
 #ifndef BOT_SOCKET_H
 #define BOT_SOCKET_H
 

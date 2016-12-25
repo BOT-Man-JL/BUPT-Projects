@@ -1,4 +1,9 @@
 ﻿
+//
+// Pokemon Game - Client Main
+// BOT Man, 2016
+//
+
 #include <iostream>
 
 #include "Client.h"
@@ -24,25 +29,26 @@ int main (int argc, char *argv[])
 	using namespace PokemonGame;
 	using namespace PokemonGameGUI;
 
+	// Read from start-up args
 	auto clientIP = IPADDR;
 	if (argc > 1) clientIP = argv[1];
+
+	// Try until succeed to connect
 	std::unique_ptr<Client> client;
-
-	try
+	while (client)
 	{
-		client = std::make_unique<Client> (clientIP, PORT);
-	}
-	catch (const std::exception &ex)
-	{
-		std::cerr << ex.what () << std::endl;
-		return 0;
+		try { client = std::make_unique<Client> (clientIP, PORT); }
+		catch (const std::exception &ex)
+		{ std::cerr << ex.what () << std::endl; }
 	}
 
+	// Navigation Data
 	bool isPassiveOffline = false;
 	PokemonID pidToPlay;
 	std::pair<size_t, size_t> worldSize;
 	std::vector<RoomPlayer> roomPlayers;
 
+	// Start at Login Page
 	auto guiState = GUIState::Login;
 	while (guiState != GUIState::Quit)
 	{

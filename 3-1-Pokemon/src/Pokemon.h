@@ -1,3 +1,9 @@
+
+//
+// Pokemon Game - Pokemon Module
+// BOT Man, 2016
+//
+
 #ifndef POKEMON_H
 #define POKEMON_H
 
@@ -17,7 +23,7 @@
 #undef min
 #endif
 
-// Scaffolding Macros
+// Scaffolding Pokemon Type
 #define SCAFFOLD_POKEMON_TYPE(CLASSNAME)					\
 struct CLASSNAME : public Pokemon {							\
 protected:													\
@@ -41,6 +47,7 @@ public:														\
 		const Pokemon &opPokemon) const override;			\
 }															\
 
+// Scaffolding Pokemon Entity
 #define SCAFFOLD_POKEMON(									\
 	CLASSNAME, TYPE, W, H, V, ATK, DEF, HP, TG)				\
 class CLASSNAME : public TYPE {								\
@@ -116,8 +123,8 @@ namespace PokemonGame
 		// Runtime Attr
 		HealthPoint GetCurHP () const { return _curHp; }
 
-		// this Pokemon Attack opPokemon
-		// Return <isKilling, isUpgraded>
+		// Attack
+		// this Attack opPokemon, returning <isKilling, isUpgraded>
 		std::pair<bool, bool> Attack (Pokemon &opPokemon)
 		{
 			auto &thisPokemon = *this;
@@ -138,19 +145,14 @@ namespace PokemonGame
 			return std::make_pair (isKilling, isUpgraded);
 		}
 
-		// Reset cur Hp to Full Hp
-		void Recover ()
-		{
-			_curHp = _hp;
-		}
+		// Set cur Hp to Full Hp
+		void Recover () { _curHp = _hp; }
 
 		// Set cur Hp to 0
-		void Die ()
-		{
-			_curHp = 0;
-		}
+		void Die () { _curHp = 0; }
 
 	protected:
+
 		// Properties
 		Level _level;
 		ExpPoint _expPoint;

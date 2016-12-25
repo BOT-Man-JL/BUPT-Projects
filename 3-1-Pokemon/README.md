@@ -306,6 +306,8 @@
 ### `ORM Lite` `EggAche`
 
 - *[ORM Lite](https://github.com/BOT-Man-JL/ORM-Lite)*
+  - [How to Design a Naive C++ ORM](https://BOT-Man-JL.github.io/articles/#2016/How-to-Design-a-Naive-Cpp-ORM)
+  - [How to Design a Better C++ ORM](https://BOT-Man-JL.github.io/articles/#2016/How-to-Design-a-Better-Cpp-ORM)
 - *[EggAche GL](https://github.com/BOT-Man-JL/EggAche-GL)*
 
 ### `Shared` （Shared.h)
@@ -478,7 +480,7 @@ SCAFFOLD_POKEMON_TYPE (SwiftPokemon);
 
 - 重写虚函数 `GetType`，返回 `#CLASSNAME`；
 - 重写虚函数 `_GetDamagePoint`，根据对手小精灵种类，返回伤害值；
-- `_GetDamagePoint` 中，使用 `dynamic_cast` 判断对手小精灵种类；
+- `_GetDamagePoint` 中，使用 `dynamic_cast` **判断对手小精灵种类**；
 
 ### `PokemonGame::*Pokemon` (Pokemon.h/cpp)
 

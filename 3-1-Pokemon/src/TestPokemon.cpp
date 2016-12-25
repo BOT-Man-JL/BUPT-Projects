@@ -1,3 +1,9 @@
+
+//
+// Pokemon Game - Pokemon Module Test
+// BOT Man, 2016
+//
+
 #include "Pokemon.h"
 #include <iostream>
 
