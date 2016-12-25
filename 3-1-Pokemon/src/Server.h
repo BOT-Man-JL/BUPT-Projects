@@ -360,7 +360,7 @@ namespace PokemonGame
 					{ "uid", user.uid },
 					{ "online", isOnline },
 					{ "wonrate", (double) user.won /
-					std::max (1u, user.won + user.los) }
+					std::max ((size_t) 1, user.won + user.los) }
 				};
 
 				auto badges = mapper.Query (badgeModel)
@@ -719,9 +719,12 @@ namespace PokemonGame
 						a.y + a.h <= worldMap.y + worldMap.h;
 				};
 
+				// Relay to walkaround issue on gcc 5.4
+				constexpr auto tickGap = RoomModel::tickGap;
+
 				// Update All Room Elements
 				while (TimePointHelper::TimeNow () -
-					   room.latestUpdate > RoomModel::tickGap)
+					   room.latestUpdate > tickGap)
 				{
 					std::vector<
 						std::pair<UserID, RoomModel::RigidBody>
@@ -783,7 +786,7 @@ namespace PokemonGame
 						if (!isHit) ++p;
 					}
 
-					room.latestUpdate += RoomModel::tickGap;
+					room.latestUpdate += tickGap;
 				}
 
 				// Handle only if this Player is alive
@@ -800,8 +803,8 @@ namespace PokemonGame
 					};
 
 					// Move
-					if (TimePointHelper::TimeNow () - player.latestUpdate >
-						RoomModel::tickGap)
+					if (TimePointHelper::TimeNow () -
+						player.latestUpdate > tickGap)
 					{
 						player.x += player.vx;
 						player.y += player.vy;
@@ -831,7 +834,7 @@ namespace PokemonGame
 					// Attack only if Not Defending
 					if (player.timeGap == 0 && !isDef && (atkX || atkY))
 					{
-						auto timeTick = (size_t) sqrt (
+						auto timeTick = (Pokemon::TimeGap) sqrt (
 							pokemon.GetAtk () * pokemon.GetTimeGap ());
 						fixVelocity (
 							atkX, atkY,

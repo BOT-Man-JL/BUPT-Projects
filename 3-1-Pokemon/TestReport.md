@@ -1,4 +1,4 @@
-﻿# 宠物小精灵对战游戏 测试报告
+﻿# 宠物小精灵多人对战游戏 测试报告
 
 > 2014211306 李俊宁 2014211288
 >
@@ -10,7 +10,7 @@
 
 #### a. 被测软件名称
 
-- 宠物小精灵对战游戏
+- 宠物小精灵多人对战游戏
 
 #### b. 版本
 
@@ -51,6 +51,8 @@
   - 小精灵对战
   - 小精灵升级
 - 测试环境：自动化测试
+  - Windows - MSVC 2015 (TestPokemon)
+  - Ubuntu - gcc 5.4 / clang 3.8 (TestPokemon)
 
 #### Test 2: Client Test
 
@@ -59,6 +61,8 @@
   - 查看用户/小精灵
   - 房间系统
 - 测试环境：自动化测试
+  - Windows - MSVC 2015 (Server / TestClient)
+  - Ubuntu - gcc 5.4 / clang 3.8 (Server / TestClient)
 
 #### Test 3: Integrate Test
 
@@ -68,6 +72,8 @@
   - 图形界面 房间系统
   - 图形界面 游戏 / 游戏结果
 - 测试环境：真实环境
+  - Windows - MSVC 2015 (Server / GUIClient)
+  - Ubuntu - gcc 5.4 / clang 3.8 (Server)
 
 ## 2. 结果
 

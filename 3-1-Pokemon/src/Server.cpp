@@ -9,7 +9,7 @@
 
 #define PORT 5768
 
-int main (int argc, char *argv[])
+int main ()
 {
 	std::cout << "Pokemon Server Started" << std::endl;
 

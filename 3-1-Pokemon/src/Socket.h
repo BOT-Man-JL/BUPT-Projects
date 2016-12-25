@@ -69,8 +69,10 @@ namespace BOT_Socket
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 #define CloseSocket close
+#define SOCKET int
 
 #endif // WIN32
 
@@ -89,7 +91,9 @@ namespace BOT_Socket
 			if (sock == -1)
 				throw std::runtime_error ("Can not create socket");
 
-			sockaddr_in sa { 0 };
+			sockaddr_in sa;
+			memset (&sa, 0, sizeof sa);
+
 			sa.sin_family = AF_INET;
 			sa.sin_port = htons (port);
 			sa.sin_addr.s_addr = htonl (INADDR_ANY);
@@ -220,7 +224,9 @@ namespace BOT_Socket
 		Client (const std::string &ipAddr,
 				unsigned short port)
 		{
-			sockaddr_in sa { 0 };
+			sockaddr_in sa;
+			memset (&sa, 0, sizeof sa);
+
 			sa.sin_family = AF_INET;
 			sa.sin_port = htons (port);
 			inet_pton (sa.sin_family,
@@ -236,7 +242,7 @@ namespace BOT_Socket
 				throw std::runtime_error ("Can not create socket");
 
 			// Connect
-			auto iTry = 0;
+			size_t iTry = 0;
 			for (; iTry < MAX_TRIAL; iTry++)
 			{
 				if (!connect (_sock, (sockaddr *) &sa, sizeof (sa)))
@@ -248,7 +254,7 @@ namespace BOT_Socket
 			{
 				CloseSocket (_sock);
 				_sock = -1;
-				throw std::runtime_error ("Failed at conncet");
+				throw std::runtime_error ("Failed to Connect to the Server");
 			}
 		}
 

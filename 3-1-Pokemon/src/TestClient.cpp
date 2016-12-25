@@ -12,7 +12,7 @@
 #define IPADDR "127.0.0.1"
 #define PORT 5768
 
-int main (int argc, char *argv[])
+int main ()
 {
 	std::cout << "Pokemon Client Test\n";
 

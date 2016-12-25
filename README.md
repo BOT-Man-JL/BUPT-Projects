@@ -45,6 +45,8 @@ together with [**buptczq**](https://github.com/buptczq/RE_Bupt_Computer_Network_
   - Student Management System
 - Java
   - Separated assignments
+- Operating System
+  - Reader-Writer Problem
 
 ## Misc
 

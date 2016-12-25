@@ -35,7 +35,7 @@ int main (int argc, char *argv[])
 
 	// Try until succeed to connect
 	std::unique_ptr<Client> client;
-	while (client)
+	while (!client)
 	{
 		try { client = std::make_unique<Client> (clientIP, PORT); }
 		catch (const std::exception &ex)
