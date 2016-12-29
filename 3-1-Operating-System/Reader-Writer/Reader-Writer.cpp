@@ -29,20 +29,16 @@ int main (int argc, char *argv[])
 {
 	try
 	{
-		if (argc < 3)
+		if (argc < 2)
 			throw std::runtime_error (
-				"Usage: reader-writer <Running Mode> <Input File>\n"
-				"Running Mode: 0 - Reader Preference, others - Writer Preference\n"
+				"Usage: reader-writer <Input File>\n"
 				"Input File: <index> <Role (R/W)> <Start Time> <Duration>");
 
-		// Running Mode
-		auto isReaderPreference = argv[1] == std::string ("0");
-
 		// Open file
-		std::ifstream ifs { argv[2] };
+		std::ifstream ifs { argv[1] };
 		if (!ifs.is_open ())
 			throw std::runtime_error (
-				std::string ("Could not Open ") + argv[2]);
+				std::string ("Could not Open ") + argv[1]);
 
 		// Input
 		std::vector<ThreadInfo> threadInfos;
@@ -93,48 +89,66 @@ int main (int argc, char *argv[])
 		// Algorithm Refer to:
 		// https://en.wikipedia.org/wiki/Readers%E2%80%93writers_problem
 
-		// Resource to R/W
-		CRITICAL_SECTION resource;
-		InitializeCriticalSection (&resource);
-
-		// Reader Count
-		CRITICAL_SECTION rmutex;
-		InitializeCriticalSection (&rmutex);
-		size_t read_count = 0;
-
 		//
 		// Reader Preference
 		// First readers-writers problem
 		//
 
-		auto reader_RP = [&] (const ThreadInfo &threadInfo)
+		auto readerPreference = [&] ()
 		{
-			task1 (threadInfo);
+			// Resource to R/W
+			auto resource = CreateSemaphore (NULL, 1, 1, NULL);
 
-			EnterCriticalSection (&rmutex);
-			read_count++;
-			if (read_count == 1)
-				EnterCriticalSection (&resource);
-			LeaveCriticalSection (&rmutex);
+			// Reader Count
+			auto rmutex = CreateSemaphore (NULL, 1, 1, NULL);
+			size_t read_count = 0;
 
-			task2 (threadInfo);
+			auto reader = [&] (const ThreadInfo &threadInfo)
+			{
+				task1 (threadInfo);
 
-			EnterCriticalSection (&rmutex);
-			read_count--;
-			if (read_count == 0)
-				LeaveCriticalSection (&resource);
-			LeaveCriticalSection (&rmutex);
-		};
+				WaitForSingleObject (rmutex, INFINITE);
+				read_count++;
+				if (read_count == 1)
+					WaitForSingleObject (resource, INFINITE);
+				ReleaseSemaphore (rmutex, 1, NULL);
 
-		auto writer_RP = [&] (const ThreadInfo &threadInfo)
-		{
-			task1 (threadInfo);
+				task2 (threadInfo);
 
-			EnterCriticalSection (&resource);
+				WaitForSingleObject (rmutex, INFINITE);
+				read_count--;
+				if (read_count == 0)
+					ReleaseSemaphore (resource, 1, NULL);
+				ReleaseSemaphore (rmutex, 1, NULL);
+			};
 
-			task2 (threadInfo);
+			auto writer = [&] (const ThreadInfo &threadInfo)
+			{
+				task1 (threadInfo);
 
-			LeaveCriticalSection (&resource);
+				WaitForSingleObject (resource, INFINITE);
+
+				task2 (threadInfo);
+
+				ReleaseSemaphore (resource, 1, NULL);
+			};
+
+			std::vector<std::thread> threads;
+			for (const auto &threadInfo : threadInfos)
+			{
+				if (threadInfo.isReader)
+					threads.emplace_back (
+						std::thread { reader, threadInfo });
+				else
+					threads.emplace_back (
+						std::thread { writer, threadInfo });
+			}
+
+			for (auto &thread : threads)
+				if (thread.joinable ()) thread.join ();
+
+			CloseHandle (resource);
+			CloseHandle (rmutex);
 		};
 
 		//
@@ -142,75 +156,70 @@ int main (int argc, char *argv[])
 		// Second readers-writers problem
 		//
 
-		// Reader trying to enter
-		CRITICAL_SECTION readTry;
-		InitializeCriticalSection (&readTry);
-
-		// Writer Count
-		CRITICAL_SECTION wmutex;
-		InitializeCriticalSection (&wmutex);
-		size_t write_count = 0;
-
-		auto reader_WP = [&] (const ThreadInfo &threadInfo)
+		auto writerPreference = [&] ()
 		{
-			task1 (threadInfo);
+			// Resource to R/W
+			auto resource = CreateSemaphore (NULL, 1, 1, NULL);
 
-			EnterCriticalSection (&readTry);
+			// Reader trying to enter
+			auto readTry = CreateSemaphore (NULL, 1, 1, NULL);
 
-			EnterCriticalSection (&rmutex);
-			read_count++;
-			if (read_count == 1)
-				EnterCriticalSection (&resource);
-			LeaveCriticalSection (&rmutex);
+			// Reader Count
+			auto rmutex = CreateSemaphore (NULL, 1, 1, NULL);
+			size_t read_count = 0;
 
-			LeaveCriticalSection (&readTry);
+			// Writer Count
+			auto wmutex = CreateSemaphore (NULL, 1, 1, NULL);
+			size_t write_count = 0;
 
-			task2 (threadInfo);
-
-			EnterCriticalSection (&rmutex);
-			read_count--;
-			if (read_count == 0)
-				LeaveCriticalSection (&resource);
-			LeaveCriticalSection (&rmutex);
-		};
-
-		auto writer_WP = [&] (const ThreadInfo &threadInfo)
-		{
-			task1 (threadInfo);
-
-			EnterCriticalSection (&wmutex);
-			write_count++;
-			if (write_count == 1)
-				EnterCriticalSection (&readTry);
-			LeaveCriticalSection (&wmutex);
-
-			EnterCriticalSection (&resource);
-
-			task2 (threadInfo);
-
-			LeaveCriticalSection (&resource);
-
-			EnterCriticalSection (&wmutex);
-			write_count--;
-			if (write_count == 0)
-				LeaveCriticalSection (&readTry);
-			LeaveCriticalSection (&wmutex);
-		};
-
-		// Start
-		std::vector<std::thread> threads;
-		for (const auto &threadInfo : threadInfos)
-		{
-			if (isReaderPreference)
+			auto reader_WP = [&] (const ThreadInfo &threadInfo)
 			{
-				if (threadInfo.isReader)
-					threads.emplace_back (
-						std::thread { reader_RP, threadInfo });
-				else
-					threads.emplace_back (
-						std::thread { writer_RP, threadInfo });
-			}
-			else
+				task1 (threadInfo);
+
+				WaitForSingleObject (readTry, INFINITE);
+
+				WaitForSingleObject (rmutex, INFINITE);
+				read_count++;
+				if (read_count == 1)
+					WaitForSingleObject (resource, INFINITE);
+				ReleaseSemaphore (rmutex, 1, NULL);
+
+				ReleaseSemaphore (readTry, 1, NULL);
+
+				task2 (threadInfo);
+
+				WaitForSingleObject (rmutex, INFINITE);
+				read_count--;
+				if (read_count == 0)
+					ReleaseSemaphore (resource, 1, NULL);
+				ReleaseSemaphore (rmutex, 1, NULL);
+			};
+
+			auto writer_WP = [&] (const ThreadInfo &threadInfo)
+			{
+				task1 (threadInfo);
+
+				WaitForSingleObject (wmutex, INFINITE);
+				write_count++;
+				if (write_count == 1)
+					WaitForSingleObject (readTry, INFINITE);
+				ReleaseSemaphore (wmutex, 1, NULL);
+
+				WaitForSingleObject (resource, INFINITE);
+
+				task2 (threadInfo);
+
+				ReleaseSemaphore (resource, 1, NULL);
+
+				WaitForSingleObject (wmutex, INFINITE);
+				write_count--;
+				if (write_count == 0)
+					ReleaseSemaphore (readTry, 1, NULL);
+				ReleaseSemaphore (wmutex, 1, NULL);
+			};
+
+			std::vector<std::thread> threads;
+			for (const auto &threadInfo : threadInfos)
 			{
 				if (threadInfo.isReader)
 					threads.emplace_back (
@@ -219,12 +228,20 @@ int main (int argc, char *argv[])
 					threads.emplace_back (
 						std::thread { writer_WP, threadInfo });
 			}
-		}
 
-		// Join
-		for (auto &thread : threads)
-			if (thread.joinable ()) thread.join ();
+			for (auto &thread : threads)
+				if (thread.joinable ()) thread.join ();
 
+			CloseHandle (resource);
+			CloseHandle (readTry);
+			CloseHandle (rmutex);
+			CloseHandle (wmutex);
+		};
+
+		std::cout << "Reader Preference" << std::endl;
+		readerPreference ();
+		std::cout << "Writer Preference" << std::endl;
+		writerPreference ();
 		std::cout << "End" << std::endl;
 	}
 	catch (const std::exception &ex)
