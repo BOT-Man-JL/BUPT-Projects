@@ -26,7 +26,11 @@ public class _14211288_Àî¿¡Äþ_7_ShoppingCartUI extends JFrame implements _142112
 		setDefaultCloseOperation (HIDE_ON_CLOSE);
 	}
 
-    @Override
+	//
+	// Note that: I reject to use previous interface
+	//
+
+	@Override
 	public void update ()
 	{
 		ArrayList<_14211288_Àî¿¡Äþ_7_SaleLineItem> items =  sale.getItems ();

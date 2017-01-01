@@ -66,7 +66,7 @@ public class _14211288_李俊宁_7_Controller
 	public void buyBook (String isbn, int copies) throws Exception
 	{
 		if (copies < 0)
-			throw new Exception ("至少买一本书");
+			throw new Exception ("至少买 0 本书");
 
 		_14211288_李俊宁_7_BookSpecification book =
 			bookCatalog.getBook (isbn);
