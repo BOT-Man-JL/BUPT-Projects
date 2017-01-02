@@ -17,7 +17,6 @@ public class _14211288_Àî¿¡Äş_7_Sale implements _14211288_Àî¿¡Äş_7_Subject
 	public void addItem (_14211288_Àî¿¡Äş_7_SaleLineItem item)
 	{
 		items.add (item);
-		notifyObservers ();
 	}
 
 	public ArrayList<_14211288_Àî¿¡Äş_7_SaleLineItem> getItems ()

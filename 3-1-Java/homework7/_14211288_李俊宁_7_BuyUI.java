@@ -110,13 +110,13 @@ public class _14211288_Àî¿¡Äþ_7_BuyUI extends JFrame
 		// Handle Close Window
 		addWindowListener (new WindowAdapter ()
 		{
-            @Override
-            public void windowClosing (WindowEvent e)
+			@Override
+			public void windowClosing (WindowEvent e)
 			{
 				disposeShoppingCart ();
 				super.windowClosing (e);
-            }
-        });
+			}
+		});
 	}
 
 	private void disposeShoppingCart ()

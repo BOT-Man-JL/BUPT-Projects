@@ -79,6 +79,7 @@ public class _14211288_Àî¿¡Äþ_7_Controller
 					.getPricingStrategy (book.getCategory ())
 			)
 		);
+		sale.notifyObservers ();
 	}
 
 	public _14211288_Àî¿¡Äþ_7_Sale getSale ()
