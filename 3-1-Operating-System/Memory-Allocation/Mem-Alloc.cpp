@@ -1,6 +1,10 @@
 
 #include <array>
+#include <string>
+#include <unordered_map>
 #include <iostream>
+#include <fstream>
+#include <iomanip>
 
 #include <thread>
 #include <Windows.h>
@@ -11,17 +15,73 @@ struct Trace
 	long size;
 };
 
+#define PAGE_UNKNOWN 0x0
+#define MEM_UNKNOWN_TYPE 0x0
+
+#define EXTRACT(VAR) {VAR, #VAR}
+
 int main (int argc, char *argv[])
 {
 	try
 	{
+		// Shared info
+		const std::vector<std::pair<DWORD, std::string>> protectArray
+		{
+			EXTRACT (PAGE_READONLY),
+			EXTRACT (PAGE_READWRITE),
+			EXTRACT (PAGE_EXECUTE),
+			EXTRACT (PAGE_EXECUTE_READ),
+			EXTRACT (PAGE_EXECUTE_READWRITE)
+		};
+		std::vector<Trace> traceInfo (protectArray.size ());
+
 		size_t outputCount = 0;
 		auto outputStatus = [&] (std::ostream &os)
 		{
-			os << "\nOutput Status " << outputCount++ << ":\n";
+			constexpr auto outputAlignment = 25;
+			const static std::vector<std::string> actionArray
+			{
+				"Reverse", "Commit", "Lock", "Unlock", "Decommit", "Release"
+			};
+			const static std::unordered_map<DWORD, std::string> protectionMap
+			{
+				EXTRACT (PAGE_UNKNOWN),
+				EXTRACT (PAGE_NOACCESS),
+				EXTRACT (PAGE_READONLY),
+				EXTRACT (PAGE_READWRITE),
+				EXTRACT (PAGE_WRITECOPY),
+				EXTRACT (PAGE_EXECUTE),
+				EXTRACT (PAGE_EXECUTE_READ),
+				EXTRACT (PAGE_EXECUTE_READWRITE),
+				EXTRACT (PAGE_EXECUTE_WRITECOPY),
+				EXTRACT (PAGE_GUARD),
+				EXTRACT (PAGE_NOCACHE),
+				EXTRACT (PAGE_WRITECOMBINE),
+				EXTRACT (PAGE_REVERT_TO_FILE_MAP)
+			};
+			const static std::unordered_map<DWORD, std::string> stateMap
+			{
+				EXTRACT (MEM_COMMIT),
+				EXTRACT (MEM_RESERVE),
+				EXTRACT (MEM_FREE)
+			};
+			const static std::unordered_map<DWORD, std::string> typeMap
+			{
+				EXTRACT (MEM_UNKNOWN_TYPE),
+				EXTRACT (MEM_IMAGE),
+				EXTRACT (MEM_MAPPED),
+				EXTRACT (MEM_PRIVATE)
+			};
 
 			SYSTEM_INFO info;
 			GetSystemInfo (&info);
+			if (!outputCount)
+				os << std::setw (outputAlignment) << "PageSize " << info.dwPageSize << std::endl;
+
+			if (outputCount % actionArray.size () == 0)
+				os << "\nCase: " << protectArray[outputCount / actionArray.size ()].second << std::endl;
+			os << actionArray[outputCount % actionArray.size ()] << std::endl;
+
 			//os << "dwActiveProcessorMask" << '\t' << info.dwActiveProcessorMask << std::endl;
 			//os << "dwAllocationGranularity" << '\t' << info.dwAllocationGranularity << std::endl;
 			//os << "dwNumberOfProcessors" << '\t' << info.dwNumberOfProcessors << std::endl;
@@ -38,26 +98,32 @@ int main (int argc, char *argv[])
 
 			MEMORYSTATUS status;
 			GlobalMemoryStatus (&status);
-			os << "dwAvailPageFile" << '\t' << status.dwAvailPageFile << std::endl;
-			os << "dwAvailPhys" << '\t' << status.dwAvailPhys << std::endl;
-			os << "dwAvailVirtual" << '\t' << status.dwAvailVirtual << std::endl;
-			os << "dwLength" << '\t' << status.dwLength << std::endl;
-			os << "dwMemoryLoad" << '\t' << status.dwMemoryLoad << std::endl;
-			os << "dwTotalPageFile" << '\t' << status.dwTotalPageFile << std::endl;
-			os << "dwTotalPhys" << '\t' << status.dwTotalPhys << std::endl;
-			os << "dwTotalVirtual" << '\t' << status.dwTotalVirtual << std::endl;
-			os << std::endl;
-
-			//MEMORY_BASIC_INFORMATION mem;
-			//VirtualQuery (info.lpMinimumApplicationAddress, &mem, sizeof (MEMORY_BASIC_INFORMATION));
-			//os << "AllocationBase" << '\t' << mem.AllocationBase << std::endl;
-			//os << "AllocationProtect" << '\t' << mem.AllocationProtect << std::endl;
-			//os << "BaseAddress" << '\t' << mem.BaseAddress << std::endl;
-			//os << "Protect" << '\t' << mem.Protect << std::endl;
-			//os << "RegionSize" << '\t' << mem.RegionSize << std::endl;
-			//os << "State" << '\t' << mem.State << std::endl;
-			//os << "Type" << '\t' << mem.Type << std::endl;
+			//os << "dwAvailPageFile" << '\t' << status.dwAvailPageFile << std::endl;
+			//os << "dwAvailPhys" << '\t' << status.dwAvailPhys << std::endl;
+			//os << "dwAvailVirtual" << '\t' << status.dwAvailVirtual << std::endl;
+			//os << "dwLength" << '\t' << status.dwLength << std::endl;
+			//os << "dwMemoryLoad" << '\t' << status.dwMemoryLoad << std::endl;
+			//os << "dwTotalPageFile" << '\t' << status.dwTotalPageFile << std::endl;
+			//os << "dwTotalPhys" << '\t' << status.dwTotalPhys << std::endl;
+			//os << "dwTotalVirtual" << '\t' << status.dwTotalVirtual << std::endl;
 			//os << std::endl;
+
+			// Reference:
+			// https://msdn.microsoft.com/en-us/library/windows/desktop/aa366902(v=vs.85).aspx
+			// https://msdn.microsoft.com/en-us/library/windows/desktop/aa366775(v=vs.85).aspx
+
+			MEMORY_BASIC_INFORMATION mem;
+			//VirtualQuery (info.lpMinimumApplicationAddress, &mem, sizeof (MEMORY_BASIC_INFORMATION));
+			VirtualQuery (traceInfo[outputCount / actionArray.size ()].start, &mem, sizeof (MEMORY_BASIC_INFORMATION));
+			os << std::setw (outputAlignment) << "BaseAddress " << mem.BaseAddress << std::endl;
+			os << std::setw (outputAlignment) << "AllocationBase " << mem.AllocationBase << std::endl;
+			os << std::setw (outputAlignment) << "AllocationProtect " << protectionMap.at (mem.AllocationProtect) << std::endl;
+			os << std::setw (outputAlignment) << "RegionSize / PageSize " << mem.RegionSize / info.dwPageSize << std::endl;
+			os << std::setw (outputAlignment) << "Protect " << protectionMap.at (mem.Protect) << std::endl;
+			os << std::setw (outputAlignment) << "State " << stateMap.at (mem.State) << std::endl;
+			os << std::setw (outputAlignment) << "Type " << typeMap.at (mem.Type) << std::endl;
+
+			outputCount++;
 		};
 
 		auto outputError = [] (std::ostream &os)
@@ -99,8 +165,8 @@ int main (int argc, char *argv[])
 				os << "Could not Get Error Msg for " << dwError << std::endl;
 		};
 
-		auto semaphoreAlloc = CreateSemaphore (NULL, 0, 1, NULL);
-		auto semaphoreTrack = CreateSemaphore (NULL, 1, 1, NULL);
+		auto semaphoreAlloc = CreateSemaphore (NULL, 1, 1, NULL);
+		auto semaphoreTrack = CreateSemaphore (NULL, 0, 1, NULL);
 		auto isEndTrack = false;
 
 		auto threadAlloc = std::thread ([&] ()
@@ -108,84 +174,78 @@ int main (int argc, char *argv[])
 			SYSTEM_INFO info;
 			GetSystemInfo (&info);
 
-			std::array<int, 5> protectionMap
+			size_t index = 0;
+			for (const auto protection : protectArray)
 			{
-				PAGE_READONLY,
-				PAGE_READWRITE,
-				PAGE_EXECUTE,
-				PAGE_EXECUTE_READ,
-				PAGE_EXECUTE_READWRITE
-			};
-
-			auto foreachProtection = [&] (auto callback)
-			{
-				size_t index = 0;
-				for (const auto protection : protectionMap)
+				auto syncWrapper = [&] (auto callback)
 				{
 					WaitForSingleObject (semaphoreAlloc, INFINITE);
-					callback (index++, protection);
+					callback ();
 					ReleaseSemaphore (semaphoreTrack, 1, NULL);
-				}
-			};
+				};
 
-			std::array<Trace, 5> traceArray;
+				// Reference:
+				// https://msdn.microsoft.com/en-us/library/windows/desktop/aa366887(v=vs.85).aspx
 
-			// Reverse
-			foreachProtection ([&] (size_t index, int)
-			{
-				traceArray[index].size = (index + 1) * info.dwPageSize;
-				traceArray[index].start = VirtualAlloc (NULL, traceArray[index].size,
-														MEM_RESERVE, PAGE_NOACCESS);
-			});
+				// Reverse
+				syncWrapper ([&] ()
+				{
+					traceInfo[index].size = (index + 1) * info.dwPageSize;
+					traceInfo[index].start = VirtualAlloc (NULL, traceInfo[index].size,
+														   MEM_RESERVE, PAGE_NOACCESS);
+				});
 
-			// Commit
-			foreachProtection ([&] (size_t index, int protection)
-			{
-				traceArray[index].start = VirtualAlloc (
-					traceArray[index].start, traceArray[index].size, MEM_COMMIT, protection);
-			});
+				// Commit
+				syncWrapper ([&] ()
+				{
+					traceInfo[index].start = VirtualAlloc (traceInfo[index].start,
+														   traceInfo[index].size,
+														   MEM_COMMIT, protection.first);
+				});
 
-			// Lock
-			foreachProtection ([&] (size_t index, int)
-			{
-				if (!VirtualLock (traceArray[index].start,
-								  traceArray[index].size))
-					outputError (std::cout);
-			});
+				// Lock
+				syncWrapper ([&] ()
+				{
+					if (!VirtualLock (traceInfo[index].start,
+									  traceInfo[index].size))
+						outputError (std::cout);
+				});
 
-			// Unlock
-			foreachProtection ([&] (size_t index, int)
-			{
-				if (!VirtualUnlock (traceArray[index].start,
-									traceArray[index].size))
-					outputError (std::cout);
-			});
+				// Unlock
+				syncWrapper ([&] ()
+				{
+					if (!VirtualUnlock (traceInfo[index].start,
+										traceInfo[index].size))
+						outputError (std::cout);
+				});
 
-			// Decommit
-			foreachProtection ([&] (size_t index, int)
-			{
-				if (!VirtualFree (traceArray[index].start,
-								  traceArray[index].size, MEM_DECOMMIT))
-					outputError (std::cout);
-			});
+				// Decommit
+				syncWrapper ([&] ()
+				{
+					if (!VirtualFree (traceInfo[index].start,
+									  traceInfo[index].size, MEM_DECOMMIT))
+						outputError (std::cout);
+				});
 
-			// Release
-			foreachProtection ([&] (size_t index, int)
-			{
-				if (!VirtualFree (traceArray[index].start, 0,
-								  MEM_RELEASE))
-					outputError (std::cout);
-			});
+				// Release
+				syncWrapper ([&] ()
+				{
+					if (!VirtualFree (traceInfo[index].start, 0, MEM_RELEASE))
+						outputError (std::cout);
+				});
 
+				index++;
+			}
 			isEndTrack = true;
 		});
 
 		auto threadTrack = std::thread ([&] ()
 		{
+			std::ofstream ofs ("MemState.log");
 			while (!isEndTrack)
 			{
 				WaitForSingleObject (semaphoreTrack, INFINITE);
-				outputStatus (std::cout);
+				outputStatus (ofs);
 				ReleaseSemaphore (semaphoreAlloc, 1, NULL);
 			}
 		});
@@ -201,6 +261,5 @@ int main (int argc, char *argv[])
 		std::cout << ex.what () << std::endl;
 	}
 
-	getchar ();
 	return 0;
 }
