@@ -47,6 +47,6 @@ without entering **Password** every time.
   - Copy the *appxbundle* file to Your Mobile
   - Open *appxbundle* on Your Mobile
 - If you don't wanna Compile it by yourself,
-  you can **Download** the [Release](http://pan.baidu.com/s/1bLRh98)
+  you can **Download** the [Release](http://pan.baidu.com/s/1bo4qeuj)
   :wink:
 - And Enjoy it :smile:

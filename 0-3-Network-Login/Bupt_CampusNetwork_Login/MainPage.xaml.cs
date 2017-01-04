@@ -47,7 +47,7 @@ namespace Bupt_CampusNetwork_Login
 				if (url != "")
 					await Module.Login(url, model.id, model.password);
 				else
-					Module.Toast("", "Well Done!", "Login already :-)");
+					Module.Toast("", "Well Done!", "Connected already :-)");
 			}
 			catch (Exception)
 			{
@@ -65,7 +65,7 @@ namespace Bupt_CampusNetwork_Login
 				var url = await Module.GetUrl();
 				if (url != "")
 					await Module.Login(url, model.id, model.password);
-				// else Login already
+				// else Connected already
 			}
 			catch (Exception)
 			{

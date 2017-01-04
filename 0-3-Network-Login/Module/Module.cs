@@ -54,31 +54,31 @@ namespace Bupt_CampusNetwork_Login_Module
 					var result = await client.PostAsync(url, payload);
 					result.EnsureSuccessStatusCode();
 
-					var htmlPage = await result.Content.ReadAsStringAsync();
-					var charset = Regex.Match(htmlPage, "charset=(.*?)\">").Groups[1].Value;
-
 					using (var stream = await result.Content.ReadAsStreamAsync())
 					{
+						// Get charset
+						var htmlPage = new StreamReader(stream).ReadToEnd();
+						var charset = Regex.Match(htmlPage, "charset=(.*?)\">").Groups[1].Value;
+
+						stream.Seek(0, SeekOrigin.Begin);
+
+						// Get content
 						Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 						var reader = new StreamReader(stream, Encoding.GetEncoding(charset));
 						htmlPage = reader.ReadToEnd();
-					}
 
-					if (_GetTitle(htmlPage) == okTitle)
-						return okTitle;
-					else
-						return "";
+						// Match title
+						if (Regex.Match(htmlPage, "<title>(.*?)</title>").Groups[1].Value == okTitle)
+							return okTitle;
+						else
+							return "";
+					}
 				}
 				catch (Exception e)
 				{
 					return e.Message;
 				}
 			}
-		}
-
-		private static string _GetTitle(string htmlPage)
-		{
-			return Regex.Match(htmlPage, "<title>(.*?)</title>").Groups[1].Value;
 		}
 
 		public static string okTitle = "登录成功窗";
