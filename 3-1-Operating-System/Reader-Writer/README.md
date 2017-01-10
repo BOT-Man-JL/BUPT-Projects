@@ -34,6 +34,12 @@
 5 W 5.1 3
 ```
 
+## 程序
+
+由于实验样例程序不能运行，故使用 Modern C++ 重新编写。
+
+[`Reader-Writer.cpp`](Reader-Writer.cpp)
+
 ## 算法
 
 ### 读者优先

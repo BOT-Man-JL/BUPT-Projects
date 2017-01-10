@@ -1,6 +1,6 @@
 ﻿# 宠物小精灵多人对战游戏
 
-> 2014211306 李俊宁 2014211288
+> *by BOT Man, 2016*
 
 - 参考
   *[CppCoreGuidelines](https://github.com/isocpp/CppCoreGuidelines)*，
