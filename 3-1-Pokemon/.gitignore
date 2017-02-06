@@ -214,3 +214,4 @@ ModelManifest.xml
 *.db
 sqlite3.h
 sqlite3.c
+json.hpp
