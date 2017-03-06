@@ -47,7 +47,7 @@
 #define SZIP_BUF_SIZE 128u
 #define SZDOMAINNAME_BUF_SIZE 512u
 
-#define SZIP_BUF_SIZE_2 256u
+#define SZDOMAINNAME_BUF_SIZE_2 256u
 #define PACKET_BUF_SIZE 4096u
 #define RECORD_COUNT 4096u
 #define TIMEOUT 8u
@@ -65,10 +65,10 @@ typedef struct
 	time_t timestamp;
 } Record;
 
-WORD curId;
 int debugLevel;
-struct sockaddr_in saNameServer;
+WORD curId;
 SOCKET sock;
+struct sockaddr_in saNameServer;
 BYTE *pbTable;
 
 void InitWSA ()
@@ -94,43 +94,6 @@ int WSAGetLastError ()
 
 // Convert 'szStr to lower-case
 void ToLower (char *szStr) { for (; *szStr; ++szStr) if (*szStr >= 'A' && *szStr <= 'Z') *szStr = *szStr + ('a' - 'A'); }
-
-// Print traffic info
-// type: 1 => Simplified, 2 => Comprehensive
-void PrintTraffic (const char *szPrefix, struct sockaddr_in *sa, BYTE *pbBuf, int bufLen, DWORD mode)
-{
-	if (debugLevel >= 2)
-	{
-		// Print prefix, ip addr, port and buffer length
-		printf ("%s %s:%d (%d bytes) ", szPrefix, inet_ntoa (sa->sin_addr), ntohs (sa->sin_port), bufLen);
-
-		// mode 1 is simplified logging
-		if (mode == 2) return;
-
-		// Print raw buffer
-		for (int i = 0; i < bufLen; ++i) printf (" %02x", pbBuf[i]);
-
-		// Print packet content
-		WORD *pwBuf = (WORD *) pbBuf;
-		DWORD flags = ntohs (pwBuf[1]);
-
-		printf ("\n\tID %04x, QR %d, OPCODE %d, AA %d, TC %d, RD %d, RA %d, Z %d, RCODE %d\n"
-				"\tQDCOUNT %u, ANCOUNT %u, NSCOUNT %u, ARCOUNT %u\n",
-				ntohs (pwBuf[0]),
-				(int) ((flags & 0x8000) >> 15),
-				(int) ((flags & 0x7800) >> 11),
-				(int) ((flags & 0x0400) >> 10),
-				(int) ((flags & 0x0200) >> 9),
-				(int) ((flags & 0x0100) >> 8),
-				(int) ((flags & 0x0080) >> 7),
-				(int) ((flags & 0x0070) >> 4),
-				(int) ((flags & 0x000F) >> 0),
-				ntohs (pwBuf[2]),
-				ntohs (pwBuf[3]),
-				ntohs (pwBuf[4]),
-				ntohs (pwBuf[5]));
-	}
-}
 
 // Load Table from 'szFileName
 void LoadTable (const char *szFileName)
@@ -193,18 +156,55 @@ void LoadTable (const char *szFileName)
 	printf ("%d names, occupy %d bytes memory\n", recordCount, memSize);
 }
 
+// Print traffic info
+// type: 1 => Simplified, 2 => Comprehensive
+void PrintTraffic (const char *szPrefix, struct sockaddr_in *sa, BYTE *pbBuf, int bufLen, DWORD mode)
+{
+	if (debugLevel >= 2)
+	{
+		// Print prefix, ip addr, port and buffer length
+		printf ("%s %s:%d (%d bytes) ", szPrefix, inet_ntoa (sa->sin_addr), ntohs (sa->sin_port), bufLen);
+
+		// mode 1 is simplified logging
+		if (mode == 2) return;
+
+		// Print raw buffer
+		for (int i = 0; i < bufLen; ++i) printf (" %02x", pbBuf[i]);
+
+		// Print packet content
+		WORD *pwBuf = (WORD *) pbBuf;
+		DWORD flags = ntohs (pwBuf[1]);
+
+		printf ("\n\tID %04x, QR %d, OPCODE %d, AA %d, TC %d, RD %d, RA %d, Z %d, RCODE %d\n"
+				"\tQDCOUNT %u, ANCOUNT %u, NSCOUNT %u, ARCOUNT %u\n",
+				ntohs (pwBuf[0]),
+				(int) ((flags & 0x8000) >> 15),
+				(int) ((flags & 0x7800) >> 11),
+				(int) ((flags & 0x0400) >> 10),
+				(int) ((flags & 0x0200) >> 9),
+				(int) ((flags & 0x0100) >> 8),
+				(int) ((flags & 0x0080) >> 7),
+				(int) ((flags & 0x0070) >> 4),
+				(int) ((flags & 0x000F) >> 0),
+				ntohs (pwBuf[2]),
+				ntohs (pwBuf[3]),
+				ntohs (pwBuf[4]),
+				ntohs (pwBuf[5]));
+	}
+}
+
 // Set anwser to buffer
 DWORD SetAnswer (DWORD *pdIp, BYTE *pbBuf, DWORD bufLen)
 {
 	WORD *pwBuf = (WORD *) pbBuf;
 
-	// Set QR (Response) & AA (Authoritative answer) & RA (Recursion Available) 
+	// Set QR (Response) & AA (Authoritative answer) & RA (Recursion Available)
 	pwBuf[1] = pwBuf[1] | htons (0x8480);
 
-	// Case: Valid IP
-	if (pdIp[0])
+	// Case: NOT 0.0.0.0
+	if (pdIp[0] != INADDR_ANY)
 	{
-		pwBuf[3] = htons (1u);  // anwser count: 1
+		pwBuf[3] = htons (1u);  // ANCOUNT: 1
 
 		char *szBufEnd = (char *) pbBuf + bufLen;
 		strcpy (szBufEnd, (char *) &pbBuf[6 * sizeof (WORD)]);  // name: (same as query)
@@ -234,17 +234,15 @@ DWORD SetAnswer (DWORD *pdIp, BYTE *pbBuf, DWORD bufLen)
 // Handle bussiness logic
 void Run ()
 {
-	BYTE buf[PACKET_BUF_SIZE];
-	char szIp[SZIP_BUF_SIZE_2];
-
 	static Record records[RECORD_COUNT];
 	static unsigned acceptCount;
 
 	// Recieve a packet
+	BYTE buf[PACKET_BUF_SIZE];
 	struct sockaddr_in saFrom;
 	socklen_t saLen = sizeof (struct sockaddr_in);
 
-	// Note that bufLen must be signed type
+	// Note that: bufLen must be signed type!
 	int bufLen = recvfrom (sock, buf, PACKET_BUF_SIZE, 0, (struct sockaddr *) &saFrom, &saLen);
 
 	// Case: Failed to recv
@@ -264,7 +262,7 @@ void Run ()
 
 	WORD *pwBuf = (WORD *) buf;
 
-	// Case: Response Message from Name Server (QR == 1)
+	// Case: Response message from Name Server (QR == 1)
 	if (pwBuf[1] & htons (0x8000))
 	{
 		// Find an entry to response to client without timeout
@@ -294,7 +292,7 @@ void Run ()
 	}
 
 	// Case: Forward this packet
-	//   - Not a Query
+	//   - Not a simple Query (QDCOUNT != 1)
 	//   - Non-standard Query (OPCODE != 0) || has-Authoritative-Answer (AA == 1)
 	//   - Anwser not found in Table
 	if (ntohs (pwBuf[2]) != 1 || pwBuf[1] & htons (0x7800))
@@ -337,20 +335,21 @@ void Run ()
 		return;
 	}
 
-	// Case: It's time to play a man-in-middle :-)
+	// Fall through
 
-	// Retrieve IP address
-	char *szIpCur = szIp;
+	// Retrieve domain name
+	char szDomainName[SZDOMAINNAME_BUF_SIZE_2];
+	char *szDomainNameCur = szDomainName;
 	BYTE *pbSegBeg = buf + 6 * sizeof (WORD) + 1;
 	BYTE segSize = buf[6 * sizeof (WORD)];
 
 	while (segSize)
 	{
 		// Copy seg
-		memcpy (szIpCur, pbSegBeg, segSize);
+		memcpy (szDomainNameCur, pbSegBeg, segSize);
 
 		// Move to next seg
-		szIpCur += segSize;
+		szDomainNameCur += segSize;
 		pbSegBeg += segSize;
 
 		// Check next seg
@@ -359,13 +358,13 @@ void Run ()
 		if (!segSize) break;
 
 		// Copy dot
-		szIpCur[0] = '.';
-		++szIpCur;
+		szDomainNameCur[0] = '.';
+		++szDomainNameCur;
 	}
 
-	// Truncate and modify szIp
-	szIpCur[0] = 0;
-	ToLower (szIp);
+	// Truncate and modify domain name
+	szDomainNameCur[0] = 0;
+	ToLower (szDomainName);
 
 	// Retrieve type and class
 	WORD *pwTypeClass = (WORD *) pbSegBeg;
@@ -375,24 +374,24 @@ void Run ()
 
 	// Check if Addr found in Table, and Get the corresponding position
 	DWORD isAddrFound = 0;
-	char *szEntryBeg = (char *) pbTable;
+	BYTE *pEntry = pbTable;
 
 	// Only handle IPv4 message when table is not empty
 	if (type == 1 && clas == 1 && pbTable[0])
 	{
-		while (strcmp (szEntryBeg, szIp) != 0)
+		while (strcmp ((char *) pEntry, szDomainName) != 0)
 		{
-			DWORD addrSize = strlen (szEntryBeg) + 1;
-			if (!szEntryBeg[addrSize + 4])
+			DWORD addrSize = strlen ((char *) pEntry) + 1;
+			if (!pEntry[addrSize + 4])
 				goto labelNotFound;
-			szEntryBeg += addrSize + 4;
+			pEntry += addrSize + 4;
 		}
 		isAddrFound = 1u;
 	}
 
 labelNotFound:
 	if (debugLevel >= 1)
-		printf ("\t%6.3f  %2u:%c %s", clock () * 0.001, acceptCount++, isAddrFound ? '*' : ' ', szIp);
+		printf ("\t%6.3f  %2u:%c %s", clock () * 0.001, acceptCount++, isAddrFound ? '*' : ' ', szDomainName);
 	if (debugLevel >= 2 - (type != 1))
 		printf (", TYPE %u, CLASS %u", type, clas);
 	if (debugLevel >= 1)
@@ -402,10 +401,11 @@ labelNotFound:
 	if (!isAddrFound)
 		goto labelForward;
 
-	// Case: Find the anwser on hosts
+	// Case: Found the anwser on hosts
+	//   It's time to play a man-in-middle :-)
 
-	// Set Answer
-	DWORD newBufLen = SetAnswer ((DWORD *) &szEntryBeg[strlen (szEntryBeg) + 1], buf, bufLen);
+	// Set Answer, and Get 'newBufLen
+	DWORD newBufLen = SetAnswer ((DWORD *) &pEntry[strlen ((char *) pEntry) + 1], buf, bufLen);
 
 	// Response to Client
 	PrintTraffic ("SEND to", &saFrom, buf, newBufLen, 1);
@@ -427,7 +427,7 @@ int main (int argc, const char **argv, const char **envp)
 	const char *szIp = "202.106.0.20";
 	const char *szFileName = "dnsrelay.txt";
 
-	// Check Args (Original Version)
+	// Load Config
 	int iNextArg = 1;
 	if (iNextArg < argc)
 	{
@@ -459,7 +459,7 @@ int main (int argc, const char **argv, const char **envp)
 	// Init WSA
 	InitWSA ();
 
-	// Config Name Server
+	// Setup Name Server
 	saNameServer.sin_family = AF_INET;
 	saNameServer.sin_port = htons (PORT);
 	saNameServer.sin_addr.s_addr = inet_addr (szIp);
