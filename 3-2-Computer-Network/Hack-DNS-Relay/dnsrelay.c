@@ -243,7 +243,7 @@ void Run ()
 	socklen_t saLen = sizeof (struct sockaddr_in);
 
 	// Note that: bufLen must be signed type!
-	int bufLen = recvfrom (sock, buf, PACKET_BUF_SIZE, 0, (struct sockaddr *) &saFrom, &saLen);
+	int bufLen = recvfrom (sock, (char *) buf, PACKET_BUF_SIZE, 0, (struct sockaddr *) &saFrom, &saLen);
 
 	// Case: Failed to recv
 	if (bufLen <= 0)
@@ -286,7 +286,7 @@ void Run ()
 		PrintTraffic ("SEND to", &(pRecord->sa), buf, bufLen, 2);
 		if (debugLevel >= 2)
 			printf ("[ID %04x -> %04x]\n", pRecord->from, pRecord->to);
-		if (sendto (sock, buf, bufLen, 0, (struct sockaddr *) &(pRecord->sa), sizeof (struct sockaddr_in)) < 0 && debugLevel >= 1)
+		if (sendto (sock, (char *) buf, bufLen, 0, (struct sockaddr *) &(pRecord->sa), sizeof (struct sockaddr_in)) < 0 && debugLevel >= 1)
 			printf ("Failed to send RESPONSE to client, error %d\n", WSAGetLastError ());
 		return;
 	}
@@ -330,7 +330,7 @@ void Run ()
 		PrintTraffic ("SEND to", &saNameServer, buf, bufLen, 2);
 		if (debugLevel >= 2)
 			printf ("[ID %04x->%04x]\n", pRecord->from, pRecord->to);
-		if (sendto (sock, buf, bufLen, 0, (struct sockaddr *) &saNameServer, sizeof (struct sockaddr_in)) < 0 && debugLevel >= 1)
+		if (sendto (sock, (char *) buf, bufLen, 0, (struct sockaddr *) &saNameServer, sizeof (struct sockaddr_in)) < 0 && debugLevel >= 1)
 			printf ("Failed to send QUERY to nameserver, Error %d\n", WSAGetLastError ());
 		return;
 	}
@@ -409,7 +409,7 @@ labelNotFound:
 
 	// Response to Client
 	PrintTraffic ("SEND to", &saFrom, buf, newBufLen, 1);
-	if (sendto (sock, buf, newBufLen, 0, (struct sockaddr *) &saFrom, sizeof (struct sockaddr_in)) < 0 && debugLevel >= 1)
+	if (sendto (sock, (char *) buf, newBufLen, 0, (struct sockaddr *) &saFrom, sizeof (struct sockaddr_in)) < 0 && debugLevel >= 1)
 		printf ("Failed to send RESPONSE to client, Error %d\n", WSAGetLastError ());
 }
 
