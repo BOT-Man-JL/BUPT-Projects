@@ -48,12 +48,14 @@
 #define SZDOMAINNAME_BUF_SIZE 512u
 
 #define SZDOMAINNAME_BUF_SIZE_2 256u
-#define PACKET_BUF_SIZE 4096u
+#define PACKET_BUF_SIZE 4096
 #define RECORD_COUNT 4096u
 #define TIMEOUT 8u
 #define SLEEP_MS 500u
 
 #define PORT 53u
+#define HOSTS_FILENAME "dnsrelay.txt"
+#define NAMESERVER_IP "202.106.0.20"
 
 typedef struct
 {
@@ -61,7 +63,7 @@ typedef struct
 	WORD to;
 	struct sockaddr_in sa;
 
-	// Different from binary version, time_t in modern C is 64-bit
+	// Different from binary version, modern time_t is 64-bit
 	time_t timestamp;
 } Record;
 
@@ -373,23 +375,26 @@ void Run ()
 	WORD clas = ntohs (pwTypeClass[1]);
 
 	// Check if Addr found in Table, and Get the corresponding position
-	DWORD isAddrFound = 0;
+	DWORD isAddrFound = 0u;
 	BYTE *pEntry = pbTable;
 
 	// Only handle IPv4 message when table is not empty
 	if (type == 1 && clas == 1 && pbTable[0])
 	{
+		isAddrFound = 1u;
 		while (strcmp ((char *) pEntry, szDomainName) != 0)
 		{
 			DWORD addrSize = strlen ((char *) pEntry) + 1;
 			if (!pEntry[addrSize + 4])
-				goto labelNotFound;
+			{
+				// Not Found
+				isAddrFound = 0u;
+				break;
+			}
 			pEntry += addrSize + 4;
 		}
-		isAddrFound = 1u;
 	}
 
-labelNotFound:
 	if (debugLevel >= 1)
 		printf ("\t%6.3f  %2u:%c %s", clock () * 0.001, acceptCount++, isAddrFound ? '*' : ' ', szDomainName);
 	if (debugLevel >= 2 - (type != 1))
@@ -424,14 +429,14 @@ int main (int argc, const char **argv, const char **envp)
 	curId = (WORD) time (0);
 
 	// Default Config
-	const char *szIp = "202.106.0.20";
-	const char *szFileName = "dnsrelay.txt";
+	const char *szIp = NAMESERVER_IP;
+	const char *szFileName = HOSTS_FILENAME;
 
 	// Load Config
 	int iNextArg = 1;
 	if (iNextArg < argc)
 	{
-		if (strcmp (argv[1], "-d") == 0)
+		if (strcmp (argv[iNextArg], "-d") == 0)
 		{
 			debugLevel = 1;
 			++iNextArg;
