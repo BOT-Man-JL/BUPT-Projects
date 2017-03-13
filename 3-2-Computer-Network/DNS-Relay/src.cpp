@@ -31,12 +31,14 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <iomanip>
 #include <string>
 
 #include <tuple>
 #include <vector>
 #include <list>
 #include <unordered_map>
+#include <memory>
 
 #include <algorithm>
 #include <functional>
@@ -55,81 +57,124 @@ int WSAGetLastError ()
 }
 #endif
 
+#define HOSTS_FILENAME "dnsrelay.txt"
+#define NAMESERVER_IP "202.106.0.20"
+
 namespace DnsRelay
 {
 	constexpr int PACKET_BUF_SIZE = 4096;
 	constexpr int PORT = 53;
-	const std::string HOSTS_FILENAME = "dnsrelay.txt";
-	const std::string NAMESERVER_IP = "202.106.0.20";
 
-	struct Exception
+	class Logger
 	{
-		int debugLevel;
-		std::string what;
+	public:
+		Logger (std::ostream &os) : _os (os) {}
+		Logger () : Logger (std::cout) {}
+
+		template<typename T>
+		Logger &operator << (const T &val)
+		{
+			_os << val;
+			_os.flush ();
+			return *this;
+		}
+	private:
+		std::ostream &_os;
 	};
 
 	class Config
 	{
 	public:
-		Config (int argc, char *argv[]) :
-			_debugLevel (0),
-			_hostsFilename (HOSTS_FILENAME),
-			_nameserverIp (NAMESERVER_IP)
+		using HostsTable = std::unordered_map<std::string, uint32_t>;
+
+		Config (int argc, char *argv[])
 		{
-			auto readArgs = [&]
+			auto initLogFile = [] (std::unique_ptr<std::ofstream> &os,
+								   const std::string &fileName)
 			{
-				using namespace std::string_literals;
-				auto nextArg = 1;
-				if (nextArg >= argc) return;
-
-				if (argv[nextArg] == "-d"s)
-				{
-					_debugLevel = 1;
-					++nextArg;
-				}
-				if (nextArg >= argc) return;
-
-				if (argv[nextArg] == "-dd"s)
-				{
-					_debugLevel = 2;
-					++nextArg;
-				}
-				if (nextArg >= argc) return;
-
-				_nameserverIp = argv[nextArg];
-				++nextArg;
-				if (nextArg >= argc) return;
-
-				_hostsFilename = argv[nextArg];
+				if (fileName.empty ()) return;
+				os = std::make_unique<std::ofstream> (fileName);
 			};
 
-			auto initNameServer = [this]
+			auto initNameServer = [] (sockaddr_in &saNameServer,
+									  const std::string &nameserverIp)
 			{
-				_saNameServer.sin_family = AF_INET;
-				_saNameServer.sin_port = htons (PORT);
+				saNameServer.sin_family = AF_INET;
+				saNameServer.sin_port = htons (PORT);
 
-				if (!inet_pton (AF_INET, _nameserverIp.c_str (),
-					(void *) &_saNameServer.sin_addr))
+				if (!inet_pton (AF_INET, nameserverIp.c_str (),
+					(void *) &saNameServer.sin_addr))
 				{
 					std::ostringstream ostrs;
-					ostrs << "Bad name server IP address \"" << _nameserverIp << "\".";
+					ostrs << "Bad name server IP address: "
+						<< nameserverIp;
 					throw std::runtime_error (ostrs.str ());
 				}
 			};
 
-			readArgs ();
-			initNameServer ();
+			auto initHostsTable = [] (HostsTable &table,
+									  const std::string &fileName)
+			{
+				std::ifstream ifs (fileName);
+				if (!ifs.is_open ()) return;
+
+				std::string ip, domainName;
+				while (ifs >> ip >> domainName)
+				{
+					std::for_each (domainName.begin (), domainName.end (),
+								   [] (auto &ch) { ch = tolower (ch); });
+
+					in_addr addrIn;
+					if (inet_pton (AF_INET, ip.c_str (), (void *) &addrIn))
+						table.emplace (std::move (domainName), addrIn.s_addr);
+				}
+			};
+
+			std::string logFilename;
+			std::string nameserverIp = NAMESERVER_IP;
+			std::string hostsFilename = HOSTS_FILENAME;
+
+			// Read Args
+			if (--argc % 2)
+				throw std::runtime_error ("Bad arguments");
+
+			std::unordered_map<std::string, std::string &> mapper
+			{
+				{ "-o", logFilename },
+				{ "-n", nameserverIp },
+				{ "-h", hostsFilename }
+			};
+
+			for (int i = 0; i < argc / 2; i++)
+			{
+				try { mapper.at (argv[i * 2 + 1]) = argv[i * 2 + 2]; }
+				catch (const std::exception &) {}
+			}
+
+			initLogFile (_logFile, logFilename);
+			initNameServer (_saNameServer, nameserverIp);
+			initHostsTable (_hostsTable, hostsFilename);
 		}
 
-		const int GetDebugLevel () const { return _debugLevel; }
-		const std::string &GetHostsFilename () const { return _hostsFilename; }
+		const std::unique_ptr<std::ofstream> &GetLogFile () const
+		{
+			return _logFile;
+		}
 		const sockaddr_in &GetNameServerSa () const { return _saNameServer; }
+		const HostsTable &GetHostsTable () const { return _hostsTable; }
+
+		static const char *GetPrompt ()
+		{
+			return "Args: [-o <log-file-name> | "
+				"-n <name-server-ip> | -h <hosts-file-name>]\n"
+				"Default args: -o <stdout> -n " NAMESERVER_IP
+				" -h " HOSTS_FILENAME "\n";
+		}
 
 	private:
-		int _debugLevel;
-		std::string _hostsFilename;
-		std::string _nameserverIp;
+		std::unique_ptr<std::ofstream> _logFile;
 		sockaddr_in _saNameServer;
+		HostsTable _hostsTable;
 	};
 
 	struct Packet
@@ -137,8 +182,7 @@ namespace DnsRelay
 		struct Header
 		{
 			uint16_t id;     // 16 bit
-
-			// flag - 16 bit
+			// [flags - 16 bit]
 			bool qr;         // 1 bit
 			uint8_t opCode;  // 4 bit
 			bool aa;         // 1 bit
@@ -147,11 +191,10 @@ namespace DnsRelay
 			bool ra;         // 1 bit
 			uint8_t zero;    // 3 bit
 			uint8_t rCode;   // 4 bit
-
-			uint16_t qdCount;  // 16 bit
-			uint16_t anCount;  // 16 bit
-			uint16_t nsCount;  // 16 bit
-			uint16_t arCount;  // 16 bit
+			// qdCount - 16 bit
+			// anCount - 16 bit
+			// nsCount - 16 bit
+			// arCount - 16 bit
 		};
 
 		struct Question
@@ -177,8 +220,7 @@ namespace DnsRelay
 			auto checkLen = [&] (size_t size)
 			{
 				bufLen -= size;
-				if (bufLen < 0)
-					throw Exception { 1, "Bad packet" };
+				if (bufLen < 0) throw std::runtime_error ("Bad packet len");
 			};
 
 			// Validation
@@ -189,10 +231,11 @@ namespace DnsRelay
 
 			header.id = ntohs (pwBuf[0]);
 			uint16_t flags = ntohs (pwBuf[1]);
-			header.qdCount = ntohs (pwBuf[2]);
-			header.anCount = ntohs (pwBuf[3]);
-			header.nsCount = ntohs (pwBuf[4]);
-			header.arCount = ntohs (pwBuf[5]);
+
+			uint16_t qdCount = ntohs (pwBuf[2]);
+			uint16_t anCount = ntohs (pwBuf[3]);
+			uint16_t nsCount = ntohs (pwBuf[4]);
+			uint16_t arCount = ntohs (pwBuf[5]);
 
 			header.qr = (flags & 0x8000) >> 15;
 			header.opCode = (flags & 0x7800) >> 11;
@@ -243,55 +286,61 @@ namespace DnsRelay
 			};
 
 			// Retrieve Questions
-			for (auto qdCount = header.qdCount; qdCount > 0; --qdCount)
+			for (; qdCount > 0; --qdCount)
 			{
 				Question question;
 
 				// Retrieve domain name
 				auto domainNameLen = getDomainName (question.name);
 
-				// Validation
-				checkLen (domainNameLen + 2 * sizeof (uint16_t));
-
 				// Retrieve fields
 				getField (question.type, ntohs);
 				getField (question.clas, ntohs);
 
+				// Validation
+				checkLen (domainNameLen + 2 * sizeof (uint16_t));
+
 				// Set Question
-				questions.emplace_back (std::move (question));
+				qd.emplace_back (std::move (question));
 			}
 
 			// Retrieve Resources
-			for (auto rcCount = header.anCount + header.nsCount + header.arCount; rcCount > 0; --rcCount)
+			auto getRes = [&] (std::list<Resource> &resources,
+							   uint16_t rcCount)
 			{
-				Resource resource;
+				for (; rcCount > 0; --rcCount)
+				{
+					Resource resource;
 
-				// Retrieve domain name
-				auto domainNameLen = getDomainName (resource.name);
+					// Retrieve domain name
+					auto domainNameLen = getDomainName (resource.name);
 
-				// Retrieve fields
-				getField (resource.type, ntohs);
-				getField (resource.clas, ntohs);
-				getField (resource.ttl, ntohl);
+					// Retrieve fields
+					getField (resource.type, ntohs);
+					getField (resource.clas, ntohs);
+					getField (resource.ttl, ntohl);
 
-				// Retrieve data
-				uint16_t rdLen;
-				getField (rdLen, ntohs);
-				resource.rdData.assign (pbBuf, pbBuf + rdLen);
-				pbBuf += rdLen;
+					// Retrieve data
+					uint16_t rdLen;
+					getField (rdLen, ntohs);
+					resource.rdData.assign (pbBuf, pbBuf + rdLen);
+					pbBuf += rdLen;
 
-				// Validation
-				checkLen (domainNameLen + 3 * sizeof (uint16_t) + sizeof (uint32_t) + rdLen);
+					// Validation
+					checkLen (domainNameLen + 3 * sizeof (uint16_t) +
+							  sizeof (uint32_t) + rdLen);
 
-				// Set Question
-				resources.emplace_back (std::move (resource));
-			}
+					// Set Resource
+					resources.emplace_back (std::move (resource));
+				}
+			};
+
+			getRes (an, anCount);
+			getRes (ns, nsCount);
+			getRes (ar, arCount);
 
 			// Validation
-			if (bufLen != 0 ||
-				questions.size () != header.qdCount ||
-				resources.size () != header.anCount + header.nsCount + header.arCount)
-				throw Exception { 1, "Invalid packet" };
+			if (bufLen != 0) throw std::runtime_error ("Bad packet len");
 		}
 
 		void ToBuffer (uint8_t *buf, int &bufLen) const
@@ -302,7 +351,7 @@ namespace DnsRelay
 			auto checkLen = [&] (size_t size)
 			{
 				oldLen -= size;
-				if (oldLen < 0) throw Exception { 1, "Bad buffer" };
+				if (oldLen < 0) throw std::runtime_error ("Bad buffer size");
 				bufLen += size;
 			};
 
@@ -324,10 +373,10 @@ namespace DnsRelay
 
 			pwBuf[0] = htons (header.id);
 			pwBuf[1] = htons (flags);
-			pwBuf[2] = htons (header.qdCount);
-			pwBuf[3] = htons (header.anCount);
-			pwBuf[4] = htons (header.nsCount);
-			pwBuf[5] = htons (header.arCount);
+			pwBuf[2] = htons ((uint16_t) qd.size ());
+			pwBuf[3] = htons ((uint16_t) an.size ());
+			pwBuf[4] = htons ((uint16_t) ns.size ());
+			pwBuf[5] = htons ((uint16_t) ar.size ());
 
 			// Buffer Pointer
 			uint8_t *pbBuf = (uint8_t *) &pwBuf[6];
@@ -340,7 +389,7 @@ namespace DnsRelay
 			};
 
 			// Set Questions
-			for (const auto &question : questions)
+			for (const auto &question : qd)
 			{
 				// Validation
 				checkLen (question.name.size () + 1 + 2 * sizeof (uint16_t));
@@ -356,72 +405,149 @@ namespace DnsRelay
 			}
 
 			// Set Resources
-			for (const auto &resource : resources)
+			auto setRes = [&] (const std::list<Resource> &resources)
 			{
-				// Validation
-				checkLen (resource.name.size () + 1 +
-						  3 * sizeof (uint16_t) + sizeof (uint32_t) +
-						  resource.rdData.size ());
+				for (const auto &resource : resources)
+				{
+					// Validation
+					checkLen (resource.name.size () + 1 +
+							  3 * sizeof (uint16_t) + sizeof (uint32_t) +
+							  resource.rdData.size ());
 
-				// Set domain name
-				strncpy ((char *) pbBuf, resource.name.c_str (),
-						 resource.name.size () + 1);
-				pbBuf += resource.name.size () + 1;
+					// Set domain name
+					strncpy ((char *) pbBuf, resource.name.c_str (),
+							 resource.name.size () + 1);
+					pbBuf += resource.name.size () + 1;
 
-				// Set fields
-				setField (resource.type, htons);
-				setField (resource.clas, htons);
-				setField (resource.ttl, htonl);
-				setField ((uint16_t) resource.rdData.size (), htons);
+					// Set fields
+					setField (resource.type, htons);
+					setField (resource.clas, htons);
+					setField (resource.ttl, htonl);
+					setField ((uint16_t) resource.rdData.size (), htons);
 
-				// Set data
-				memcpy (pbBuf, resource.rdData.data (),
-						resource.rdData.size ());
-				pbBuf += resource.rdData.size ();
+					// Set data
+					memcpy (pbBuf, resource.rdData.data (),
+							resource.rdData.size ());
+					pbBuf += resource.rdData.size ();
+				}
+			};
+
+			setRes (an);
+			setRes (ns);
+			setRes (ar);
+		}
+
+		static std::string ParseDomainName (const std::string &rawName)
+		{
+			std::string domainName;
+			const char *pbBuf = rawName.c_str ();
+
+			while (*pbBuf)
+			{
+				domainName.append ((pbBuf + 1), *pbBuf);
+				pbBuf += 1 + *pbBuf;
+				if (*pbBuf) domainName.append (1, '.');
 			}
+
+			std::for_each (domainName.begin (), domainName.end (),
+						   [] (auto &ch) { ch = tolower (ch); });
+			return domainName;
 		}
 
 		sockaddr_in addr;
 		Header header;
-		std::list<Question> questions;
-		std::list<Resource> resources;
+		std::list<Question> qd;
+		std::list<Resource> an;
+		std::list<Resource> ns;
+		std::list<Resource> ar;
 	};
 
-	class HostsTable
+	std::ostream &operator << (std::ostream &os, const Packet &packet)
 	{
-	public:
-		HostsTable (const Config &config)
+		auto printAddr = [] (std::ostream &os,
+							 const sockaddr_in &addr)
 		{
-			std::ifstream ifs (config.GetHostsFilename ());
-			if (!ifs.is_open ()) return;
+			constexpr int BUF_SIZE = 64;
+			char szIp[BUF_SIZE];
 
-			std::string ip, domainName;
-			while (ifs >> ip >> domainName)
-			{
-				std::for_each (domainName.begin (), domainName.end (),
-							   [] (auto &ch) { ch = isupper (ch) ? ch + 'a' - 'A' : ch; });
+			if (!inet_ntop (
+				AF_INET, (const void *) &addr.sin_addr,
+				szIp, BUF_SIZE))
+				strcpy (szIp, "Invalid IP");
+			os << "[" << szIp << ":" << ntohs (addr.sin_port) << "]\n";
+		};
 
-				in_addr addrIn;
-				inet_pton (AF_INET, ip.c_str (), (void *) &addrIn);
-				_hosts.emplace (std::move (domainName), addrIn.s_addr);
-			}
-		}
+		auto printHeader = [] (std::ostream &os,
+							   const Packet::Header &header)
+		{
+			os << "ID: " << std::hex << header.id
+				<< " QR: " << header.qr
+				<< " OPCODE: " << (uint16_t) header.opCode
+				<< " AA: " << header.aa
+				<< " TC: " << header.tc
+				<< " RD: " << header.rd
+				<< " RA: " << header.ra
+				<< " ZERO: " << (uint16_t) header.zero
+				<< " RCODE: " << (uint16_t) header.rCode;
+		};
 
-		const uint32_t GetIp (const std::string &domainName) const { return _hosts.at (domainName); }
+		auto printQuestion = [] (std::ostream &os,
+								 const Packet::Question &ques)
+		{
+			os << " - Domain Name: [ " <<
+				Packet::ParseDomainName (ques.name)
+				<< " ] Type: " << ques.type
+				<< " Class: " << ques.clas << std::endl;
+		};
 
-	private:
-		std::unordered_map<std::string, uint32_t> _hosts;
-	};
+		auto printResource = [] (std::ostream &os,
+								 const Packet::Resource &res)
+		{
+			os << " - Domain Name: [ " <<
+				Packet::ParseDomainName (res.name)
+				<< " ] Type: " << res.type
+				<< " Class: " << res.clas
+				<< " TTL: " << res.ttl
+				<< " rdLen: " << res.rdData.size ()
+				<< " rdData: [ ";
+			for (const auto &byteVal : res.rdData)
+				os << std::setw (2) << std::setfill ('0') << std::right
+				<< std::hex << (uint16_t) byteVal << " ";
+			os << "]" << std::endl;
+		};
+
+		printAddr (os, packet.addr);
+		printHeader (os, packet.header);
+		os << std::endl;
+
+		os << packet.qd.size () << " RD fields:" << std::endl;
+		for (const auto &ques : packet.qd)
+			printQuestion (os, ques);
+
+		os << packet.an.size () << " AN fields:" << std::endl;
+		for (const auto &res : packet.an)
+			printResource (os, res);
+
+		os << packet.ns.size () << " NS fields:" << std::endl;
+		for (const auto &res : packet.ns)
+			printResource (os, res);
+
+		os << packet.ar.size () << " AR fields:" << std::endl;
+		for (const auto &res : packet.ar)
+			printResource (os, res);
+
+		return os << std::endl;
+	}
 
 	class Connector
 	{
 	public:
-		Connector (const Config &config)
+		Connector ()
 		{
 			// Init sock
 			_sock = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 			if (_sock < 0)
-				throw std::runtime_error ("Failed to open udp server socket");
+				throw std::runtime_error ("socket() Error");
 
 			// Bind the 'sock at 'PORT
 			sockaddr_in saBind;
@@ -429,10 +555,11 @@ namespace DnsRelay
 			saBind.sin_addr.s_addr = INADDR_ANY;
 			saBind.sin_port = htons (PORT);
 
-			if (bind (_sock, (sockaddr *) &saBind, sizeof (sockaddr_in)) < 0)
+			if (bind (_sock, (sockaddr *) &saBind,
+				sizeof (sockaddr_in)) < 0)
 			{
 				std::ostringstream ostrs;
-				ostrs << "Fail to bind UDP port, Error " << WSAGetLastError ();
+				ostrs << "bind() Error #" << WSAGetLastError ();
 				throw std::runtime_error (ostrs.str ());
 			}
 		}
@@ -445,12 +572,13 @@ namespace DnsRelay
 			sockaddr_in saFrom;
 			socklen_t saLen = sizeof (sockaddr_in);
 
-			int bufLen = recvfrom (_sock, (char *) buf, PACKET_BUF_SIZE, 0, (sockaddr *) &saFrom, &saLen);
+			int bufLen = recvfrom (_sock, (char *) buf, PACKET_BUF_SIZE,
+								   0, (sockaddr *) &saFrom, &saLen);
 			if (bufLen <= 0)
 			{
 				std::ostringstream ostrs;
 				ostrs << "recvfrom() Error #" << WSAGetLastError ();
-				throw Exception { 1, ostrs.str () };
+				throw std::runtime_error (ostrs.str ());
 			}
 
 			callback (Packet (saFrom, buf, bufLen));
@@ -462,11 +590,13 @@ namespace DnsRelay
 			int bufLen = sizeof (buf);
 			packet.ToBuffer (buf, bufLen);
 
-			if (sendto (_sock, (char *) buf, bufLen, 0, (const sockaddr *) &packet.addr, sizeof (sockaddr_in)) < 0)
+			if (sendto (_sock, (char *) buf, bufLen,
+				0, (const sockaddr *) &packet.addr,
+				sizeof (sockaddr_in)) < 0)
 			{
 				std::ostringstream ostrs;
-				ostrs << "Failed to send RESPONSE to client, Error " << WSAGetLastError ();
-				throw Exception { 1, ostrs.str () };
+				ostrs << "sendto Error #" << WSAGetLastError ();
+				throw std::runtime_error (ostrs.str ());
 			}
 		}
 
@@ -478,6 +608,8 @@ namespace DnsRelay
 int main (int argc, char *argv[])
 {
 	using namespace DnsRelay;
+	std::cout << "DNS Relay by BOT-Man-JL, 2017\n";
+	std::cout << Config::GetPrompt ();
 
 	try
 	{
@@ -485,39 +617,25 @@ int main (int argc, char *argv[])
 #ifdef WIN32
 		WSAData WSAData;
 		if (WSAStartup (MAKEWORD (2, 2), &WSAData))
-			throw std::runtime_error ("WSAStartup() error");
+			throw std::runtime_error ("WSAStartup() Error");
 #endif
 		// Init
 		Config config (argc, argv);
-		Connector connector (config);
-		HostsTable hostsTable (config);
+		Connector connector;
 
-		// Predicates
-		auto isResponseMsg = [] (const Packet &packet)
+		// Set Logger
+		std::unique_ptr<Logger> pLogger;
+		if (config.GetLogFile ())
+			pLogger = std::make_unique<Logger> (*config.GetLogFile ());
+		else
+			pLogger = std::make_unique<Logger> ();
+		Logger &logger = *pLogger;
+
+		auto printTimeNow = [] (Logger &logger)
 		{
-			return packet.header.qr == 1;
-		};
-		auto isSingleQuery = [] (const Packet &packet)
-		{
-			return packet.header.qdCount == 1;
-		};
-		auto isStandardQuery = [] (const Packet &packet)
-		{
-			return packet.header.opCode == 0;
-		};
-		auto hasAuthAns = [] (const Packet &packet)
-		{
-			return packet.header.aa;
-		};
-		auto hasv4Query = [] (const Packet &packet)
-		{
-			return !packet.questions.empty () &&
-				packet.questions.front ().type == 1 &&
-				packet.questions.front ().clas == 1;
-		};
-		auto hasAnswer = [] (const Packet::Resource &res)
-		{
-			return !res.rdData.empty ();
+			std::time_t t = std::time (nullptr);
+			std::tm tm = *std::localtime (&t);
+			logger << std::put_time (&tm, "%c");
 		};
 
 		// Records
@@ -525,21 +643,22 @@ int main (int argc, char *argv[])
 		using Record = std::tuple<uint16_t, sockaddr_in, TimePoint>;
 		std::unordered_map<uint16_t, Record> records;
 
-		auto clearTimeout = [] (std::unordered_map<uint16_t, Record> &records)
+		auto clearTimeout = [] (
+			std::unordered_map<uint16_t, Record> &records)
 		{
 			for (auto p = records.begin (); p != records.end ();)
 			{
 				using namespace std::chrono_literals;
 				TimePoint timePoint;
 				std::tie (std::ignore, std::ignore, timePoint) = p->second;
-				if (std::chrono::system_clock::now () - timePoint < 2s)
+				if (std::chrono::system_clock::now () - timePoint > 8s)
 					p = records.erase (p);
 				else
 					p = ++p;
 			}
 		};
 
-		// Handler
+		// Handlers
 		auto fromNameServer = [&] (const Packet &packet)
 		{
 			try
@@ -547,15 +666,20 @@ int main (int argc, char *argv[])
 				const Record &record = records.at (packet.header.id);
 
 				auto newPacket = packet;
-				std::tie (newPacket.header.id, newPacket.addr, std::ignore) = record;
+				std::tie (newPacket.header.id, newPacket.addr,
+						  std::ignore) = record;
 				connector.Send (newPacket);
+
+				printTimeNow (logger);
+				logger << " - Send to " << newPacket;
 			}
+			// Ignore if timeout...
 			catch (const std::exception &) {}
 		};
 
 		auto toNameServer = [&] (const Packet &packet)
 		{
-			//clearTimeout (records);
+			clearTimeout (records);
 
 			static uint16_t curId;
 			records.emplace (++curId, Record {
@@ -566,78 +690,102 @@ int main (int argc, char *argv[])
 			newPacket.header.id = curId;
 			newPacket.addr = config.GetNameServerSa ();
 			connector.Send (newPacket);
+
+			printTimeNow (logger);
+			logger << " - Send to " << newPacket;
 		};
 
-		// On Recv
+		// Predicates
+		auto isResponseMsg = [] (const Packet &packet)
+		{
+			return packet.header.qr == 1;
+		};
+		auto isSingleQuery = [] (const Packet &packet)
+		{
+			return packet.qd.size () == 1;
+		};
+		auto isStandardQuery = [] (const Packet &packet)
+		{
+			return packet.header.opCode == 0;
+		};
+		auto hasv4Query = [] (const Packet &packet)
+		{
+			return !packet.qd.empty () &&
+				packet.qd.front ().type == 1 &&
+				packet.qd.front ().clas == 1;
+		};
+
+		// Helpers
+		auto setAnswer = [] (const Packet &packet,
+							 const Config &config)
+		{
+			// Throwable
+			auto dwordIp = config.GetHostsTable ().at (
+				Packet::ParseDomainName (packet.qd.front ().name));
+
+			// Throw here if not found
+
+			auto newPacket = packet;
+			newPacket.header.qr = newPacket.header.aa =
+				newPacket.header.ra = true;
+
+			if (dwordIp != INADDR_ANY)
+			{
+				Packet::Resource answer;
+				answer.name = packet.qd.front ().name;
+				answer.type = 1;
+				answer.clas = 1;
+				answer.ttl = 120;
+				answer.rdData.assign ((uint8_t *) &dwordIp,
+					(uint8_t *) (&dwordIp + 1));
+				newPacket.an.emplace_front (std::move (answer));
+			}
+			else
+				newPacket.header.rCode = 3;
+
+			return newPacket;
+		};
+
+		// Callback Delegate
 		auto onRecv = [&] (const Packet &packet)
 		{
-			// Response
+			printTimeNow (logger);
+			logger << " - Recv from " << packet;
+
+			// Response Message
 			if (isResponseMsg (packet))
 				return fromNameServer (packet);
 
 			// Non-normal Query
 			if (!isSingleQuery (packet) ||
 				!isStandardQuery (packet) ||
-				hasAuthAns (packet))
+				!hasv4Query (packet))
 				return toNameServer (packet);
 
-			// Find answer in hostsTable
-			Packet::Resource answer;
+			// Search hostsTable for question domain name
+			// - Set Anwser and Send back if Found
+			// - Forward to name server if NOT Found
 			try
 			{
-				// Search in domain name in lower-case
-				std::string domainName;
-				const char *pbBuf =
-					packet.questions.front ().name.c_str ();
+				auto newPacket = setAnswer (packet, config);
+				connector.Send (newPacket);
 
-				while (*pbBuf)
-				{
-					domainName.append ((pbBuf + 1), *pbBuf);
-					pbBuf += 1 + *pbBuf;
-					if (*pbBuf) domainName.append (1, '.');
-				}
-
-				std::for_each (domainName.begin (), domainName.end (),
-							   [] (auto &ch) { ch = isupper (ch) ? ch + 'a' - 'A' : ch; });
-
-				auto dwordIp = hostsTable.GetIp (domainName);
-				if (dwordIp != INADDR_ANY)
-				{
-					answer.rdData.assign ((uint8_t *) &dwordIp,
-						(uint8_t *) (&dwordIp + 1));
-				}
+				printTimeNow (logger);
+				logger << " - Send to " << newPacket;
 			}
-			// Forward if not found
-			catch (const std::exception &) { return toNameServer (packet); }
-
-			// Set Anwser
-			auto newPacket = packet;
-			newPacket.header.qr = true;
-			newPacket.header.aa = true;
-			newPacket.header.ra = true;
-
-			if (!hasAnswer (answer))
-				newPacket.header.rCode = 3;
-			else
-			{
-				newPacket.header.anCount = 1;
-				answer.name = packet.questions.front ().name;
-				answer.type = 1;
-				answer.clas = 1;
-				answer.ttl = 120;
-				newPacket.resources.emplace_front (std::move (answer));
-			}
-			connector.Send (newPacket);
+			catch (const std::exception &) { toNameServer (packet); }
 		};
 
-		// Run
+		// Run here
+		printTimeNow (logger);
+		logger << " - Server Started :-)\n\n";
 		while (true)
 		{
 			try { connector.Recv (onRecv); }
-			catch (const Exception &ex)
+			catch (const std::exception &ex)
 			{
-				if (config.GetDebugLevel () >= ex.debugLevel)
-					std::cerr << ex.what << std::endl;
+				printTimeNow (logger);
+				logger << " - Exception: " << ex.what () << "\n";
 			}
 		}
 	}
@@ -645,7 +793,5 @@ int main (int argc, char *argv[])
 	{
 		std::cerr << ex.what () << std::endl;
 	}
-
-	// Fatal Error
-	return 1;
+	return 1;  // Fatal Error
 }
