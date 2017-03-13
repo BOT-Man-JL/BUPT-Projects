@@ -85,56 +85,8 @@ namespace DnsRelay
 	class Config
 	{
 	public:
-		using HostsTable = std::unordered_map<std::string, uint32_t>;
-
 		Config (int argc, char *argv[])
 		{
-			auto initLogFile = [] (std::unique_ptr<std::ofstream> &os,
-								   const std::string &fileName)
-			{
-				if (fileName.empty ()) return;
-				os = std::make_unique<std::ofstream> (fileName);
-			};
-
-			auto initNameServer = [] (sockaddr_in &saNameServer,
-									  const std::string &nameserverIp)
-			{
-				saNameServer.sin_family = AF_INET;
-				saNameServer.sin_port = htons (PORT);
-
-				if (!inet_pton (AF_INET, nameserverIp.c_str (),
-					(void *) &saNameServer.sin_addr))
-				{
-					std::ostringstream ostrs;
-					ostrs << "Bad name server IP address: "
-						<< nameserverIp;
-					throw std::runtime_error (ostrs.str ());
-				}
-			};
-
-			auto initHostsTable = [] (HostsTable &table,
-									  const std::string &fileName)
-			{
-				std::ifstream ifs (fileName);
-				if (!ifs.is_open ()) return;
-
-				std::string ip, domainName;
-				while (ifs >> ip >> domainName)
-				{
-					std::for_each (domainName.begin (), domainName.end (),
-								   [] (auto &ch) { ch = tolower (ch); });
-
-					in_addr addrIn;
-					if (inet_pton (AF_INET, ip.c_str (), (void *) &addrIn))
-						table.emplace (std::move (domainName), addrIn.s_addr);
-				}
-			};
-
-			std::string logFilename;
-			std::string nameserverIp = NAMESERVER_IP;
-			std::string hostsFilename = HOSTS_FILENAME;
-
-			// Read Args
 			if (--argc % 2)
 				throw std::runtime_error ("Bad arguments");
 
@@ -150,18 +102,7 @@ namespace DnsRelay
 				try { mapper.at (argv[i * 2 + 1]) = argv[i * 2 + 2]; }
 				catch (const std::exception &) {}
 			}
-
-			initLogFile (_logFile, logFilename);
-			initNameServer (_saNameServer, nameserverIp);
-			initHostsTable (_hostsTable, hostsFilename);
 		}
-
-		const std::unique_ptr<std::ofstream> &GetLogFile () const
-		{
-			return _logFile;
-		}
-		const sockaddr_in &GetNameServerSa () const { return _saNameServer; }
-		const HostsTable &GetHostsTable () const { return _hostsTable; }
 
 		static const char *GetPrompt ()
 		{
@@ -171,10 +112,9 @@ namespace DnsRelay
 				" -h " HOSTS_FILENAME "\n";
 		}
 
-	private:
-		std::unique_ptr<std::ofstream> _logFile;
-		sockaddr_in _saNameServer;
-		HostsTable _hostsTable;
+		std::string logFilename;
+		std::string nameserverIp = NAMESERVER_IP;
+		std::string hostsFilename = HOSTS_FILENAME;
 	};
 
 	struct Packet
@@ -624,14 +564,48 @@ int main (int argc, char *argv[])
 		Config config (argc, argv);
 		Connector connector;
 
-		// Set Logger
+		// Init Name Server
+		sockaddr_in saNameServer;
+		saNameServer.sin_family = AF_INET;
+		saNameServer.sin_port = htons (PORT);
+
+		if (!inet_pton (AF_INET, config.nameserverIp.c_str (),
+			(void *) &saNameServer.sin_addr))
+		{
+			std::ostringstream ostrs;
+			ostrs << "Bad name server IP address: "
+				<< config.nameserverIp;
+			throw std::runtime_error (ostrs.str ());
+		}
+
+		// Init hosts table
+		using HostsTable = std::unordered_map<std::string, uint32_t>;
+		HostsTable hostsTable;
+		std::ifstream ifs (config.hostsFilename);
+		if (ifs.is_open ())
+		{
+			std::string ip, domainName;
+			while (ifs >> ip >> domainName)
+			{
+				std::for_each (domainName.begin (), domainName.end (),
+							   [] (auto &ch) { ch = tolower (ch); });
+
+				in_addr addrIn;
+				if (inet_pton (AF_INET, ip.c_str (), (void *) &addrIn))
+					hostsTable.emplace (std::move (domainName), addrIn.s_addr);
+			}
+		}
+
+		// Init Logger
 		std::unique_ptr<Logger> pLogger;
-		if (config.GetLogFile ())
-			pLogger = std::make_unique<Logger> (*config.GetLogFile ());
+		std::ofstream ofs (config.logFilename);
+		if (ofs.is_open ())
+			pLogger = std::make_unique<Logger> (ofs);
 		else
 			pLogger = std::make_unique<Logger> ();
 		Logger &logger = *pLogger;
 
+		// Helper
 		auto printTimeNow = [] (Logger &logger)
 		{
 			std::time_t t = std::time (nullptr);
@@ -689,7 +663,7 @@ int main (int argc, char *argv[])
 
 			auto newPacket = packet;
 			newPacket.header.id = curId;
-			newPacket.addr = config.GetNameServerSa ();
+			newPacket.addr = saNameServer;
 			connector.Send (newPacket);
 
 			printTimeNow (logger);
@@ -716,12 +690,12 @@ int main (int argc, char *argv[])
 				packet.qd.front ().clas == 1;
 		};
 
-		// Helpers
+		// Helper
 		auto setAnswer = [] (const Packet &packet,
-							 const Config &config)
+							 const HostsTable &hostsTable)
 		{
 			// Throwable
-			auto dwordIp = config.GetHostsTable ().at (
+			auto dwordIp = hostsTable.at (
 				Packet::ParseDomainName (packet.qd.front ().name));
 
 			// Throw here if not found
@@ -768,7 +742,7 @@ int main (int argc, char *argv[])
 			// - Forward to name server if NOT Found
 			try
 			{
-				auto newPacket = setAnswer (packet, config);
+				auto newPacket = setAnswer (packet, hostsTable);
 				connector.Send (newPacket);
 
 				printTimeNow (logger);
