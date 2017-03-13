@@ -49,6 +49,7 @@ together with [**buptczq**](https://github.com/buptczq/RE_Bupt_Computer_Network_
   - Reader-Writer Problem
   - Memory Allocation Tracking
 - Computer Network Pratice
+  - [DNS Relay](/3-2-Computer-Network/DNS-Relay)
   - [Hacking DNS Relay](/3-2-Computer-Network/Hack-DNS-Relay)
 
 ## Misc

@@ -474,7 +474,8 @@ namespace DnsRelay
 				AF_INET, (const void *) &addr.sin_addr,
 				szIp, BUF_SIZE))
 				strcpy (szIp, "Invalid IP");
-			os << "[" << szIp << ":" << ntohs (addr.sin_port) << "]\n";
+			os << "[" << szIp << ":" << std::dec
+				<< ntohs (addr.sin_port) << "]\n";
 		};
 
 		auto printHeader = [] (std::ostream &os,
@@ -494,18 +495,18 @@ namespace DnsRelay
 		auto printQuestion = [] (std::ostream &os,
 								 const Packet::Question &ques)
 		{
-			os << " - Domain Name: [ " <<
+			os << " - Domain Name: [" <<
 				Packet::ParseDomainName (ques.name)
-				<< " ] Type: " << ques.type
+				<< "] Type: " << ques.type
 				<< " Class: " << ques.clas << std::endl;
 		};
 
 		auto printResource = [] (std::ostream &os,
 								 const Packet::Resource &res)
 		{
-			os << " - Domain Name: [ " <<
+			os << " - Domain Name: [" <<
 				Packet::ParseDomainName (res.name)
-				<< " ] Type: " << res.type
+				<< "] Type: " << res.type
 				<< " Class: " << res.clas
 				<< " TTL: " << res.ttl
 				<< " rdLen: " << res.rdData.size ()
@@ -609,7 +610,7 @@ int main (int argc, char *argv[])
 {
 	using namespace DnsRelay;
 	std::cout << "DNS Relay by BOT-Man-JL, 2017\n";
-	std::cout << Config::GetPrompt ();
+	std::cout << Config::GetPrompt () << std::endl;
 
 	try
 	{
