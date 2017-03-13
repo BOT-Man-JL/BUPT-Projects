@@ -68,23 +68,25 @@ namespace DnsRelay
 	class Logger
 	{
 	public:
-		Logger (std::ostream &os) : _os (os) {}
-		Logger () : Logger (std::cout) {}
+		// Print timestamp at construction
+		Logger (std::ostream &os) : _os (os)
+		{
+			std::time_t t = std::time (nullptr);
+			std::tm tm = *std::localtime (&t);
+			_os << std::put_time (&tm, "%c") << " - ";
+		}
+
+		// Flush at destruction
+		~Logger () { _os << std::flush; }
 
 		template<typename T>
-		Logger &operator << (const T &val)
-		{
-			_os << val;
-			_os.flush ();
-			return *this;
-		}
+		Logger &operator << (const T &val) { _os << val; return *this; }
 	private:
 		std::ostream &_os;
 	};
 
-	class Config
+	struct Config
 	{
-	public:
 		Config (int argc, char *argv[])
 		{
 			if (--argc % 2)
@@ -108,14 +110,22 @@ namespace DnsRelay
 		{
 			return "Args: [-o <log-file-name> | "
 				"-n <name-server-ip> | -h <hosts-file-name>]\n"
-				"Default args: -o <stdout> -n " NAMESERVER_IP
-				" -h " HOSTS_FILENAME "\n";
+				"Default Config: -o <stdout> -n " NAMESERVER_IP
+				" -h " HOSTS_FILENAME;
 		}
 
 		std::string logFilename;
 		std::string nameserverIp = NAMESERVER_IP;
 		std::string hostsFilename = HOSTS_FILENAME;
 	};
+
+	std::ostream &operator << (std::ostream &os, const Config &config)
+	{
+		return os << "-o " << (config.logFilename.empty () ?
+				"<stdout>" : config.logFilename.c_str ())
+			<< " -n " << config.nameserverIp
+			<< " -h " << config.hostsFilename;
+	}
 
 	struct Packet
 	{
@@ -414,14 +424,15 @@ namespace DnsRelay
 				AF_INET, (const void *) &addr.sin_addr,
 				szIp, BUF_SIZE))
 				strcpy (szIp, "Invalid IP");
-			os << "[" << szIp << ":" << std::dec
+			os << "[" << szIp << ":"
 				<< ntohs (addr.sin_port) << "]\n";
 		};
 
 		auto printHeader = [] (std::ostream &os,
 							   const Packet::Header &header)
 		{
-			os << "ID: " << std::hex << header.id
+			os << "ID: " << std::setw (4) << std::setfill ('0')
+				<< std::right << std::hex << header.id << std::dec
 				<< " QR: " << header.qr
 				<< " OPCODE: " << (uint16_t) header.opCode
 				<< " AA: " << header.aa
@@ -450,11 +461,11 @@ namespace DnsRelay
 				<< " Class: " << res.clas
 				<< " TTL: " << res.ttl
 				<< " rdLen: " << res.rdData.size ()
-				<< " rdData: [ ";
+				<< " rdData: [ " << std::hex;
 			for (const auto &byteVal : res.rdData)
-				os << std::setw (2) << std::setfill ('0') << std::right
-				<< std::hex << (uint16_t) byteVal << " ";
-			os << "]" << std::endl;
+				os << std::setw (2) << std::setfill ('0')
+				<< std::right << (uint16_t) byteVal << " ";
+			os << std::dec << "]" << std::endl;
 		};
 
 		printAddr (os, packet.addr);
@@ -560,9 +571,9 @@ int main (int argc, char *argv[])
 		if (WSAStartup (MAKEWORD (2, 2), &WSAData))
 			throw std::runtime_error ("WSAStartup() Error");
 #endif
-		// Init
+		// Load Config
 		Config config (argc, argv);
-		Connector connector;
+		std::cout << "Current Config: " << config << std::endl;
 
 		// Init Name Server
 		sockaddr_in saNameServer;
@@ -597,21 +608,8 @@ int main (int argc, char *argv[])
 		}
 
 		// Init Logger
-		std::unique_ptr<Logger> pLogger;
 		std::ofstream ofs (config.logFilename);
-		if (ofs.is_open ())
-			pLogger = std::make_unique<Logger> (ofs);
-		else
-			pLogger = std::make_unique<Logger> ();
-		Logger &logger = *pLogger;
-
-		// Helper
-		auto printTimeNow = [] (Logger &logger)
-		{
-			std::time_t t = std::time (nullptr);
-			std::tm tm = *std::localtime (&t);
-			logger << std::put_time (&tm, "%c");
-		};
+		std::ostream &logFile = ofs.is_open () ? ofs : std::cout;
 
 		// Records
 		using TimePoint = std::chrono::system_clock::time_point;
@@ -631,43 +629,6 @@ int main (int argc, char *argv[])
 				else
 					p = ++p;
 			}
-		};
-
-		// Handlers
-		auto fromNameServer = [&] (const Packet &packet)
-		{
-			try
-			{
-				const Record &record = records.at (packet.header.id);
-
-				auto newPacket = packet;
-				std::tie (newPacket.header.id, newPacket.addr,
-						  std::ignore) = record;
-				connector.Send (newPacket);
-
-				printTimeNow (logger);
-				logger << " - Send to " << newPacket;
-			}
-			// Ignore if timeout...
-			catch (const std::exception &) {}
-		};
-
-		auto toNameServer = [&] (const Packet &packet)
-		{
-			clearTimeout (records);
-
-			static uint16_t curId;
-			records.emplace (++curId, Record {
-				packet.header.id, packet.addr,
-				std::chrono::system_clock::now () });
-
-			auto newPacket = packet;
-			newPacket.header.id = curId;
-			newPacket.addr = saNameServer;
-			connector.Send (newPacket);
-
-			printTimeNow (logger);
-			logger << " - Send to " << newPacket;
 		};
 
 		// Predicates
@@ -721,11 +682,46 @@ int main (int argc, char *argv[])
 			return newPacket;
 		};
 
+		// Functions
+		Connector connector;
+		auto fromNameServer = [&] (const Packet &packet)
+		{
+			try
+			{
+				const Record &record = records.at (packet.header.id);
+
+				auto newPacket = packet;
+				std::tie (newPacket.header.id, newPacket.addr,
+						  std::ignore) = record;
+				connector.Send (newPacket);
+
+				Logger (logFile) << "Send to " << newPacket;
+			}
+			// Ignore if timeout...
+			catch (const std::exception &) {}
+		};
+
+		auto toNameServer = [&] (const Packet &packet)
+		{
+			clearTimeout (records);
+
+			static uint16_t curId;
+			records.emplace (++curId, Record {
+				packet.header.id, packet.addr,
+				std::chrono::system_clock::now () });
+
+			auto newPacket = packet;
+			newPacket.header.id = curId;
+			newPacket.addr = saNameServer;
+			connector.Send (newPacket);
+
+			Logger (logFile) << "Send to " << newPacket;
+		};
+
 		// Callback Delegate
 		auto onRecv = [&] (const Packet &packet)
 		{
-			printTimeNow (logger);
-			logger << " - Recv from " << packet;
+			Logger (logFile) << "Recv from " << packet;
 
 			// Response Message
 			if (isResponseMsg (packet))
@@ -745,22 +741,19 @@ int main (int argc, char *argv[])
 				auto newPacket = setAnswer (packet, hostsTable);
 				connector.Send (newPacket);
 
-				printTimeNow (logger);
-				logger << " - Send to " << newPacket;
+				Logger (logFile) << "Send to " << newPacket;
 			}
 			catch (const std::exception &) { toNameServer (packet); }
 		};
 
 		// Run here
-		printTimeNow (logger);
-		logger << " - Server Started :-)\n\n";
+		Logger (logFile) << "Server Started :-)\n\n";
 		while (true)
 		{
 			try { connector.Recv (onRecv); }
 			catch (const std::exception &ex)
 			{
-				printTimeNow (logger);
-				logger << " - Exception: " << ex.what () << "\n";
+				Logger (logFile) << "Exception: " << ex.what () << "\n";
 			}
 		}
 	}
