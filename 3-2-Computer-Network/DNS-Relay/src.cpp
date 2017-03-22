@@ -122,7 +122,7 @@ namespace DnsRelay
 	std::ostream &operator << (std::ostream &os, const Config &config)
 	{
 		return os << "-o " << (config.logFilename.empty () ?
-				"<stdout>" : config.logFilename.c_str ())
+							   "<stdout>" : config.logFilename.c_str ())
 			<< " -n " << config.nameserverIp
 			<< " -h " << config.hostsFilename;
 	}
@@ -167,14 +167,14 @@ namespace DnsRelay
 		Packet (const sockaddr_in &_addr, uint8_t *buf, int bufLen)
 			: addr (_addr)
 		{
-			auto checkLen = [&] (size_t size)
+			auto checkLen = [] (int &bufLen, size_t size)
 			{
 				bufLen -= size;
 				if (bufLen < 0) throw std::runtime_error ("Bad packet len");
 			};
 
 			// Validation
-			checkLen (6 * sizeof (uint16_t));
+			checkLen (bufLen, 6 * sizeof (uint16_t));
 
 			// Retrieve Header
 			uint16_t *pwBuf = (uint16_t *) buf;
@@ -248,7 +248,7 @@ namespace DnsRelay
 				getField (question.clas, ntohs);
 
 				// Validation
-				checkLen (domainNameLen + 2 * sizeof (uint16_t));
+				checkLen (bufLen, domainNameLen + 2 * sizeof (uint16_t));
 
 				// Set Question
 				qd.emplace_back (std::move (question));
@@ -277,8 +277,8 @@ namespace DnsRelay
 					pbBuf += rdLen;
 
 					// Validation
-					checkLen (domainNameLen + 3 * sizeof (uint16_t) +
-							  sizeof (uint32_t) + rdLen);
+					checkLen (bufLen, domainNameLen + sizeof (uint32_t) +
+							  3 * sizeof (uint16_t) + rdLen);
 
 					// Set Resource
 					resources.emplace_back (std::move (resource));
@@ -298,15 +298,15 @@ namespace DnsRelay
 			auto oldLen = bufLen;
 			bufLen = 0;
 
-			auto checkLen = [&] (size_t size)
+			auto checkLen = [] (int &oldLen, int &newLen, size_t size)
 			{
 				oldLen -= size;
 				if (oldLen < 0) throw std::runtime_error ("Bad buffer size");
-				bufLen += size;
+				newLen += size;
 			};
 
 			// Validation
-			checkLen (6 * sizeof (uint16_t));
+			checkLen (oldLen, bufLen, 6 * sizeof (uint16_t));
 
 			// Set Header
 			uint16_t *pwBuf = (uint16_t *) buf;
@@ -342,7 +342,8 @@ namespace DnsRelay
 			for (const auto &question : qd)
 			{
 				// Validation
-				checkLen (question.name.size () + 1 + 2 * sizeof (uint16_t));
+				checkLen (oldLen, bufLen, question.name.size () + 1 +
+						  2 * sizeof (uint16_t));
 
 				// Set domain name
 				strncpy ((char *) pbBuf, question.name.c_str (),
@@ -360,7 +361,7 @@ namespace DnsRelay
 				for (const auto &resource : resources)
 				{
 					// Validation
-					checkLen (resource.name.size () + 1 +
+					checkLen (oldLen, bufLen, resource.name.size () + 1 +
 							  3 * sizeof (uint16_t) + sizeof (uint32_t) +
 							  resource.rdData.size ());
 
@@ -651,19 +652,32 @@ int main (int argc, char *argv[])
 				packet.qd.front ().clas == 1;
 		};
 
-		// Helper
-		auto setAnswer = [] (const Packet &packet,
-							 const HostsTable &hostsTable)
+		// Helpers
+		auto fromRecord = [] (Packet packet,
+							  const Record &record)
 		{
-			// Throwable
-			auto dwordIp = hostsTable.at (
-				Packet::ParseDomainName (packet.qd.front ().name));
-
-			// Throw here if not found
-
-			auto newPacket = packet;
-			newPacket.header.qr = newPacket.header.aa =
-				newPacket.header.ra = true;
+			std::tie (packet.header.id, packet.addr,
+					  std::ignore) = record;
+			return packet;
+		};
+		auto toRecord = [] (const Packet &packet)
+		{
+			return Record { packet.header.id, packet.addr,
+				std::chrono::system_clock::now () };
+		};
+		auto setTarget = [] (Packet packet, uint16_t id,
+							 const sockaddr_in &sa)
+		{
+			packet.header.id = id;
+			packet.addr = sa;
+			return packet;
+		};
+		auto setAnswer = [] (Packet packet,
+							 uint32_t dwordIp)
+		{
+			packet.header.qr =
+				packet.header.aa =
+				packet.header.ra = true;
 
 			if (dwordIp != INADDR_ANY)
 			{
@@ -674,28 +688,28 @@ int main (int argc, char *argv[])
 				answer.ttl = 120;
 				answer.rdData.assign ((uint8_t *) &dwordIp,
 					(uint8_t *) (&dwordIp + 1));
-				newPacket.an.emplace_front (std::move (answer));
+				packet.an.emplace_front (std::move (answer));
 			}
 			else
-				newPacket.header.rCode = 3;
+				packet.header.rCode = 3;
 
-			return newPacket;
+			return packet;
+		};
+
+		Connector connector;
+		auto sendPacket = [&] (const Packet &packet)
+		{
+			connector.Send (packet);
+			Logger (logFile) << "Send to " << packet;
 		};
 
 		// Functions
-		Connector connector;
 		auto fromNameServer = [&] (const Packet &packet)
 		{
 			try
 			{
-				const Record &record = records.at (packet.header.id);
-
-				auto newPacket = packet;
-				std::tie (newPacket.header.id, newPacket.addr,
-						  std::ignore) = record;
-				connector.Send (newPacket);
-
-				Logger (logFile) << "Send to " << newPacket;
+				sendPacket (fromRecord (packet,
+							records.at (packet.header.id)));
 			}
 			// Ignore if timeout...
 			catch (const std::exception &) {}
@@ -706,19 +720,13 @@ int main (int argc, char *argv[])
 			clearTimeout (records);
 
 			static uint16_t curId;
-			records.emplace (++curId, Record {
-				packet.header.id, packet.addr,
-				std::chrono::system_clock::now () });
-
-			auto newPacket = packet;
-			newPacket.header.id = curId;
-			newPacket.addr = saNameServer;
-			connector.Send (newPacket);
-
-			Logger (logFile) << "Send to " << newPacket;
+			records.emplace (++curId,
+							 toRecord (packet));
+			sendPacket (setTarget (
+				packet, curId, saNameServer));
 		};
 
-		// Callback Delegate
+		// Callback Delegates
 		auto onRecv = [&] (const Packet &packet)
 		{
 			Logger (logFile) << "Recv from " << packet;
@@ -738,12 +746,17 @@ int main (int argc, char *argv[])
 			// - Forward to name server if NOT Found
 			try
 			{
-				auto newPacket = setAnswer (packet, hostsTable);
-				connector.Send (newPacket);
-
-				Logger (logFile) << "Send to " << newPacket;
+				sendPacket (setAnswer (packet,
+							hostsTable.at (
+							Packet::ParseDomainName (
+							packet.qd.front ().name))));
 			}
 			catch (const std::exception &) { toNameServer (packet); }
+		};
+
+		auto onException = [&] (const std::exception &ex)
+		{
+			Logger (logFile) << "Exception: " << ex.what () << "\n";
 		};
 
 		// Run here
@@ -751,10 +764,7 @@ int main (int argc, char *argv[])
 		while (true)
 		{
 			try { connector.Recv (onRecv); }
-			catch (const std::exception &ex)
-			{
-				Logger (logFile) << "Exception: " << ex.what () << "\n";
-			}
+			catch (const std::exception &ex) { onException (ex); }
 		}
 	}
 	catch (const std::exception &ex)
