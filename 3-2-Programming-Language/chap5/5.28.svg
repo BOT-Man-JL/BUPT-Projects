@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<svg width="640" height="480" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg">
+ <!-- Created with SVG-edit - http://svg-edit.googlecode.com/ -->
+ <g>
+  <title>Layer 1</title>
+  <circle id="svg_10" stroke="#000000" r="31.376923" cy="245.188464" cx="128.188459" fill-opacity="0" stroke-width="3" fill="#000000"/>
+  <text id="svg_11" xml:space="preserve" text-anchor="middle" font-family="serif" font-size="24" y="242.188461" x="116.188461" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="0" stroke="#000000" fill="#000000"/>
+  <text style="cursor: move;" id="svg_12" xml:space="preserve" text-anchor="middle" font-family="serif" font-size="24" y="253.188461" x="127.188461" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="0" stroke="#000000" fill="#000000">y</text>
+  <rect id="svg_13" height="66" width="189" y="214.188461" x="360.188461" fill-opacity="0" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="3" stroke="#000000" fill="#000000"/>
+  <circle id="svg_14" stroke="#000000" r="31.376923" cy="247.188464" cx="457.188459" fill-opacity="0" stroke-width="3" fill="#000000"/>
+  <line stroke="#000000" id="svg_15" y2="244.188461" x2="360.188461" y1="245.188461" x1="162.188461" fill-opacity="0" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="3" fill="none"/>
+  <circle id="svg_16" stroke="#000000" r="31.376923" cy="125.188464" cx="127.188459" fill-opacity="0" stroke-width="3" fill="#000000"/>
+  <text id="svg_17" xml:space="preserve" text-anchor="middle" font-family="serif" font-size="24" y="122.188461" x="115.188461" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="0" stroke="#000000" fill="#000000"/>
+  <text style="cursor: move;" id="svg_18" xml:space="preserve" text-anchor="middle" font-family="serif" font-size="24" y="133.188461" x="126.188461" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="0" stroke="#000000" fill="#000000">x</text>
+  <rect id="svg_19" height="66" width="189" y="94.188461" x="359.188461" fill-opacity="0" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="3" stroke="#000000" fill="#000000"/>
+  <circle id="svg_20" stroke="#000000" r="31.376923" cy="127.188464" cx="456.188459" fill-opacity="0" stroke-width="3" fill="#000000"/>
+  <line id="svg_21" y2="124.188461" x2="359.188461" y1="125.188461" x1="161.188461" fill-opacity="0" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="3" stroke="#000000" fill="none"/>
+  <line id="svg_30" y2="216" x2="457" y1="129" x1="456" fill-opacity="0" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="3" stroke="#000000" fill="none"/>
+  <circle id="svg_37" stroke="#000000" r="31.376923" cy="368.688464" cx="128.188451" fill-opacity="0" stroke-width="3" fill="#000000"/>
+  <text id="svg_38" xml:space="preserve" text-anchor="middle" font-family="serif" font-size="24" y="365.688461" x="116.188454" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="0" stroke="#000000" fill="#000000"/>
+  <text style="cursor: move;" id="svg_39" xml:space="preserve" text-anchor="middle" font-family="serif" font-size="24" y="376.688461" x="127.188454" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="0" stroke="#000000" fill="#000000">z</text>
+  <rect id="svg_40" height="66" width="189" y="337.688461" x="360.188454" fill-opacity="0" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="3" stroke="#000000" fill="#000000"/>
+  <circle id="svg_41" stroke="#000000" r="31.376923" cy="370.688464" cx="457.188451" fill-opacity="0" stroke-width="3" fill="#000000"/>
+  <line id="svg_42" stroke="#000000" y2="367.688461" x2="360.188454" y1="368.688461" x1="162.188454" fill-opacity="0" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="3" fill="none"/>
+  <line id="svg_43" y2="340" x2="456.5" y1="253" x1="455.5" fill-opacity="0" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="3" stroke="#000000" fill="none"/>
+  <text style="cursor: move;" id="svg_44" xml:space="preserve" text-anchor="middle" font-family="serif" font-size="24" y="378.500961" x="455.000954" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="0" stroke="#000000" fill="#000000">2或4</text>
+ </g>
+</svg>

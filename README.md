@@ -51,6 +51,8 @@ together with [**buptczq**](https://github.com/buptczq/RE_Bupt_Computer_Network_
 - Computer Network Pratice
   - [DNS Relay](/3-2-Computer-Network/DNS-Relay)
   - [Hacking DNS Relay](/3-2-Computer-Network/Hack-DNS-Relay)
+- Programming Language Principles and Pratice
+  - Chapter 5 Solution
 
 ## Misc
 

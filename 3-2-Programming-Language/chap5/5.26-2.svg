@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<svg width="640" height="480" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg">
+ <!-- Created with SVG-edit - http://svg-edit.googlecode.com/ -->
+ <g>
+  <title>Layer 1</title>
+  <circle stroke="#000000" id="svg_2" r="31.376923" cy="396.000003" cx="117.999998" fill-opacity="0" stroke-width="3" fill="#000000"/>
+  <text xml:space="preserve" text-anchor="middle" font-family="serif" font-size="24" id="svg_3" y="393" x="106" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="0" stroke="#000000" fill="#000000"/>
+  <text xml:space="preserve" text-anchor="middle" font-family="serif" font-size="24" id="svg_4" y="404" x="117" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="0" stroke="#000000" fill="#000000">z</text>
+  <rect id="svg_6" height="66" width="189" y="365" x="350" fill-opacity="0" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="3" stroke="#000000" fill="#000000"/>
+  <circle id="svg_8" stroke="#000000" r="31.376923" cy="398.000003" cx="446.999998" fill-opacity="0" stroke-width="3" fill="#000000"/>
+  <line id="svg_9" y2="395" x2="350" y1="396" x1="152" fill-opacity="0" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="3" stroke="#000000" fill="none"/>
+  <circle id="svg_10" stroke="#000000" r="31.376923" cy="201.188464" cx="121.188459" fill-opacity="0" stroke-width="3" fill="#000000"/>
+  <text id="svg_11" xml:space="preserve" text-anchor="middle" font-family="serif" font-size="24" y="198.188461" x="109.188461" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="0" stroke="#000000" fill="#000000"/>
+  <text style="cursor: move;" id="svg_12" xml:space="preserve" text-anchor="middle" font-family="serif" font-size="24" y="209.188461" x="120.188461" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="0" stroke="#000000" fill="#000000">y</text>
+  <rect id="svg_13" height="66" width="189" y="170.188461" x="353.188461" fill-opacity="0" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="3" stroke="#000000" fill="#000000"/>
+  <circle id="svg_14" stroke="#000000" r="31.376923" cy="203.188464" cx="450.188459" fill-opacity="0" stroke-width="3" fill="#000000"/>
+  <line stroke="#000000" id="svg_15" y2="200.188461" x2="353.188461" y1="201.188461" x1="155.188461" fill-opacity="0" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="3" fill="none"/>
+  <circle id="svg_16" stroke="#000000" r="31.376923" cy="81.188464" cx="120.188459" fill-opacity="0" stroke-width="3" fill="#000000"/>
+  <text id="svg_17" xml:space="preserve" text-anchor="middle" font-family="serif" font-size="24" y="78.188461" x="108.188461" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="0" stroke="#000000" fill="#000000"/>
+  <text style="cursor: move;" id="svg_18" xml:space="preserve" text-anchor="middle" font-family="serif" font-size="24" y="89.188461" x="119.188461" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="0" stroke="#000000" fill="#000000">x</text>
+  <rect id="svg_19" height="66" width="189" y="50.188461" x="352.188461" fill-opacity="0" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="3" stroke="#000000" fill="#000000"/>
+  <circle id="svg_20" stroke="#000000" r="31.376923" cy="83.188464" cx="449.188459" fill-opacity="0" stroke-width="3" fill="#000000"/>
+  <line id="svg_21" y2="80.188461" x2="352.188461" y1="81.188461" x1="154.188461" fill-opacity="0" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="3" stroke="#000000" fill="none"/>
+  <line id="svg_22" y2="395" x2="350" y1="396" x1="152" fill-opacity="0" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="3" stroke="#000000" fill="none"/>
+  <rect id="svg_23" height="66" width="189" y="365" x="350" fill-opacity="0" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="3" stroke="#000000" fill="#000000"/>
+  <circle id="svg_24" stroke="#000000" r="31.376923" cy="398.000003" cx="446.999998" fill-opacity="0" stroke-width="3" fill="#000000"/>
+  <rect id="svg_25" height="66" width="189" y="269" x="352.499992" fill-opacity="0" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="3" stroke="#000000" fill="#000000"/>
+  <circle id="svg_26" stroke="#000000" r="31.376923" cy="302.000003" cx="449.49999" fill-opacity="0" stroke-width="3" fill="#000000"/>
+  <line id="svg_30" y2="172" x2="450" y1="85" x1="449" fill-opacity="0" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="3" stroke="#000000" fill="none"/>
+  <line id="svg_31" y2="272" x2="449" y1="206" x1="449" fill-opacity="0" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="3" stroke="#000000" fill="none"/>
+  <text style="cursor: move;" xml:space="preserve" text-anchor="middle" font-family="serif" font-size="24" id="svg_35" y="311" x="449" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="0" stroke="#000000" fill="#000000">4</text>
+  <text style="cursor: move;" id="svg_36" xml:space="preserve" text-anchor="middle" font-family="serif" font-size="24" y="406" x="447" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="0" stroke="#000000" fill="#000000">3</text>
+ </g>
+</svg>
