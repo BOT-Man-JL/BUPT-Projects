@@ -8,6 +8,8 @@
 
 [TOC]
 
+[page-break]
+
 ## Q-5.7
 
 ### Question
@@ -459,11 +461,15 @@ int main ()
 
 #### box-and-circle 图
 
+[img=max-height:100mm]
+
 ![5.26 box-and-circle](chap5/5.26-1.svg)
 
 [align-center]
 
 图 1（第 11 行）
+
+[img=max-height:100mm]
 
 ![5.26 box-and-circle](chap5/5.26-2.svg)
 
@@ -503,11 +509,15 @@ int main ()
 
 导致第 10 行 `*x = y;` 失败：
 
+[img=max-width:120mm]
+
 ![5.27 Vc 1](chap5/5.27-vc-1.png)
 
 #### 去掉第 7 行
 
 导致第 9 行 `*y = 2;` 失败：
+
+[img=max-width:120mm]
 
 ![5.27 Vc 2](chap5/5.27-vc-2.png)
 
@@ -543,6 +553,8 @@ int main ()
 #### box-and-circle 图
 
 第 11 和 15 行的 `**x` 赋值位置的图相同（第一次 `z` 为 `2`，第二次为 `4`）：
+
+[img=max-height:100mm]
 
 ![5.28](chap5/5.28.svg)
 
