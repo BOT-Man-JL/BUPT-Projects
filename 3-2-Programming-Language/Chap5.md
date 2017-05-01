@@ -8,8 +8,6 @@
 
 [TOC]
 
-[page-break]
-
 ## Q-5.7
 
 ### Question
