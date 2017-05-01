@@ -48,11 +48,18 @@ together with [**buptczq**](https://github.com/buptczq/RE_Bupt_Computer_Network_
 - Operating System
   - Reader-Writer Problem
   - Memory Allocation Tracking
+- Network Storage
+  - [12306 Analysis](https://bot-man-jl.github.io/articles/?post=2016/12306-Architecture)
+  - [Online Exam System Desing](https://bot-man-jl.github.io/articles/?post=2016/Exam-System-Design)
 - Computer Network Pratice
   - [DNS Relay](/3-2-Computer-Network/DNS-Relay)
   - [Hacking DNS Relay](/3-2-Computer-Network/Hack-DNS-Relay)
+- Linux
+  - PM 2.5 Crawler Script
+  - Naive `ls` Implementation
 - Programming Language Principles and Pratice
   - Chapter 5 Solution
+  - [Template Programming](https://bot-man-jl.github.io/articles/?post=2017/Template-Programming)
 
 ## Misc
 
