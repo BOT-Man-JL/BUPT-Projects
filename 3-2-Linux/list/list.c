@@ -1,3 +1,10 @@
+
+// A naive implementation of list on Linux
+//
+// By John Lee, 2017/5/1
+//
+// Usage: list [-a] [-r] [-l <min-size>] [-h <max-size>] [-m <modify-day>] [path ...]
+
 #include <stdio.h>  // for printf
 #include <stdlib.h>  // for malloc/free
 #include <time.h>  // for time
