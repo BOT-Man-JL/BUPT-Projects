@@ -136,8 +136,73 @@ namespace DnsRelay
             << " -t " << config.timeOut.count ();
     }
 
-    struct Packet
+    class Packet
     {
+        using StrMap = std::unordered_map<uint16_t, std::string>;
+        static const StrMap &TypeStrs ()
+        {
+            static const StrMap typeStrs
+            {
+                { 1, "A" },
+                { 2, "NS" },
+                { 5, "CNAME" },
+                { 6, "SOA" },
+                { 12, "PTR" },
+                { 15, "MX" },
+                { 16, "TXT" },
+                { 28, "AAAA" }
+            };
+            return typeStrs;
+        }
+
+        static const StrMap &ClasStrs ()
+        {
+            static const StrMap clasStrs
+            {
+                { 1, "IN" }
+            };
+            return clasStrs;
+        }
+
+        static const std::string &UnknownStr ()
+        {
+            static const std::string ret { "???" };
+            return ret;
+        }
+
+        static auto GetDomainName (const uint8_t *buf,
+                                   const uint8_t *pbFrom,
+                                   std::string &name)
+        {
+            auto pbBuf = pbFrom;
+            auto isCompressed = false;
+
+            auto szSeg = (const char *) pbBuf;
+            while (*szSeg)
+            {
+                // Handle compressed domain name
+                if (*szSeg & 0xC0)
+                {
+                    uint16_t *pwBuf = (uint16_t *) szSeg;
+                    uint16_t offset = ntohs (*pwBuf) & 0x3FFF;
+                    szSeg = (const char *) buf + offset;
+
+                    if (!isCompressed) pbBuf += sizeof (uint16_t);
+                    isCompressed = true;
+                }
+
+                uint8_t segSize = *(uint8_t *) szSeg + 1;
+                name.append (szSeg, segSize);
+                szSeg += segSize;
+                if (!isCompressed) pbBuf = (uint8_t *) szSeg;
+            }
+            name.append (1u, '\0');
+
+            if (!isCompressed) ++pbBuf;
+            return pbBuf - pbFrom;
+        }
+
+    public:
         struct Header
         {
             uint16_t id;     // 16 bit
@@ -161,6 +226,17 @@ namespace DnsRelay
             std::string name;
             uint16_t type;  // 16 bit
             uint16_t clas;  // 16 bit
+
+            const std::string &typeStr () const
+            {
+                try { return TypeStrs ().at (type); }
+                catch (...) { return UnknownStr (); }
+            }
+            const std::string &clasStr () const
+            {
+                try { return ClasStrs ().at (clas); }
+                catch (...) { return UnknownStr (); }
+            }
         };
 
         struct Resource
@@ -171,9 +247,118 @@ namespace DnsRelay
             uint32_t ttl;    // 32 bit
             // rdLen - 16 bit
             std::vector<uint8_t> rdData; // rdLen
+
+            const std::string &typeStr () const
+            {
+                try { return TypeStrs ().at (type); }
+                catch (...) { return UnknownStr (); }
+            }
+            const std::string &clasStr () const
+            {
+                try { return ClasStrs ().at (clas); }
+                catch (...) { return UnknownStr (); }
+            }
+
+            void FixData (const uint8_t *buf)
+            {
+                switch (type)
+                {
+                case 2:
+                case 5:
+                case 12:
+                {
+                    std::string domainName;
+                    GetDomainName (buf, rdData.data (), domainName);
+                    rdData.assign (domainName.begin (), domainName.end ());
+                    break;
+                }
+                case 6:
+                {
+                    std::string domainName;
+                    auto pData = rdData.data ();
+                    pData += GetDomainName (buf, pData, domainName);
+                    pData += GetDomainName (buf, pData, domainName);
+                    domainName.append (pData, pData + rdData.size ());
+                    rdData.assign (domainName.begin (), domainName.end ());
+                    break;
+                }
+                default: break;
+                }
+            }
+
+            void PrintData (std::ostream &os) const
+            {
+                switch (type)
+                {
+                case 1:
+                {
+                    os << " Addr: ";
+                    for (auto p = rdData.begin (); ;)
+                    {
+                        os << (uint16_t) *p;
+                        if (++p == rdData.end ()) break;
+                        os << ".";
+                    }
+                    break;
+                }
+                case 28:
+                {
+                    auto count = 0;
+                    os << " Addr: " << std::hex;
+                    for (const auto byteVal : rdData)
+                    {
+                        os << std::setw (2) << std::setfill ('0')
+                            << std::right << (uint16_t) byteVal;
+                        if (count % 2 && count != 15) os << ":";
+                        ++count;
+                    }
+                    os << std::dec;
+                    break;
+                }
+                case 2:
+                case 5:
+                case 12:
+                {
+                    os << " Name: " << Packet::ParseDomainName (
+                        std::string { rdData.begin (), rdData.end () });
+                    break;
+                }
+                case 6:
+                {
+                    auto p = rdData.begin ();
+                    for (; p != rdData.end () && *p != 0; ++p);
+                    os << " NName: " << Packet::ParseDomainName (
+                        std::string { rdData.begin (), p });
+                    auto q = ++p;
+                    for (; p != rdData.end () && *p != 0; ++p);
+                    os << " RName: " << Packet::ParseDomainName (
+                        std::string { q, p });
+                    uint32_t *pd = (uint32_t *) &(*++p);
+                    os << " Serial: " << *(++pd);
+                    os << " Refresh: " << *(++pd);
+                    os << " Retry: " << *(++pd);
+                    os << " Expire: " << *(++pd);
+                    os << " Mininum: " << *(++pd);
+                    break;
+                }
+                default:
+                {
+                    auto count = rdData.size ();
+                    os << std::hex;
+                    for (const auto byteVal : rdData)
+                    {
+                        os << std::setw (2) << std::setfill ('0')
+                            << std::right << (uint16_t) byteVal;
+                        if (--count != 0) os << " ";
+                    }
+                    os << std::dec;
+                    break;
+                }
+                }
+            }
         };
 
-        Packet (const sockaddr_in &_addr, uint8_t *buf, int bufLen)
+        Packet (const sockaddr_in &_addr, const uint8_t *buf, int bufLen)
             : addr (_addr)
         {
             auto checkLen = [&bufLen] (size_t size)
@@ -208,36 +393,6 @@ namespace DnsRelay
             // Buffer Pointer
             uint8_t *pbBuf = (uint8_t *) &pwBuf[6];
 
-            auto getDomainName = [buf] (uint8_t *pbFrom, std::string &name)
-            {
-                auto pbBuf = pbFrom;
-                auto isCompressed = false;
-                auto szSeg = (const char *) pbBuf;
-
-                while (*szSeg)
-                {
-                    // Handle compressed domain name
-                    if (*szSeg & 0xC0)
-                    {
-                        uint16_t *pwBuf = (uint16_t *) szSeg;
-                        uint16_t offset = ntohs (*pwBuf) & 0x3FFF;
-                        szSeg = (const char *) buf + offset;
-
-                        if (!isCompressed) pbBuf += sizeof (uint16_t);
-                        isCompressed = true;
-                    }
-
-                    uint8_t segSize = *(uint8_t *) szSeg + 1;
-                    name.append (szSeg, segSize);
-                    szSeg += segSize;
-                    if (!isCompressed) pbBuf = (uint8_t *) szSeg;
-                }
-                name.append (1u, '\0');
-
-                if (!isCompressed) ++pbBuf;
-                return pbBuf - pbFrom;
-            };
-
             auto getField = [&pbBuf] (auto &val, auto fn)
             {
                 using Type = std::remove_reference_t<decltype (val)>;
@@ -252,7 +407,8 @@ namespace DnsRelay
                 Question question;
 
                 // Retrieve domain name
-                auto domainNameLen = getDomainName (pbBuf, question.name);
+                auto domainNameLen =
+                    GetDomainName (buf, pbBuf, question.name);
                 pbBuf += domainNameLen;
 
                 // Retrieve fields
@@ -275,7 +431,8 @@ namespace DnsRelay
                     Resource resource;
 
                     // Retrieve domain name
-                    auto domainNameLen = getDomainName (pbBuf, resource.name);
+                    auto domainNameLen =
+                        GetDomainName (buf, pbBuf, resource.name);
                     pbBuf += domainNameLen;
 
                     // Retrieve fields
@@ -287,17 +444,8 @@ namespace DnsRelay
                     uint16_t rdLen;
                     getField (rdLen, ntohs);
                     resource.rdData.assign (pbBuf, pbBuf + rdLen);
+                    resource.FixData (buf);
                     pbBuf += rdLen;
-
-                    // TODO: support more protocols
-                    // Handle compression in rdData
-                    if (resource.type == 2 || resource.type == 5)
-                    {
-                        auto pFrom = resource.rdData.data ();
-                        std::string domainName;
-                        getDomainName (pFrom, domainName);
-                        resource.rdData.assign (domainName.begin (), domainName.end ());
-                    }
 
                     // Validation
                     checkLen (domainNameLen + sizeof (uint32_t) +
@@ -418,119 +566,79 @@ namespace DnsRelay
         std::list<Resource> ar;
     };
 
-    std::ostream &operator << (std::ostream &os, const Packet &packet)
+    std::ostream &operator << (std::ostream &os,
+                               const sockaddr_in &addr)
     {
-        auto printAddr = [] (std::ostream &os,
-                             const sockaddr_in &addr)
-        {
-            constexpr int BUF_SIZE = 64;
-            char szIp[BUF_SIZE];
+        constexpr int BUF_SIZE = 64;
+        char szIp[BUF_SIZE];
 
-            if (!inet_ntop (
-                AF_INET, (const void *) &addr.sin_addr,
-                szIp, BUF_SIZE))
-                strcpy (szIp, "Invalid IP");
-            os << "[" << szIp << ":"
-                << ntohs (addr.sin_port) << "]\n";
-        };
+        if (!inet_ntop (
+            AF_INET, (const void *) &addr.sin_addr,
+            szIp, BUF_SIZE))
+            strcpy (szIp, "Invalid IP");
+        return os << "[" << szIp << ":"
+            << ntohs (addr.sin_port) << "]\n";
+    }
 
-        auto printHeader = [] (std::ostream &os,
+    std::ostream &operator << (std::ostream &os,
                                const Packet::Header &header)
-        {
-            os << "ID: " << std::setw (4) << std::setfill ('0')
-                << std::right << std::hex << header.id << std::dec
-                << " QR: " << header.qr
-                << " OPCODE: " << (uint16_t) header.opCode
-                << " AA: " << header.aa
-                << " TC: " << header.tc
-                << " RD: " << header.rd
-                << " RA: " << header.ra
-                << " ZERO: " << (uint16_t) header.zero
-                << " RCODE: " << (uint16_t) header.rCode
-                << std::endl;
-        };
+    {
+        return os << "ID: " << std::setw (4) << std::setfill ('0')
+            << std::right << std::hex << header.id << std::dec
+            << " QR: " << header.qr
+            << " OPCODE: " << (uint16_t) header.opCode
+            << " AA: " << header.aa
+            << " TC: " << header.tc
+            << " RD: " << header.rd
+            << " RA: " << header.ra
+            << " ZERO: " << (uint16_t) header.zero
+            << " RCODE: " << (uint16_t) header.rCode
+            << std::endl;
+    }
 
-        auto printQuestion = [] (std::ostream &os,
-                                 const Packet::Question &ques)
-        {
-            os << " - Domain Name: [" <<
-                Packet::ParseDomainName (ques.name)
-                << "] Type: " << ques.type
-                << " Class: " << ques.clas << std::endl;
-        };
+    std::ostream &operator << (std::ostream &os,
+                               const Packet::Question &ques)
+    {
+        return os << " - Name: [" <<
+            Packet::ParseDomainName (ques.name)
+            << "] Type: " << ques.typeStr ()
+            << " Class: " << ques.clasStr ()
+            << std::endl;
+    }
 
-        auto printResource = [] (std::ostream &os,
-                                 const Packet::Resource &res)
-        {
-            os << " - Domain Name: [" <<
-                Packet::ParseDomainName (res.name)
-                << "] Type: " << res.type
-                << " Class: " << res.clas
-                << " TTL: " << res.ttl
-                << " rdData: [ ";
-            if (res.type == 1)  // A
-            {
-                auto p = res.rdData.begin ();
-                while (true)
-                {
-                    os << (uint16_t) *p;
-                    if (++p == res.rdData.end ()) break;
-                    os << ".";
-                }
-                os << " ";
-            }
-            else if (res.type == 28)  // AAAA
-            {
-                auto count = 0;
-                os << std::hex;
-                for (const auto byteVal : res.rdData)
-                {
-                    os << std::setw (2) << std::setfill ('0')
-                        << std::right << (uint16_t) byteVal;
-                    if (count % 2)
-                        if (count != 15) os << ":";
-                        else os << " ";
-                    ++count;
-                }
-                os << std::dec;
-            }
-            else if (res.type == 2 || res.type == 5)  // NS, CNAME
-            {
-                os << Packet::ParseDomainName (std::string {
-                    res.rdData.begin (), res.rdData.end () }) << " ";
-            }
-            else  // Unknown
-            {
-                os << std::hex;
-                for (const auto byteVal : res.rdData)
-                    os << std::setw (2) << std::setfill ('0')
-                    << std::right << (uint16_t) byteVal << " ";
-                os << std::dec;
-            }
-            os << "]" << std::endl;
-        };
+    std::ostream &operator << (std::ostream &os,
+                               const Packet::Resource &res)
+    {
+        os << " - Name: [" <<
+            Packet::ParseDomainName (res.name)
+            << "] Type: " << res.typeStr ()
+            << " Class: " << res.clasStr ()
+            << " TTL: " << res.ttl;
+        res.PrintData (os);
+        return os << std::endl;
+    }
 
+    std::ostream &operator << (std::ostream &os,
+                               const Packet &packet)
+    {
         auto printFieldList = [] (
             std::ostream &os,
             const char *fieldName,
-            const auto &list,
-            const auto &printField)
+            const auto &list)
         {
             if (list.empty ()) return;
 
             os << fieldName << " has " << list.size ()
                 << " fields:" << std::endl;
             for (const auto &res : list)
-                printField (os, res);
+                os << res;
         };
 
-        printAddr (os, packet.addr);
-        printHeader (os, packet.header);
-        printFieldList (os, "QD", packet.qd, printQuestion);
-        printFieldList (os, "AN", packet.an, printResource);
-        printFieldList (os, "NS", packet.ns, printResource);
-        printFieldList (os, "AR", packet.ar, printResource);
-
+        os << packet.addr << packet.header;
+        printFieldList (os, "QD", packet.qd);
+        printFieldList (os, "AN", packet.an);
+        printFieldList (os, "NS", packet.ns);
+        printFieldList (os, "AR", packet.ar);
         return os << std::endl;
     }
 
