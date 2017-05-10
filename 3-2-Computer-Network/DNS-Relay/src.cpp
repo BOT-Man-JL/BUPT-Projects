@@ -208,16 +208,16 @@ namespace DnsRelay
             // Buffer Pointer
             uint8_t *pbBuf = (uint8_t *) &pwBuf[6];
 
-            auto getDomainName = [&pbBuf, buf] (std::string &name)
+            auto getDomainName = [buf] (uint8_t *pbFrom, std::string &name)
             {
-                auto pbBufBeg = pbBuf;
-                bool isCompressed = false;
+                auto pbBuf = pbFrom;
+                auto isCompressed = false;
                 auto szSeg = (const char *) pbBuf;
 
                 while (*szSeg)
                 {
                     // Handle compressed domain name
-                    if ((*szSeg & 0x80) && (*szSeg & 0x40))
+                    if (*szSeg & 0xC0)
                     {
                         uint16_t *pwBuf = (uint16_t *) szSeg;
                         uint16_t offset = ntohs (*pwBuf) & 0x3FFF;
@@ -227,13 +227,15 @@ namespace DnsRelay
                         isCompressed = true;
                     }
 
-                    name.append (szSeg, *(uint8_t *) szSeg + 1);
-                    szSeg += *szSeg + 1;
+                    uint8_t segSize = *(uint8_t *) szSeg + 1;
+                    name.append (szSeg, segSize);
+                    szSeg += segSize;
                     if (!isCompressed) pbBuf = (uint8_t *) szSeg;
                 }
+                name.append (1u, '\0');
 
                 if (!isCompressed) ++pbBuf;
-                return pbBuf - pbBufBeg;
+                return pbBuf - pbFrom;
             };
 
             auto getField = [&pbBuf] (auto &val, auto fn)
@@ -250,7 +252,8 @@ namespace DnsRelay
                 Question question;
 
                 // Retrieve domain name
-                auto domainNameLen = getDomainName (question.name);
+                auto domainNameLen = getDomainName (pbBuf, question.name);
+                pbBuf += domainNameLen;
 
                 // Retrieve fields
                 getField (question.type, ntohs);
@@ -272,7 +275,8 @@ namespace DnsRelay
                     Resource resource;
 
                     // Retrieve domain name
-                    auto domainNameLen = getDomainName (resource.name);
+                    auto domainNameLen = getDomainName (pbBuf, resource.name);
+                    pbBuf += domainNameLen;
 
                     // Retrieve fields
                     getField (resource.type, ntohs);
@@ -284,6 +288,16 @@ namespace DnsRelay
                     getField (rdLen, ntohs);
                     resource.rdData.assign (pbBuf, pbBuf + rdLen);
                     pbBuf += rdLen;
+
+                    // TODO: support more protocols
+                    // Handle compression in rdData
+                    if (resource.type == 2 || resource.type == 5)
+                    {
+                        auto pFrom = resource.rdData.data ();
+                        std::string domainName;
+                        getDomainName (pFrom, domainName);
+                        resource.rdData.assign (domainName.begin (), domainName.end ());
+                    }
 
                     // Validation
                     checkLen (domainNameLen + sizeof (uint32_t) +
@@ -352,7 +366,7 @@ namespace DnsRelay
             // Set Questions
             for (const auto &question : qd)
             {
-                setBytes (question.name.c_str (), question.name.size () + 1);
+                setBytes (question.name.c_str (), question.name.size ());
                 setField (question.type, htons);
                 setField (question.clas, htons);
             }
@@ -363,7 +377,7 @@ namespace DnsRelay
                 for (const auto &resource : resources)
                 {
                     setBytes (resource.name.c_str (),
-                              resource.name.size () + 1);
+                              resource.name.size ());
                     setField (resource.type, htons);
                     setField (resource.clas, htons);
                     setField (resource.ttl, htonl);
@@ -453,12 +467,47 @@ namespace DnsRelay
                 << "] Type: " << res.type
                 << " Class: " << res.clas
                 << " TTL: " << res.ttl
-                << " rdLen: " << res.rdData.size ()
-                << " rdData: [ " << std::hex;
-            for (const auto &byteVal : res.rdData)
-                os << std::setw (2) << std::setfill ('0')
-                << std::right << (uint16_t) byteVal << " ";
-            os << std::dec << "]" << std::endl;
+                << " rdData: [ ";
+            if (res.type == 1)  // A
+            {
+                auto p = res.rdData.begin ();
+                while (true)
+                {
+                    os << (uint16_t) *p;
+                    if (++p == res.rdData.end ()) break;
+                    os << ".";
+                }
+                os << " ";
+            }
+            else if (res.type == 28)  // AAAA
+            {
+                auto count = 0;
+                os << std::hex;
+                for (const auto byteVal : res.rdData)
+                {
+                    os << std::setw (2) << std::setfill ('0')
+                        << std::right << (uint16_t) byteVal;
+                    if (count % 2)
+                        if (count != 15) os << ":";
+                        else os << " ";
+                    ++count;
+                }
+                os << std::dec;
+            }
+            else if (res.type == 2 || res.type == 5)  // NS, CNAME
+            {
+                os << Packet::ParseDomainName (std::string {
+                    res.rdData.begin (), res.rdData.end () }) << " ";
+            }
+            else  // Unknown
+            {
+                os << std::hex;
+                for (const auto byteVal : res.rdData)
+                    os << std::setw (2) << std::setfill ('0')
+                    << std::right << (uint16_t) byteVal << " ";
+                os << std::dec;
+            }
+            os << "]" << std::endl;
         };
 
         auto printFieldList = [] (
