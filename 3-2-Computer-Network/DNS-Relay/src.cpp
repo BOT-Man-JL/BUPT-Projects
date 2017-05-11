@@ -202,6 +202,23 @@ namespace DnsRelay
             return pbBuf - pbFrom;
         }
 
+        static auto ParseDomainName (const std::string &rawName)
+        {
+            std::string domainName;
+            const char *pbBuf = rawName.c_str ();
+
+            while (*pbBuf)
+            {
+                domainName.append ((pbBuf + 1), *pbBuf);
+                pbBuf += 1 + *pbBuf;
+                if (*pbBuf) domainName.append (1, '.');
+            }
+
+            std::for_each (domainName.begin (), domainName.end (),
+                           [] (auto &ch) { ch = tolower (ch); });
+            return domainName;
+        }
+
     public:
         struct Header
         {
@@ -227,6 +244,10 @@ namespace DnsRelay
             uint16_t type;  // 16 bit
             uint16_t clas;  // 16 bit
 
+            std::string nameStr () const
+            {
+                return ParseDomainName (name);
+            }
             const std::string &typeStr () const
             {
                 try { return TypeStrs ().at (type); }
@@ -248,6 +269,10 @@ namespace DnsRelay
             // rdLen - 16 bit
             std::vector<uint8_t> rdData; // rdLen
 
+            std::string nameStr () const
+            {
+                return ParseDomainName (name);
+            }
             const std::string &typeStr () const
             {
                 try { return TypeStrs ().at (type); }
@@ -292,19 +317,20 @@ namespace DnsRelay
                 {
                 case 1:
                 {
-                    os << " Addr: ";
+                    os << " Addr: [";
                     for (auto p = rdData.begin (); ;)
                     {
                         os << (uint16_t) *p;
                         if (++p == rdData.end ()) break;
                         os << ".";
                     }
+                    os << "]";
                     break;
                 }
                 case 28:
                 {
                     auto count = 0;
-                    os << " Addr: " << std::hex;
+                    os << " Addr: [" << std::hex;
                     for (const auto byteVal : rdData)
                     {
                         os << std::setw (2) << std::setfill ('0')
@@ -312,46 +338,47 @@ namespace DnsRelay
                         if (count % 2 && count != 15) os << ":";
                         ++count;
                     }
-                    os << std::dec;
+                    os << std::dec << "]";
                     break;
                 }
                 case 2:
                 case 5:
                 case 12:
                 {
-                    os << " Name: " << Packet::ParseDomainName (
-                        std::string { rdData.begin (), rdData.end () });
+                    os << " Name: [" << Packet::ParseDomainName (
+                        std::string { rdData.begin (), rdData.end () })
+                        << "]";
                     break;
                 }
                 case 6:
                 {
                     auto p = rdData.begin ();
                     for (; p != rdData.end () && *p != 0; ++p);
-                    os << " NName: " << Packet::ParseDomainName (
+                    os << " NName: [" << Packet::ParseDomainName (
                         std::string { rdData.begin (), p });
                     auto q = ++p;
                     for (; p != rdData.end () && *p != 0; ++p);
-                    os << " RName: " << Packet::ParseDomainName (
+                    os << "] RName: [" << Packet::ParseDomainName (
                         std::string { q, p });
-                    uint32_t *pd = (uint32_t *) &(*++p);
-                    os << " Serial: " << *(++pd);
-                    os << " Refresh: " << *(++pd);
-                    os << " Retry: " << *(++pd);
-                    os << " Expire: " << *(++pd);
-                    os << " Mininum: " << *(++pd);
+                    uint32_t *pd = (uint32_t *) &(*++p);  // Dangerous
+                    os << "] Serial: " << ntohl (*++pd);
+                    os << " Refresh: " << ntohl (*++pd);
+                    os << " Retry: " << ntohl (*++pd);
+                    os << " Expire: " << ntohl (*++pd);
+                    os << " Mininum: " << ntohl (*++pd);
                     break;
                 }
                 default:
                 {
                     auto count = rdData.size ();
-                    os << std::hex;
+                    os << " rdData: [" << std::hex;
                     for (const auto byteVal : rdData)
                     {
                         os << std::setw (2) << std::setfill ('0')
                             << std::right << (uint16_t) byteVal;
                         if (--count != 0) os << " ";
                     }
-                    os << std::dec;
+                    os << std::dec << "]";
                     break;
                 }
                 }
@@ -541,29 +568,43 @@ namespace DnsRelay
             setRes (ar);
         }
 
-        static std::string ParseDomainName (const std::string &rawName)
-        {
-            std::string domainName;
-            const char *pbBuf = rawName.c_str ();
-
-            while (*pbBuf)
-            {
-                domainName.append ((pbBuf + 1), *pbBuf);
-                pbBuf += 1 + *pbBuf;
-                if (*pbBuf) domainName.append (1, '.');
-            }
-
-            std::for_each (domainName.begin (), domainName.end (),
-                           [] (auto &ch) { ch = tolower (ch); });
-            return domainName;
-        }
-
         sockaddr_in addr;
         Header header;
         std::list<Question> qd;
         std::list<Resource> an;
         std::list<Resource> ns;
         std::list<Resource> ar;
+    };
+
+    class StrictPacket
+    {
+        Packet _packet;
+        std::vector<uint8_t> _buffer;
+
+    public:
+        StrictPacket (const sockaddr_in &addr, const uint8_t *buf, int bufLen)
+            : _packet (addr, buf, bufLen), _buffer (buf, buf + bufLen)
+        {}
+
+        void SetAddr (const sockaddr_in &addr)
+        {
+            _packet.addr = addr;
+        }
+        void SetId (const uint16_t id)
+        {
+            _packet.header.id = id;
+            uint16_t *pwId = (uint16_t *) _buffer.data ();
+            *pwId = htons (id);
+        }
+
+        const Packet &GetPacket () const
+        {
+            return _packet;
+        }
+        const std::vector<uint8_t> &GetBuffer () const
+        {
+            return _buffer;
+        }
     };
 
     std::ostream &operator << (std::ostream &os,
@@ -599,8 +640,7 @@ namespace DnsRelay
     std::ostream &operator << (std::ostream &os,
                                const Packet::Question &ques)
     {
-        return os << " - Name: [" <<
-            Packet::ParseDomainName (ques.name)
+        return os << " - Name: [" << ques.nameStr ()
             << "] Type: " << ques.typeStr ()
             << " Class: " << ques.clasStr ()
             << std::endl;
@@ -609,8 +649,7 @@ namespace DnsRelay
     std::ostream &operator << (std::ostream &os,
                                const Packet::Resource &res)
     {
-        os << " - Name: [" <<
-            Packet::ParseDomainName (res.name)
+        os << " - Name: [" << res.nameStr ()
             << "] Type: " << res.typeStr ()
             << " Class: " << res.clasStr ()
             << " TTL: " << res.ttl;
@@ -639,7 +678,22 @@ namespace DnsRelay
         printFieldList (os, "AN", packet.an);
         printFieldList (os, "NS", packet.ns);
         printFieldList (os, "AR", packet.ar);
-        return os << std::endl;
+        return os;
+    }
+
+    std::ostream &operator << (std::ostream &os,
+                               const StrictPacket &packet)
+    {
+        os << packet.GetPacket ();
+        auto count = packet.GetBuffer ().size ();
+        os << "Buffer: [" << std::hex;
+        for (const auto byteVal : packet.GetBuffer ())
+        {
+            os << std::setw (2) << std::setfill ('0')
+                << std::right << (uint16_t) byteVal;
+            if (--count != 0) os << " ";
+        }
+        return os << std::dec << "]\n";
     }
 
     class Connector
@@ -665,7 +719,7 @@ namespace DnsRelay
 
         ~Connector () { closesocket (_sock); }
 
-        void Recv (std::function<void (const Packet &)> callback)
+        void Recv (std::function<void (const StrictPacket &)> callback)
         {
             uint8_t buf[PACKET_BUF_SIZE];
             sockaddr_in saFrom;
@@ -676,7 +730,7 @@ namespace DnsRelay
             if (bufLen <= 0)
                 ThrowRuntimeError ("recvfrom");
 
-            callback (Packet (saFrom, buf, bufLen));
+            callback (StrictPacket (saFrom, buf, bufLen));
         }
 
         void Send (const Packet &packet)
@@ -687,6 +741,16 @@ namespace DnsRelay
 
             if (sendto (_sock, (char *) buf, bufLen,
                         0, (const sockaddr *) &packet.addr,
+                        sizeof (sockaddr_in)) < 0)
+                ThrowRuntimeError ("send");
+        }
+
+        void Send (const StrictPacket &packet)
+        {
+            auto bufLen = (int) packet.GetBuffer ().size ();
+            auto buf = (const char *) packet.GetBuffer ().data ();
+            if (sendto (_sock, buf, bufLen,
+                        0, (const sockaddr *) &packet.GetPacket ().addr,
                         sizeof (sockaddr_in)) < 0)
                 ThrowRuntimeError ("send");
         }
@@ -786,42 +850,18 @@ int main (int argc, char *argv[])
         {
             return packet.header.qr == 1;
         };
-        auto isSingleQuery = [] (const Packet &packet)
-        {
-            return packet.qd.size () == 1;
-        };
         auto isStandardQuery = [] (const Packet &packet)
         {
             return packet.header.opCode == 0;
         };
-        auto hasv4Query = [] (const Packet &packet)
+        auto isAQuery = [] (const Packet::Question &ques)
         {
-            return !packet.qd.empty () &&
-                packet.qd.front ().type == 1 &&
-                packet.qd.front ().clas == 1;
+            return ques.type == 1 && ques.clas == 1;
         };
 
         // Helpers
-        auto fromRecord = [] (Packet packet,
-                              const Record &record)
-        {
-            std::tie (packet.header.id, packet.addr,
-                      std::ignore) = record;
-            return packet;
-        };
-        auto toRecord = [] (const Packet &packet)
-        {
-            return Record { packet.header.id, packet.addr,
-                std::chrono::system_clock::now () };
-        };
-        auto setTarget = [] (Packet packet, uint16_t id,
-                             const sockaddr_in &sa)
-        {
-            packet.header.id = id;
-            packet.addr = sa;
-            return packet;
-        };
-        auto setAnswer = [] (Packet packet,
+        auto setAnswer = [] (Packet &packet,
+                             const std::string &name,
                              uint32_t dwordIp)
         {
             packet.header.qr =
@@ -831,65 +871,76 @@ int main (int argc, char *argv[])
             if (dwordIp != INADDR_ANY)
             {
                 Packet::Resource answer;
-                answer.name = packet.qd.front ().name;
+                answer.name = name;
                 answer.type = 1;
                 answer.clas = 1;
                 answer.ttl = 120;
                 answer.rdData.assign ((uint8_t *) &dwordIp,
                     (uint8_t *) (&dwordIp + 1));
-                packet.an.emplace_front (std::move (answer));
+                packet.an.emplace_back (std::move (answer));
             }
             else
                 packet.header.rCode = 3;
-
-            return packet;
         };
 
         Connector connector;
         auto sendPacket = [&] (const Packet &packet)
         {
             connector.Send (packet);
-            Logger (logFile) << "Send to " << packet;
+            Logger (logFile) << "Send to " << packet << "\n";
+        };
+        auto sendStrictPacket = [&] (StrictPacket packet,
+                                     uint16_t id,
+                                     const sockaddr_in &addr)
+        {
+            packet.SetId (id);
+            packet.SetAddr (addr);
+            connector.Send (packet);
+            Logger (logFile) << "Send to " << packet << "\n";
         };
 
         // Functions
-        auto fromNameServer = [&] (const Packet &packet)
+        auto fromNameServer = [&] (const StrictPacket &packet)
         {
             try
             {
-                sendPacket (fromRecord (packet,
-                                        records.at (packet.header.id)));
+                uint16_t id;
+                sockaddr_in addr;
+                std::tie (id, addr, std::ignore) =
+                    records.at (packet.GetPacket ().header.id);
+                sendStrictPacket (packet, id, addr);
             }
             // Ignore if timeout...
             catch (const std::exception &) {}
         };
 
-        auto toNameServer = [&] (const Packet &packet)
+        auto toNameServer = [&] (const StrictPacket &packet)
         {
             // Discard this packet if table is full
             if (!clearTimeout (records, config.timeOut))
                 return;
 
             static uint16_t curId;  // Auto loop back
-            records.emplace (++curId,
-                             toRecord (packet));
-            sendPacket (setTarget (
-                packet, curId, saNameServer));
+            records.emplace (
+                ++curId, Record {
+                packet.GetPacket ().header.id,
+                packet.GetPacket ().addr,
+                std::chrono::system_clock::now () });
+
+            sendStrictPacket (packet, curId, saNameServer);
         };
 
         // Callback Delegates
-        auto onRecv = [&] (const Packet &packet)
+        auto onRecv = [&] (const StrictPacket &packet)
         {
-            Logger (logFile) << "Recv from " << packet;
+            Logger (logFile) << "Recv from " << packet << "\n";
 
             // Response Message
-            if (isResponseMsg (packet))
+            if (isResponseMsg (packet.GetPacket ()))
                 return fromNameServer (packet);
 
-            // Non-normal Query
-            if (!isSingleQuery (packet) ||
-                !isStandardQuery (packet) ||
-                !hasv4Query (packet))
+            // Non-standard Query
+            if (!isStandardQuery (packet.GetPacket ()))
                 return toNameServer (packet);
 
             // Search hostsTable for question domain name
@@ -897,10 +948,15 @@ int main (int argc, char *argv[])
             // - Forward to name server if NOT Found
             try
             {
-                sendPacket (setAnswer (packet,
-                                       hostsTable.at (
-                                           Packet::ParseDomainName (
-                                               packet.qd.front ().name))));
+                auto newPacket = packet.GetPacket ();
+                for (const auto &ques : packet.GetPacket ().qd)
+                {
+                    if (!isAQuery (ques)) throw std::exception {};
+                    const auto &dwordIp = hostsTable.at (
+                        ques.nameStr ());
+                    setAnswer (newPacket, ques.name, dwordIp);
+                }
+                sendPacket (newPacket);
             }
             catch (const std::exception &) { toNameServer (packet); }
         };
