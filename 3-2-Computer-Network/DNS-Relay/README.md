@@ -78,6 +78,46 @@
 
 ## 软件流程图
 
+![Flowchart](flowchart.svg)
+
+<!--
+recv=>inputoutput: 接收数据
+isResponse=>condition: 查询报文？
+isStandardQuery=>condition: 正向查询？
+isAQuery=>condition: IPv4 查询？
+isInTable=>condition: 找到表项？
+isBlocked=>condition: `0.0.0.0`？
+fromNameServer=>condition: 请求超时？
+fromNameServer2=>operation: 还原 ID 和地址
+toNameServer=>operation: 保存 ID 和地址
+toNameServer2=>operation: 设置为新 ID，
+设置因特网 DNS 服务器地址
+setAns=>operation: 写入答案
+setBlocked=>operation: 写入 未找到
+sendStrict=>inputoutput: 发送严格数据包
+sendNew=>inputoutput: 发送数据包
+endRecv=>operation: 清空缓存
+start=>start: 开始
+
+start->recv->isResponse
+isResponse(yes,right)->fromNameServer
+isResponse(no)->isStandardQuery
+isStandardQuery(no)->toNameServer
+isStandardQuery(yes)->isAQuery
+isAQuery(no)->toNameServer
+isAQuery(yes)->isInTable
+isInTable(no)->toNameServer
+isInTable(yes)->isBlocked
+isBlocked(yes,right)->setBlocked->sendNew
+isBlocked(no)->setAns->sendNew
+toNameServer->toNameServer2->sendStrict
+fromNameServer(yes,right)->endRecv
+fromNameServer(no)->fromNameServer2->sendStrict
+sendStrict->endRecv
+sendNew->endRecv
+endRecv(left)->recv
+-->
+
 ## 测试用例以及运行结果
 
 - 测试平台
@@ -85,7 +125,6 @@
   - `Ubuntu 16.04`
 - 测试工具
   - `nslookup`
-  - `WireShark`
 - 测试对象
   - 拦截域名
   - 已知域名
@@ -99,8 +138,31 @@
 
 ## 调试中遇到并解决的问题
 
+由于最初的实现是：先把收到的包解析成各个字段，然后再修改内容并组装，最后发出去。遇到的问题主要在解析包的时候，有两个关键的问题：域名压缩和资源类型识别。
+
 ### 域名压缩
 
-### 资源类型
+#### 问题描述
+
+域名压缩是用一个指针指向之前出现过的后缀，从而避免重复的记录这些后缀。例如，`bupt.edu.cn` 和 `www.bupt.edu.cn` 拥有公共后缀；如果前者先出现，那么后者可以压缩为 `www.` 和一个指向前者开头的指针；如果后者先出现，那么前者可以压缩为一个指向 `www.bupt.edu.cn` 中 `bupt` 位置的指针。
+
+最开始的版本没有考虑到这个问题，导致了解析出来的域名不正确。
+
+#### 解决方法
+
+域名还原
+
+### 资源类型识别
+
+#### 问题描述
+
+域名压缩不仅出现在查询段、资源段的域名字段，还可能出现在资源段的数据字段。如果还原了域名字段的域名，但不还原资源数据的域名，就可能导致资源数据失效。例如，还原了前边的一些域名，使得整个包的体积变大，但后边域名里的指针指向的位置还是还原前的位置，所以这些指针会全部失效。
+
+最开始的版本没有考虑到这个问题，导致了从因特网 DNS 服务器发回的数据包重新组装后，被客户端识别为不能解析的包。
+
+#### 解决方法
+
+- 解析资源
+- 设置严格数据包（[sec|严格数据包 `DnsRelay::StrictPacket`]）
 
 ## 课程设计工作总结
