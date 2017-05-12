@@ -562,7 +562,6 @@ namespace DnsRelay
                 }
             };
 
-            auto sizean = an.size ();
             setRes (an);
             setRes (ns);
             setRes (ar);
