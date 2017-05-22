@@ -361,7 +361,7 @@ namespace DnsRelay
                     os << "] RName: [" << Packet::ParseDomainName (
                         std::string { q, p });
                     uint32_t *pd = (uint32_t *) &(*++p);  // Dangerous
-                    os << "] Serial: " << ntohl (*++pd);
+                    os << "] Serial: " << ntohl (*pd);
                     os << " Refresh: " << ntohl (*++pd);
                     os << " Retry: " << ntohl (*++pd);
                     os << " Expire: " << ntohl (*++pd);
