@@ -28,7 +28,7 @@ int main (int argc, char *argv[])
     }
     else if (fork () == 0)
     {
-        int f = open ("result.txt", O_RDWR);
+        int f = open ("result.txt", O_WRONLY | O_CREAT, 0666);
         if (f != -1)
         {
             dup2 (f, 1);
