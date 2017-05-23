@@ -21,7 +21,7 @@ int main (int argc, char *argv[])
         {
             dup2 (f, 0);
             dup2 (fd[1], 1); close (fd[0]); close (fd[1]);
-            execlp ("grep", "-v", "usr", NULL);
+            execlp ("grep", "grep", "-v", "usr", NULL);
         }
         fprintf (stderr, "exec failed: grep\n");
         exit (1);
@@ -33,7 +33,7 @@ int main (int argc, char *argv[])
         {
             dup2 (f, 1);
             dup2 (fd[0], 0); close (fd[0]); close (fd[1]);
-            execlp ("wc", "-l", NULL);
+            execlp ("wc", "wc", "-l", NULL);
         }
         fprintf (stderr, "exec failed: wc\n");
         exit (1);
