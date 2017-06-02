@@ -57,9 +57,13 @@ together with [**buptczq**](https://github.com/buptczq/RE_Bupt_Computer_Network_
 - Linux
   - PM 2.5 Crawler Script
   - Naive `ls` Implementation
+  - A practice of `pipe`, `dup`, `fork` and `exec`
 - Programming Language Principles and Pratice
   - Chapter 5 Solution
   - [C++ Metaprogramming](https://bot-man-jl.github.io/articles/?post=2017/Cpp-Metaprogramming)
+- Computer Architecture
+  - SimpleScalar Installation
+  - Mibench Automotive Benchmark
 
 ## Misc
 
