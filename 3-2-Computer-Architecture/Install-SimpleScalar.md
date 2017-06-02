@@ -21,6 +21,7 @@
 ### 进入实验环境
 
 本次实验使用 docker 上的 Ubuntu 16.04 镜像，所有的操作在 docker 中完成（默认是 `root`）。好处是：
+
 - 可以很方便的恢复原来的状态，避免直接对系统操作
 - 安装完成后，可以保存镜像，方便之后的实验
 
@@ -72,7 +73,11 @@ curl http://american.cs.ucdavis.edu/RAD/gcc-2.7.2.3.ss.tar.gz -o gcc-2.7.2.3.ss.
 git clone https://github.com/BOT-Man-JL/simple-scalar
 ```
 
-为了方便其他人的下载，所有需要的文件已经放到 https://github.com/BOT-Man-JL/simple-scalar 仓库中。
+为了方便其他人的下载，所有需要的文件已经放到 https://github.com/BOT-Man-JL/simple-scalar 仓库中，可以使用 `git clone` 获取文件：
+
+``` bash
+git clone https://github.com/BOT-Man-JL/simple-scalar
+```
 
 ### 安装 Simple Utilities
 
@@ -218,13 +223,24 @@ cd $IDIR/test
 printf '#include <stdio.h> \nmain () { printf ("hello world\\n"); }' > hello.c
 sgcc hello.c -o hello
 sim-safe hello > output_hello.txt
+cat output_hello.txt
 ```
 
 结果为：
 
 ![Final](imgs/final.png)
 
-## 完整脚本
+### 提交 docker
+
+本次实验的结果已提交到 docker 服务器上，可以通过以下命令获取镜像：
+
+``` bash
+docker pull botmanjl/simplescalar
+```
+
+> 起初，我打算使用别人部署的 docker 环境进行之后的实验；但是发现现有的 docker 环境的安装都有问题，所以自己重现做了 实验 1。
+
+## 完整安装脚本
 
 ``` bash
 # Install Packages
@@ -331,6 +347,7 @@ cd $IDIR/test
 printf '#include <stdio.h> \nmain () { printf ("hello world\\n"); }' > hello.c
 sgcc hello.c -o hello
 sim-safe hello > output_hello.txt
+cat output_hello.txt
 ```
 
 ## 实验总结
