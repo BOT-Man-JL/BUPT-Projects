@@ -116,7 +116,7 @@ make
 
 update-alternatives --install /bin/sim-safe sim-safe $IDIR/simplesim-3.0/sim-safe 100
 update-alternatives --install /bin/sim-outorder sim-outorder $IDIR/simplesim-3.0/sim-outorder 100
-update-alternatives --install /bin/sim-sim-bpred sim-bpred $IDIR/simplesim-3.0/sim-bpred 100
+update-alternatives --install /bin/sim-bpred sim-bpred $IDIR/simplesim-3.0/sim-bpred 100
 ```
 
 ### 配置 Simple Tools 和 gcc 交叉编译器
@@ -289,7 +289,7 @@ make
 
 update-alternatives --install /bin/sim-safe sim-safe $IDIR/simplesim-3.0/sim-safe 100
 update-alternatives --install /bin/sim-outorder sim-outorder $IDIR/simplesim-3.0/sim-outorder 100
-update-alternatives --install /bin/sim-sim-bpred sim-bpred $IDIR/simplesim-3.0/sim-bpred 100
+update-alternatives --install /bin/sim-bpred sim-bpred $IDIR/simplesim-3.0/sim-bpred 100
 
 # Config SimpleTools and gcc
 
@@ -352,4 +352,4 @@ cat output_hello.txt
 
 ## 实验总结
 
-本次实验中，学到了如何使用 Linux 下的工具进行 SimpleScalar 的安装和配置，为之后的实验做准备。
+本次实验中，学到了如何使用 Linux 下的工具，进行 SimpleScalar 的安装和配置，为之后的实验做准备。
