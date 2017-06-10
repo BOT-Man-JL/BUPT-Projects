@@ -1,35 +1,41 @@
-# ÊµÑé 2£º5 ¼¶³¬±êÁ¿Á÷Ë®Ïß
+ï»¿# å®éªŒ 2ï¼š5 çº§è¶…æ ‡é‡æµæ°´çº¿
 
 > 2017/6/2
 
-±¾´ÎÊµÑé²ÉÓÃµÄÄ£ÄâÆ÷ sim-outorder Îª 5 ¼¶³¬±êÁ¿Á÷Ë®µÄÂÒĞòÄ£ÄâÆ÷¡£ÒªÇó´ó¼ÒÍ¨¹ıÖ´ĞĞ simplescalar ×Ô´øµÄ²âÊÔ³ÌĞò£¬²¢¸ãÇå³ş¸÷Ä£ÄâÆ÷²ÎÊıÓëÍ³¼ÆÁ¿µÄº¬Òå£¬ÒÔ¼ÓÉî¶ÔÁ÷Ë®Ïß¼¼ÊõµÄÀí½â¡£
+[heading-numbering]
 
-## ÊµÑéÄ¿µÄ
+## ç›®å½• [no-toc] [no-number]
 
-1. Í¨¹ıÊµÑé£¬¼ÓÉî¶ÔÁ÷Ë®Ïß¼¼ÊõµÄÀí½â¡£
-2. ³õ²½ÕÆÎÕ SimpleScalar µÄÊ¹ÓÃ¡£
+[TOC]
 
-## ÊµÑéÒªÇó
+æœ¬æ¬¡å®éªŒé‡‡ç”¨çš„æ¨¡æ‹Ÿå™¨ sim-outorder ä¸º 5 çº§è¶…æ ‡é‡æµæ°´çš„ä¹±åºæ¨¡æ‹Ÿå™¨ã€‚è¦æ±‚å¤§å®¶é€šè¿‡æ‰§è¡Œ simplescalar è‡ªå¸¦çš„æµ‹è¯•ç¨‹åºï¼Œå¹¶ææ¸…æ¥šå„æ¨¡æ‹Ÿå™¨å‚æ•°ä¸ç»Ÿè®¡é‡çš„å«ä¹‰ï¼Œä»¥åŠ æ·±å¯¹æµæ°´çº¿æŠ€æœ¯çš„ç†è§£ã€‚
 
-1. ÀûÓÃ SimpleScalar ÖĞµÄÄ£ÄâÆ÷ sim-outorder£¬ÔËĞĞÆä×Ô´øµÄ²âÊÔ³ÌĞò£º`./tests-pisa/bin.little` Ä¿Â¼ÏÂµÄ `test-math`, `test-fmath` ¼° `test-printf`¡£
-2. ¼ÇÂ¼½á¹û¼°Éú³ÉµÄÍ³¼ÆÁ¿£¬×¢Òâ¹Û²ìÁ÷Ë®ÏßÏà¹ØµÄÍ³¼ÆÁ¿¡£
-3. Ê¹ÓÃ gcc-2.7.2.3 ½»²æ±àÒëÆ÷£¬¹¹½¨ Mibench benchmark£¨»ù×¼²âÊÔ³ÌĞò£©µÄ automotive °ü£¨½ñºóµÄÊµÑéÖĞ»áÓÃµ½£©¡£ÔÚ´Ë¹ı³ÌÖĞ£¬ĞèÒª½«¸÷ÎÄ¼ş¼ĞÏÂ Makefile ÖĞµÄ gcc Ìæ»»Îª SimpleScalar ÖĞµÄ½»²æ±àÒëÆ÷µÄ¾ø¶ÔÂ·¾¶¡£
-4. ĞŞ¸Ä¸÷ÎÄ¼ş¼ĞÏÂµÄ `runme_small.sh`£¬Ê¹ÆäÄÜ¹»µ÷ÓÃ sim-outorder Ä£ÄâÆ÷ÒÔÍê³É benchmark µÄÔËĞĞ£¬²¢¹Û²ìÊä³ö½á¹û¡£
+## å®éªŒç›®çš„
 
-## ÊµÑé»·¾³
+1. é€šè¿‡å®éªŒï¼ŒåŠ æ·±å¯¹æµæ°´çº¿æŠ€æœ¯çš„ç†è§£ã€‚
+2. åˆæ­¥æŒæ¡ SimpleScalar çš„ä½¿ç”¨ã€‚
 
-- Ubuntu 16.04£¨docker `botmanjl/simplescalar`£©
+## å®éªŒè¦æ±‚
+
+1. åˆ©ç”¨ SimpleScalar ä¸­çš„æ¨¡æ‹Ÿå™¨ sim-outorderï¼Œè¿è¡Œå…¶è‡ªå¸¦çš„æµ‹è¯•ç¨‹åºï¼š`./tests-pisa/bin.little` ç›®å½•ä¸‹çš„ `test-math`, `test-fmath` åŠ `test-printf`ã€‚
+2. è®°å½•ç»“æœåŠç”Ÿæˆçš„ç»Ÿè®¡é‡ï¼Œæ³¨æ„è§‚å¯Ÿæµæ°´çº¿ç›¸å…³çš„ç»Ÿè®¡é‡ã€‚
+3. ä½¿ç”¨ gcc-2.7.2.3 äº¤å‰ç¼–è¯‘å™¨ï¼Œæ„å»º Mibench benchmarkï¼ˆåŸºå‡†æµ‹è¯•ç¨‹åºï¼‰çš„ automotive åŒ…ï¼ˆä»Šåçš„å®éªŒä¸­ä¼šç”¨åˆ°ï¼‰ã€‚åœ¨æ­¤è¿‡ç¨‹ä¸­ï¼Œéœ€è¦å°†å„æ–‡ä»¶å¤¹ä¸‹ Makefile ä¸­çš„ gcc æ›¿æ¢ä¸º SimpleScalar ä¸­çš„äº¤å‰ç¼–è¯‘å™¨çš„ç»å¯¹è·¯å¾„ã€‚
+4. ä¿®æ”¹å„æ–‡ä»¶å¤¹ä¸‹çš„ `runme_small.sh`ï¼Œä½¿å…¶èƒ½å¤Ÿè°ƒç”¨ sim-outorder æ¨¡æ‹Ÿå™¨ä»¥å®Œæˆ benchmark çš„è¿è¡Œï¼Œå¹¶è§‚å¯Ÿè¾“å‡ºç»“æœã€‚
+
+## å®éªŒç¯å¢ƒ
+
+- Ubuntu 16.04ï¼ˆdocker `botmanjl/simplescalar`ï¼‰
 - SimpleSim
 - gcc cross
 - Mibench benchmark - Automotive
 
-## ÊµÑé²½Öè
+## å®éªŒæ­¥éª¤
 
-### ½øÈëÊµÑé»·¾³
+### è¿›å…¥å®éªŒç¯å¢ƒ
 
-- ÏÂÔØÊµÑé 1 ÖĞ²¿ÊğºÃµÄ¾µÏñ
-- ½øÈë¸Ã¾µÏñ£¬½øĞĞÊµÑé
-- ÅäÖÃ»·¾³±äÁ¿
+- ä¸‹è½½å®éªŒ 1 ä¸­éƒ¨ç½²å¥½çš„é•œåƒ
+- è¿›å…¥è¯¥é•œåƒï¼Œè¿›è¡Œå®éªŒ
+- é…ç½®ç¯å¢ƒå˜é‡
 
 ``` bash
 docker pull botmanjl/simplescalar
@@ -38,10 +44,10 @@ docker run -i -t botmanjl/simplescalar
 export IDIR=/home/john
 ```
 
-### Ê¹ÓÃ sim-outorder ÔËĞĞ tests-pisa ²âÊÔ
+### ä½¿ç”¨ sim-outorder è¿è¡Œ tests-pisa æµ‹è¯•
 
-- ·Ö±ğÔËĞĞ `test-math`, `test-fmath` ¼° `test-printf`
-- ½«Êä³öÖØ¶¨Ïòµ½ `*_o.txt`£¬Í³¼ÆÁ¿ÖØ¶¨Ïòµ½ `*_s.txt`
+- åˆ†åˆ«è¿è¡Œ `test-math`, `test-fmath` åŠ `test-printf`
+- å°†è¾“å‡ºé‡å®šå‘åˆ° `*_o.txt`ï¼Œç»Ÿè®¡é‡é‡å®šå‘åˆ° `*_s.txt`
 
 ``` bash
 cd $IDIR/simplesim-3.0/tests-pisa/bin.little
@@ -50,13 +56,13 @@ sim-outorder test-fmath > fmath_o.txt 2> fmath_s.txt
 sim-outorder test-printf > printf_o.txt 2> printf_s.txt
 ```
 
-Êä³ö½á¹û¼û [sec|½á¹ûÒ» `test-math` `test-fmath` `test-printf`]
+è¾“å‡ºç»“æœè§ [sec|ç»“æœä¸€ `test-math` `test-fmath` `test-printf`]
 
-### Ê¹ÓÃ gcc cross ¹¹½¨ Mibench benchmark
+### ä½¿ç”¨ gcc cross æ„å»º Mibench benchmark
 
-- ÏÂÔØ `automotive`
-- ĞŞ¸ÄÔ­Ê¼µÄ `makefile`
-- ¹¹½¨ `automotive` ÏÂµÄËÄ¸ö³ÌĞò
+- ä¸‹è½½ `automotive`
+- ä¿®æ”¹åŸå§‹çš„ `makefile`
+- æ„å»º `automotive` ä¸‹çš„å››ä¸ªç¨‹åº
 
 ``` bash
 cd $IDIR
@@ -74,11 +80,11 @@ sed "s/-lm/$LIBDIR/g" */Makefile -i
 find . -type d -exec make -C {} \;
 ```
 
-### Ê¹ÓÃ sim-outorder ÔËĞĞ automotive
+### ä½¿ç”¨ sim-outorder è¿è¡Œ automotive
 
-- Ê¹ÓÃ `sim-outorder` ·Ö±ğÔËĞĞ `basicmath`, `bitcount`, `susan` ºÍ `qsort`
-- ÓÉÓÚÕâĞ©ÅÜ·ÖµÄ½á¹û²»ĞèÒª¼ÇÂ¼£¬ËùÒÔ½«Êä³öÖØ¶¨Ïòµ½ `/dev/null`
-- ½«Í³¼ÆÁ¿ÖØ¶¨Ïòµ½ `*_s.txt`
+- ä½¿ç”¨ `sim-outorder` åˆ†åˆ«è¿è¡Œ `basicmath`, `bitcount`, `susan` å’Œ `qsort`
+- ç”±äºè¿™äº›è·‘åˆ†çš„ç»“æœä¸éœ€è¦è®°å½•ï¼Œæ‰€ä»¥å°†è¾“å‡ºé‡å®šå‘åˆ° `/dev/null`
+- å°†ç»Ÿè®¡é‡é‡å®šå‘åˆ° `*_s.txt`
 
 ``` bash
 cd $IDIR/automotive
@@ -95,18 +101,20 @@ rm *.pgm
 sim-outorder ./qsort/qsort_small ./qsort/input_small.dat > /dev/null 2> qsort_s.txt
 ```
 
-## ÊµÑé×Ü½á
+è¾“å‡ºç»“æœè§ [sec|ç»“æœäºŒ `automotive`]
 
-±¾´ÎÊµÑéÖĞ£¬Ñ§»áÁËÈçºÎÊ¹ÓÃ SimpleSim µÄ SimOutorder Ä£ÄâÁ÷Ë®Ïß£¬²¢Í³¼ÆÔËĞĞ½á¹û£»»¹Ñ§»áÁËÈçºÎÊ¹ÓÃ gcc ½»²æ±àÒëÆ÷Éú³ÉÓÃÓÚ SimpleSim µÄ¶ş½øÖÆÎÄ¼ş¡£
+## å®éªŒæ€»ç»“
 
-## ÊµÑé½á¹û
+æœ¬æ¬¡å®éªŒä¸­ï¼Œå­¦ä¼šäº†å¦‚ä½•ä½¿ç”¨ SimpleSim çš„ SimOutorder æ¨¡æ‹Ÿæµæ°´çº¿ï¼Œå¹¶ç»Ÿè®¡è¿è¡Œç»“æœï¼›è¿˜å­¦ä¼šäº†å¦‚ä½•ä½¿ç”¨ gcc äº¤å‰ç¼–è¯‘å™¨ç”Ÿæˆç”¨äº SimpleSim çš„äºŒè¿›åˆ¶æ–‡ä»¶ã€‚
 
-- ÓÉÓÚ½á¹ûÄÚÈİ±È½Ï¶à£¬²»½ØÍ¼£¬½ö¸´ÖÆ¡£
-- ÓÉÓÚÅäÖÃĞÅÏ¢ÏàÍ¬£¬²»¸´ÖÆ£»½ö¸´ÖÆÍ³¼ÆÁ¿¡£
+## å®éªŒç»“æœ
 
-### ½á¹ûÒ» `test-math` `test-fmath` `test-printf`
+- ç”±äºç»“æœå†…å®¹æ¯”è¾ƒå¤šï¼Œä¸æˆªå›¾ï¼Œä»…å¤åˆ¶ã€‚
+- ç”±äºé…ç½®ä¿¡æ¯ç›¸åŒï¼Œä¸å¤åˆ¶ï¼›ä»…å¤åˆ¶ç»Ÿè®¡é‡ã€‚
 
-#### Êä³ö½á¹û
+### ç»“æœä¸€ `test-math` `test-fmath` `test-printf`
+
+#### è¾“å‡ºç»“æœ
 
 ```
 root@636b338fc4bb:/home/john/simplesim-3.0/tests-pisa/bin.little# cat math_o.txt
@@ -376,7 +384,7 @@ prefix  6d      6o      6x      6X      6u
 testing parametric fields: 0.7000
 ```
 
-#### `test-math` Í³¼ÆĞÅÏ¢
+#### `test-math` ç»Ÿè®¡ä¿¡æ¯
 
 ```
 sim: ** simulation statistics **
@@ -502,7 +510,7 @@ mem.ptab_accesses           1832598 # total page table accesses
 mem.ptab_miss_rate           0.0000 # first level page table miss rate
 ```
 
-#### `test-fmath` Í³¼ÆĞÅÏ¢
+#### `test-fmath` ç»Ÿè®¡ä¿¡æ¯
 
 ```
 sim: ** simulation statistics **
@@ -628,7 +636,7 @@ mem.ptab_accesses            798168 # total page table accesses
 mem.ptab_miss_rate           0.0000 # first level page table miss rate
 ```
 
-#### `test-printf` Í³¼ÆĞÅÏ¢
+#### `test-printf` ç»Ÿè®¡ä¿¡æ¯
 
 ```
 sim: ** simulation statistics **
@@ -754,9 +762,9 @@ mem.ptab_accesses           8605812 # total page table accesses
 mem.ptab_miss_rate           0.0000 # first level page table miss rate
 ```
 
-### ½á¹û¶ş
+### ç»“æœäºŒ `automotive`
 
-#### `basicmath` Í³¼ÆĞÅÏ¢
+#### `basicmath` ç»Ÿè®¡ä¿¡æ¯
 
 ```
 sim: ** simulation statistics **
@@ -882,7 +890,7 @@ mem.ptab_accesses        1065855782 # total page table accesses
 mem.ptab_miss_rate           0.0000 # first level page table miss rate
 ```
 
-#### `bitcount` Í³¼ÆĞÅÏ¢
+#### `bitcount` ç»Ÿè®¡ä¿¡æ¯
 
 ```
 sim: ** simulation statistics **
@@ -1008,7 +1016,7 @@ mem.ptab_accesses         218031420 # total page table accesses
 mem.ptab_miss_rate           0.0000 # first level page table miss rate
 ```
 
-#### `susan-smoothing` Í³¼ÆĞÅÏ¢
+#### `susan-smoothing` ç»Ÿè®¡ä¿¡æ¯
 
 ```
 sim: ** simulation statistics **
@@ -1134,7 +1142,7 @@ mem.ptab_accesses         117945118 # total page table accesses
 mem.ptab_miss_rate           0.0000 # first level page table miss rate
 ```
 
-#### `susan-edges` Í³¼ÆĞÅÏ¢
+#### `susan-edges` ç»Ÿè®¡ä¿¡æ¯
 
 ```
 sim: ** simulation statistics **
@@ -1260,7 +1268,7 @@ mem.ptab_accesses          12434922 # total page table accesses
 mem.ptab_miss_rate           0.0000 # first level page table miss rate
 ```
 
-#### `susan-corners` Í³¼ÆĞÅÏ¢
+#### `susan-corners` ç»Ÿè®¡ä¿¡æ¯
 
 ```
 sim: ** simulation statistics **
@@ -1386,7 +1394,7 @@ mem.ptab_accesses           5980082 # total page table accesses
 mem.ptab_miss_rate           0.0000 # first level page table miss rate
 ```
 
-#### `qsort` Í³¼ÆĞÅÏ¢
+#### `qsort` ç»Ÿè®¡ä¿¡æ¯
 
 ```
 sim: ** simulation statistics **

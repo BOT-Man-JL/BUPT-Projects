@@ -64,6 +64,7 @@ together with [**buptczq**](https://github.com/buptczq/RE_Bupt_Computer_Network_
 - Computer Architecture
   - SimpleScalar Installation
   - Mibench Automotive Benchmark
+  - Cluster System Reading Report
 
 ## Misc
 

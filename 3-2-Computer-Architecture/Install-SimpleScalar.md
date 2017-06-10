@@ -1,43 +1,49 @@
-# ʵ�� 1��SimpleScalar �İ�װ������
+﻿# 实验 1：SimpleScalar 的安装与配置
 
 > 2017/6/1
 
-## ʵ��Ŀ��
+[heading-numbering]
 
-��װʵ��ƽ̨����Ϥʵ�黷����Ϊ����ѧϰ��׼����
+## 目录 [no-toc] [no-number]
 
-## ʵ��Ҫ��
+[TOC]
 
-1. � SimpleScalar��3.0e �汾��ģ���������������� hello world��д��ϸ�Ĵ���棬��ͼչʾ������̡�
-2. ���� SimpleScalar ���������� Mibench�\auotomotive ��׼���԰���
+## 实验目的
 
-## ʵ�黷��
+安装实验平台并熟悉实验环境，为今后的学习做准备。
 
-- Ubuntu 16.04��docker �Դ���
-- gcc 5.4��Ubuntu 16.04 �Դ���
+## 实验要求
 
-## ʵ�鲽��
+1. 搭建 SimpleScalar（3.0e 版本）模拟器环境，并运行 hello world，写详细的搭建报告，截图展示具体过程。
+2. 利用 SimpleScalar 工具链编译 Mibench‐auotomotive 基准测试包。
 
-### ����ʵ�黷��
+## 实验环境
 
-����ʵ��ʹ�� docker �ϵ� Ubuntu 16.04 �������еĲ����� docker ����ɣ�Ĭ���� `root`�����ô��ǣ�
+- Ubuntu 16.04（docker 自带）
+- gcc 5.4（Ubuntu 16.04 自带）
 
-- ���Ժܷ���Ļָ�ԭ����״̬������ֱ�Ӷ�ϵͳ����
-- ��װ��ɺ󣬿��Ա��澵�񣬷���֮���ʵ��
+## 实验步骤
+
+### 进入实验环境
+
+本次实验使用 docker 上的 Ubuntu 16.04 镜像，所有的操作在 docker 中完成（默认是 `root`）。好处是：
+
+- 可以很方便的恢复原来的状态，避免直接对系统操作
+- 安装完成后，可以保存镜像，方便之后的实验
 
 ``` bash
 sudo apt-get install docker
 docker run -i -t ubuntu:16.04
 ```
 
-### ��װ������
+### 安装依赖包
 
-���� docker �ϵľ���Ƚ�ԭʼ����Ҫ���ǰ�װʵ�����������
+由于 docker 上的镜像比较原始，需要我们安装实验的依赖包：
 
-- ʹ�� `update` ���°�����Դ
-- ��װ `git` �� `curl` ��������������Ҫ��Դ�ļ�
-- ��װ `build-essential` `flex` `bison` ���� `gcc` ��������
-- ��װ `libc6-dev-i386` ���ڱ���ϵͳ�������
+- 使用 `update` 更新包的来源
+- 安装 `git` 和 `curl` 用于下载我们需要的源文件
+- 安装 `build-essential` `flex` `bison` 用于 `gcc` 构建程序
+- 安装 `libc6-dev-i386` 用于编译系统相关内容
 
 ``` bash
 apt-get update
@@ -45,10 +51,10 @@ apt-get install -y git curl
 apt-get install -y build-essential flex bison libc6-dev-i386
 ```
 
-### ���û�������
+### 配置环境变量
 
-- ���û�������
-- ����ʵ����Ҫ��Ŀ¼
+- 设置环境变量
+- 创建实验需要的目录
 
 ``` bash
 export IDIR=/home/john
@@ -57,12 +63,12 @@ export TARGET=sslittle-na-sstrix
 mkdir $IDIR
 ```
 
-### ����ʵ����Ҫ���ļ�
+### 下载实验需要的文件
 
-- �ӹ������� `simple sim` �� `simple tools`
-  - ʹ�� `curl -e` α�� **ͬ��** ������
-- ��������վ���� `simple utils` �� `gcc-2.7.2.3` ���������
-- �� `git` ������ ֮����Ҫ�� `ar` �� `ranlib`
+- 从官网下载 `simple sim` 和 `simple tools`
+  - 使用 `curl -e` 伪造 **同意** 的请求
+- 从其他网站下载 `simple utils` 和 `gcc-2.7.2.3` 交叉编译器
+- 从 `git` 上下载 之后需要的 `ar` 和 `ranlib`
 
 ``` bash
 cd $IDIR
@@ -73,18 +79,18 @@ curl http://american.cs.ucdavis.edu/RAD/gcc-2.7.2.3.ss.tar.gz -o gcc-2.7.2.3.ss.
 git clone https://github.com/BOT-Man-JL/simple-scalar
 ```
 
-Ϊ�˷��������˵����أ�������Ҫ���ļ��Ѿ��ŵ� https://github.com/BOT-Man-JL/simple-scalar �ֿ��У�����ʹ�� `git clone` ��ȡ�ļ���
+为了方便其他人的下载，所有需要的文件已经放到 https://github.com/BOT-Man-JL/simple-scalar 仓库中，可以使用 `git clone` 获取文件：
 
 ``` bash
 git clone https://github.com/BOT-Man-JL/simple-scalar
 ```
 
-### ��װ Simple Utilities
+### 安装 Simple Utilities
 
-- ��ѹԴ�ļ�
-- �� `sed` ���Դ������� **ƴд����**��`yy_current_buffer` �滻Ϊ `YY_CURRENT_BUFFER`��
-- ʹ�� `configure` ����
-- ʹ�� `make` ���ɴ���
+- 解压源文件
+- 用 `sed` 解决源代码里的 **拼写错误**（`yy_current_buffer` 替换为 `YY_CURRENT_BUFFER`）
+- 使用 `configure` 配置
+- 使用 `make` 生成代码
 
 ``` bash
 cd $IDIR
@@ -98,12 +104,12 @@ make CFLAGS=-O
 make install
 ```
 
-### ��װ Simple Sim
+### 安装 Simple Sim
 
-- ��ѹԴ�ļ�
-- ʹ�� `make` ���� `config-pisa` �� Ŀ�����
-  - ��� `make` ��ʾ `my work is done here...` ��ʾ�ɹ�
-- ʹ�� `update-alternatives` ��������������֮��ʵ��Ľ��У�����ʹ�û���������
+- 解压源文件
+- 使用 `make` 生成 `config-pisa` 和 目标程序
+  - 最后 `make` 提示 `my work is done here...` 表示成功
+- 使用 `update-alternatives` 建立别名，方便之后实验的进行（避免使用环境变量）
 
 ``` bash
 cd $IDIR
@@ -119,11 +125,11 @@ update-alternatives --install /bin/sim-outorder sim-outorder $IDIR/simplesim-3.0
 update-alternatives --install /bin/sim-bpred sim-bpred $IDIR/simplesim-3.0/sim-bpred 100
 ```
 
-### ���� Simple Tools �� gcc ���������
+### 配置 Simple Tools 和 gcc 交叉编译器
 
-- ��ѹԴ�ļ�
-- �滻 `sslittle-na-sstrix/bin/` ·���µ� `ar` �� `ranlib`
-- �� `ar` �� `ranlib` ��ִ��Ȩ��
+- 解压源文件
+- 替换 `sslittle-na-sstrix/bin/` 路径下的 `ar` 和 `ranlib`
+- 给 `ar` 和 `ranlib` 可执行权限
 
 ``` bash
 cd $IDIR
@@ -140,14 +146,14 @@ chmod +x $IDIR/sslittle-na-sstrix/bin/ar
 chmod +x $IDIR/sslittle-na-sstrix/bin/ranlib
 ```
 
-### ��һ�α��� gcc ���������
+### 第一次编译 gcc 交叉编译器
 
-- ʹ�� `configure` ����
-- �� `Makefile` �� 130 ��β������ `-I/usr/include`
-- �� `protoize.c` �� 60 �У�`varargs.h` ��Ϊ `stdarg.h`
-- �� `obstack.h` �� 341 �У�`next_free)++` ��Ϊ `next_free++)`
-- ���� `cdefs.h`��`libc.a` �� `crt0.o` �ļ�
-- ʹ�� `gcc -m32` ���� 32 λĿ��
+- 使用 `configure` 配置
+- 在 `Makefile` 的 130 行尾，加入 `-I/usr/include`
+- 在 `protoize.c` 的 60 行，`varargs.h` 改为 `stdarg.h`
+- 在 `obstack.h` 的 341 行，`next_free)++` 改为 `next_free++)`
+- 拷贝 `cdefs.h`，`libc.a` 和 `crt0.o` 文件
+- 使用 `gcc -m32` 编译 32 位目标
 
 ``` bash
 cd $IDIR/gcc-2.7.2.3
@@ -161,14 +167,14 @@ cp ../sslittle-na-sstrix/lib/crt0.o ../lib/
 make LANGUAGES=c CFLAGS=-O CC="gcc -m32"
 ```
 
-��һ�α����ᱨ����ԭ���Ǳ������Զ����ɵĴ��� `insn-output.c` �����⣩��
+第一次编译后会报错（原因是编译器自动生成的代码 `insn-output.c` 有问题）：
 
 ![First Time](imgs/first-time.png)
 
-### �ڶ��α��� gcc ���������
+### 第二次编译 gcc 交叉编译器
 
-- ʹ�� `sed` ���� `insn-output.c` ���г����ĵط�����β��һ�� `\`��
-- ���±���
+- 使用 `sed` 修正 `insn-output.c` 所有出错的地方（行尾加一个 `\`）
+- 重新编译
 
 ``` bash
 cd $IDIR/gcc-2.7.2.3
@@ -176,15 +182,15 @@ sed 's/FIXME\\n/FIXME\\n\\/g' insn-output.c -i
 make LANGUAGES=c CFLAGS=-O CC="gcc -m32"
 ```
 
-�ڶ��α������ϴδ���ĵط��������룬���ᱨ����ԭ���Ǳ������Զ����ɵĴ��� `cxxmain.c` �ظ������� `malloc` �� `realloc`��
+第二次编译会从上次错误的地方继续编译，但会报错（原因是编译器自动生成的代码 `cxxmain.c` 重复声明了 `malloc` 和 `realloc`）
 
 ![Second Time](imgs/second-time.png)
 
-### �����α��� gcc ���������
+### 第三次编译 gcc 交叉编译器
 
-- ʹ�� `sed` ɾ�� `cplus-dem.c` �� 2978 �� 2979 ��
-  - **����ͽ��岻һ��**����Ϊ�� `cxxmain.c` ���޸Ļ������� make ��ʱ��ʧЧ
-- ���±��룬��α��벻�ᱨ��
+- 使用 `sed` 删除 `cplus-dem.c` 的 2978 和 2979 行
+  - **这里和讲义不一样**，因为对 `cxxmain.c` 的修改会在重新 make 的时候失效
+- 重新编译，这次编译不会报错
 
 ``` bash
 cd $IDIR/gcc-2.7.2.3
@@ -193,14 +199,14 @@ sed '2979s/.*//g' cplus-dem.c -i
 make LANGUAGES=c CFLAGS=-O CC="gcc -m32"
 ```
 
-### ���� gcc �� enquire �� ��װ gcc ���������
+### 编译 gcc 的 enquire 和 安装 gcc 交叉编译器
 
-- ʹ�� `sed` ���� Makefile �� enquire ��ȱʧ����
+- 使用 `sed` 修正 Makefile 对 enquire 的缺失参数
 - make enquire
-  - **����ͽ��岻һ��**�������ָ�� `-m32` �ᵼ�¹����� 64 λĿ�꣬��֮ǰ�� 32 λ��ƥ��
-- ʹ�� `sim-safe` ���� `float.h-cross` ����
-- ������ `install`
-- ʹ�� `update-alternatives` ��������
+  - **这里和讲义不一样**，如果不指定 `-m32` 会导致构建出 64 位目标，与之前的 32 位不匹配
+- 使用 `sim-safe` 生成 `float.h-cross` 代码
+- 最后编译 `install`
+- 使用 `update-alternatives` 导出别名
 
 ``` bash
 cd $IDIR/gcc-2.7.2.3
@@ -212,10 +218,10 @@ make LANGUAGES=c CFLAGS=-O CC="gcc -m32" install
 update-alternatives --install /bin/sgcc sgcc $IDIR/bin/sslittle-na-sstrix-gcc 100
 ```
 
-### ���� SimpleScalar
+### 测试 SimpleScalar
 
-- ���ɲ����ļ�
-- ʹ�����ǹ����ĳ�����롢����
+- 生成测试文件
+- 使用我们构建的程序编译、运行
 
 ``` bash
 mkdir $IDIR/test
@@ -226,21 +232,21 @@ sim-safe hello > output_hello.txt
 cat output_hello.txt
 ```
 
-���Ϊ��
+结果为：
 
 ![Final](imgs/final.png)
 
-### �ύ docker
+### 提交 docker
 
-����ʵ��Ľ�����ύ�� docker �������ϣ�����ͨ�����������ȡ����
+本次实验的结果已提交到 docker 服务器上，可以通过以下命令获取镜像：
 
 ``` bash
 docker pull botmanjl/simplescalar
 ```
 
-> ������Ҵ���ʹ�ñ��˲���� docker ��������֮���ʵ�飻���Ƿ������е� docker �����İ�װ�������⣬�����Լ��������� ʵ�� 1��
+> 起初，我打算使用别人部署的 docker 环境进行之后的实验；但是发现现有的 docker 环境的安装都有问题，所以自己重现做了 实验 1。
 
-## ������װ�ű�
+## 完整安装脚本
 
 ``` bash
 # Install Packages
@@ -350,6 +356,6 @@ sim-safe hello > output_hello.txt
 cat output_hello.txt
 ```
 
-## ʵ���ܽ�
+## 实验总结
 
-����ʵ���У�ѧ�������ʹ�� Linux �µĹ��ߣ����� SimpleScalar �İ�װ�����ã�Ϊ֮���ʵ����׼����
+本次实验中，学到了如何使用 Linux 下的工具，进行 SimpleScalar 的安装和配置，为之后的实验做准备。
