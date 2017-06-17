@@ -1,0 +1,60 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26430.13
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Air-Conditioner-Client", "Air-Conditioner-Client\Air-Conditioner-Client.vcxproj", "{C3FD2977-E4CE-4DFF-8D55-BE92FB0E3942}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Air-Conditioner-Server", "Air-Conditioner-Server\Air-Conditioner-Server.vcxproj", "{1FDA4974-5A47-43B9-9692-175C9ED028EE}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "common", "common", "{DD85AA2D-9A57-468F-AABF-9361E489E220}"
+	ProjectSection(SolutionItems) = preProject
+		..\src\common\bot-cs.h = ..\src\common\bot-cs.h
+		..\src\common\bot-socket.h = ..\src\common\bot-socket.h
+		..\src\common\cli-helper.h = ..\src\common\cli-helper.h
+		..\src\common\common-model.h = ..\src\common\common-model.h
+		..\src\common\common-protocol.h = ..\src\common\common-protocol.h
+		..\src\common\common-view.h = ..\src\common\common-view.h
+		..\src\common\json\json.hpp = ..\src\common\json\json.hpp
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{E41DEA93-AF20-4AA8-BD03-479E0D2A2E1E}"
+	ProjectSection(SolutionItems) = preProject
+		..\docs\OO-Design.md = ..\docs\OO-Design.md
+		..\docs\protocol.md = ..\docs\protocol.md
+		..\README.md = ..\README.md
+		..\docs\Requirements-Spec.md = ..\docs\Requirements-Spec.md
+		..\docs\Requirements.md = ..\docs\Requirements.md
+		..\docs\Structural.md = ..\docs\Structural.md
+		..\docs\User-cases.md = ..\docs\User-cases.md
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C3FD2977-E4CE-4DFF-8D55-BE92FB0E3942}.Debug|x64.ActiveCfg = Debug|x64
+		{C3FD2977-E4CE-4DFF-8D55-BE92FB0E3942}.Debug|x64.Build.0 = Debug|x64
+		{C3FD2977-E4CE-4DFF-8D55-BE92FB0E3942}.Debug|x86.ActiveCfg = Debug|Win32
+		{C3FD2977-E4CE-4DFF-8D55-BE92FB0E3942}.Debug|x86.Build.0 = Debug|Win32
+		{C3FD2977-E4CE-4DFF-8D55-BE92FB0E3942}.Release|x64.ActiveCfg = Release|x64
+		{C3FD2977-E4CE-4DFF-8D55-BE92FB0E3942}.Release|x64.Build.0 = Release|x64
+		{C3FD2977-E4CE-4DFF-8D55-BE92FB0E3942}.Release|x86.ActiveCfg = Release|Win32
+		{C3FD2977-E4CE-4DFF-8D55-BE92FB0E3942}.Release|x86.Build.0 = Release|Win32
+		{1FDA4974-5A47-43B9-9692-175C9ED028EE}.Debug|x64.ActiveCfg = Debug|x64
+		{1FDA4974-5A47-43B9-9692-175C9ED028EE}.Debug|x64.Build.0 = Debug|x64
+		{1FDA4974-5A47-43B9-9692-175C9ED028EE}.Debug|x86.ActiveCfg = Debug|Win32
+		{1FDA4974-5A47-43B9-9692-175C9ED028EE}.Debug|x86.Build.0 = Debug|Win32
+		{1FDA4974-5A47-43B9-9692-175C9ED028EE}.Release|x64.ActiveCfg = Release|x64
+		{1FDA4974-5A47-43B9-9692-175C9ED028EE}.Release|x64.Build.0 = Release|x64
+		{1FDA4974-5A47-43B9-9692-175C9ED028EE}.Release|x86.ActiveCfg = Release|Win32
+		{1FDA4974-5A47-43B9-9692-175C9ED028EE}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
