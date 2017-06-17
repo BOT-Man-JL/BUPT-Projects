@@ -54,6 +54,8 @@ together with [**buptczq**](https://github.com/buptczq/RE_Bupt_Computer_Network_
 - Computer Network Pratice
   - [DNS Relay](/3-2-Computer-Network/DNS-Relay)
   - [Hacking DNS Relay](/3-2-Computer-Network/Hack-DNS-Relay)
+- Software Engineering
+  - [Air Conditioner](/3-2-Software-Engineering)
 - Linux
   - PM 2.5 Crawler Script
   - Naive `ls` Implementation
