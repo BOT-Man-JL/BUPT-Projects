@@ -6,6 +6,8 @@
 
 ## 工程说明
 
+> 相关设计：https://bot-man-jl.github.io/articles/?post=2017/Hack-Qt-GUI
+
 ### 开发环境
 
 - 语言：C++ 14 / Qt (GUI Only)
@@ -20,7 +22,7 @@
 - 编译器：
   - gcc/clang（命令行 Linux）
   - Visual Studio 2017 - MSVC 15（命令行 Windows）
-  - Qt 5（图形化）
+  - Qt 5.9（图形化）
 - 数据库：
   - [sqlite 3](https://sqlite.org/)（由 ORM-Lite 提供）
 
@@ -53,9 +55,9 @@
 ### 源代码文件
 
 - src/common/
+  - json/（json 库）
   - [common-model.h](src/common/common-model.h)（共享 模型）
   - [common-protocol.h](src/common/common-protocol.h)（共享 协议）
-  - [json/json.hpp](src/common/json/json.hpp)（json 库）
   - [bot-socket.h](src/common/bot-socket.h)（socket 库）
   - [bot-cs.h](src/common/bot-cs.h)（基于 socket 的服务器/客户端框架）
   - [common-view.h](src/common/common-view.h)（共享 视图库）

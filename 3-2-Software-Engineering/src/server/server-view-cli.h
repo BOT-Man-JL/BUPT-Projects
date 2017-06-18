@@ -62,7 +62,7 @@ namespace Air_Conditioner
                 " - 'config': Config the master machine\n"
                 " - 'guest': Manage the guest list of the rooms\n"
                 " - 'log': View logs\n"
-                " - 'client': View logs\n"
+                " - 'client': View clients\n"
                 " - 'quit': Quit\n";
             if (_onNav)
                 _onNav (_GetViewType ());
