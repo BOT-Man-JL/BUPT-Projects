@@ -1,0 +1,66 @@
+## Chap 1. Intro
+
+- terminal
+  - hardware -> driver
+  - -> line discipline -> process
+  - escape characters
+  - Ctrl-S = pause, Ctrl-Q = resume
+- shutdown
+- man
+- date
+- who [am i]
+- uptime
+- w
+- free
+- top
+- vmstat
+- passwd
+- telnet
+- ssh
+- ftp
+- scp
+- iconv -f [from] -t [to]
+- cal
+- bc
+- VNC
+- Samba
+
+## Chap 2. Basic
+
+- more (q, /regexp, /)
+- pg
+- less
+- cat
+- od -t x[SIZE]
+- head -n [LINE]
+- tail [-f | -LINE]
+- wc -l
+- sort [-n]
+- tee
+- tr SET_src SET_dst
+- grep [PATTERN] [FILES] [-v] [-n] [-i]
+- egrep
+  - (xy)*
+  - (xx|yy)
+  - [0-9]+
+  - a?
+- fgrep (match string, not pattern)
+- sed '[LINE[,LINE]]s/src/dst/g' [FILES]
+  - \(...\) => \0, \1, \2
+- awk
+  - File Name => FILENAME
+  - Line Number => NR
+  - Line => $0
+  - Field (Space Separated) => $1, $2, $3
+  - Condition: none, expr, /regexp/, BEGIN, END
+  - Action: { var, if/else, print/printf }
+- cmp
+- diff (normal) (context) [-c] (unified) [-u]
+- md5sum [-c FILENAME]
+- git
+
+### Regexp
+
+- Meta Chars: . * [ ^ $ \
+- Set: [abc], [.*\], [a-z], [a-zA-Z0-9], [^a-z]
+
