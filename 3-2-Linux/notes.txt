@@ -38,6 +38,14 @@
 - sort [-n]
 - tee
 - tr SET_src SET_dst
+- regexp
+  - . => any char
+  - * => any length
+  - \ => escape
+  - ^ => line beg
+  - $ => line end
+  - [ => set
+    - [abc], [.*\], [a-z], [a-zA-Z0-9], [^a-z]
 - grep [PATTERN] [FILES] [-v] [-n] [-i]
 - egrep
   - (xy)*
@@ -59,8 +67,269 @@
 - md5sum [-c FILENAME]
 - git
 
-### Regexp
+## Chap 3. vi
 
-- Meta Chars: . * [ ^ $ \
-- Set: [abc], [.*\], [a-z], [a-zA-Z0-9], [^a-z]
+- set [number|nonumber]
+- set [showmode|noshowmode]
+- set all
+- set [ts|tabstop]=4
+- [i|a] => insert mode
+- h => left
+- j => down
+- k => up
+- i => right
+- Ctrl f => page down
+- Ctrl b => page up
+- w => next word
+- b => prev word
+- [NUM][h|j|k|l|Ctrl f|Ctrl b|w|b]
+- ^ => line beg
+- $ => line end
+- :[LINE] => goto line
+- :1 => goto top
+- . == this line
+- $ == last line
+- :[.|$]-[LINE] => goto prev line of ./$
+- % => goto matched bracket
+- x => del
+- dd => del line
+- d% => del bracket
+- yy => copy line
+- y% => copy bracket
+- p => paste
+- [NUM][x|dd|d%|yy|y%|p]
+- r => replace char (ra => replace with 'a')
+- R => replace mode
+- u => undo
+- . => redo prev action
+- :w => save
+- :q => exit
+- [:wq|ZZ] => save and exit
+- [:w|:q|:wq]! => forced
+- :r [FILE] => insert FILE under this line
+- :[LINE],$w [FILE] => write LINE ~ end to FILE
+- :[LINE],[LINE]d => cut lines
+- :[LINE],[LINE]y => copy lines
+- :[LINE],[LINE]m[LINE] => move lines
+- :[LINE],[LINE]co[LINE] => copy lines
+- J => join next under into this line
+- Ctrl l => load
+- Ctrl g => info
+- /regexp => find
+  - n => next
+  - N => prev
+- :LINE[,LINE]s/src/dst/g
+  - :1,$s/a\[i]\*b\[j]/x[m]*y[n]/g
+  - :1,$s/obj\.len\/10/obj.len\/16/g
+  - \(...\) => \0, \1, \2
 
+## Chap 4. File and Directory
+
+- /
+  - /etc
+  - /tmp
+  - /var
+  - /bin
+  - /dev
+  - /usr/bin
+  - /sbin, /usr/sbin
+  - /usr/include
+  - /lib, /usr/lib
+- ldd
+- file name only excludes '/'
+- ls
+  - F => flags
+  - l => long format
+  - h => human readable
+  - a => all (including starting dot)
+  - s => size
+  - i => inode number
+  - d => list this dir rather than contents inside
+- cp
+  - cp src dst
+  - cp src1 src2 dst_dir
+  - cp -r src_dir dst_dir
+  - v => verbose
+  - u => update (only newer)
+- mv
+  - mv src dst
+  - mv src1 src2 dst_dir
+  - mv src_dir dst_dir
+- rm
+  - d => directory
+  - i => with confirm
+  - f => without confirm
+  - r => recursive
+  - -- => omit -command
+- touch
+- direcotry
+  - .
+  - ..
+- pwd
+- cd (shell command)
+- mkdir
+  - p => auto make missing (2017/06/27)
+- rmdir => rm -r
+- rsync
+- find [path...] CONSTRANT TEST ACTION
+  - [-maxdepth|-mindepth] LEVEL
+  - -name PATTERN
+  - -type [fdlcbp]
+  - -inum NUM
+  - -size [+-]N[cb] (c: byte, b: block)
+  - -mtime [+-]N (day)
+  - -atime [+-]N (day)
+  - -user USER
+  - -group GROUP
+  - ! TEST
+  - -print
+  - -printf FORMAT
+  - -fprintf FILE FORMAT
+  - -exec COMMAND [+;]
+    - -exec ls {} +
+    - -exec rm {} \;
+  - -ok COMMAND ;
+- xargs
+  - xargs rm
+- tar
+  - c => create
+  - t => table (list)
+  - x => extract
+  - v => verbose
+  - f => filename (*)
+  - z => gzip
+  - j => bz2
+  - tar [ctx]f TARGET FILES
+- mkfs /dev/fd0
+- mount
+  - mount => list
+  - mount /dev/fd0 /mnt
+- umount /dev/fd0
+- df
+  - h => human readable
+- stat (read i-node info)
+- ln
+  - ln src dst (hard, file only)
+  - ln -s src dst (soft)
+    - ln -s dir/target dir/link
+	- => dir/link -> dir/dir/target
+- errno
+  - strerror (errno)
+  - perror (string)
+  - printf %m
+- #! /bin/bash
+- privilege
+  - read (r)
+  - write (w)
+  - exec (x)
+  - sticky (t) (write, but not remove)
+  - SUID (s)
+  - root
+- chmod
+  - chmod [ugoa] [+-=] [rwxts] FILES
+  - chmod [0-7][0-7][0-7] FILES
+- umask (shell command)
+  - umask
+  - umask [0-7][0-7][0-7]
+
+## Chap 5. Bash
+
+- history (shell command)
+  - !! => prev command
+  - !prefix => last command
+  - !NUM => No. NUM command
+- alias/unalias (shell command)
+  - alias
+  - alias ALIAS=COMMAND
+  - unalias ALIAS
+- redirection in shell
+  - < input_filename
+  - << token_of_eof
+  - > output_filename
+  - >> appending_output_filename
+  - FD>filename
+  - FD>&FD
+  - FD: 0, 1, 2
+  - CMD1 | CMD2
+- echo
+  - \c => no return
+  - \b => backspace
+  - \r, \n, \t, \\, \ooo
+- read VAR (shell command, readline)
+- export (shell command)
+  - export
+  - export VAR=VAL
+  - HOME
+  - PATH
+  - PS1, PS2
+  - TERM
+- file in shell
+  - * => any chars
+    - starting . and / must be explicit
+	- */.*
+  - ? => any char
+  - [] => set
+- arguments in script
+  - $0 => filename
+  - $1, $2 => argv
+  - $# => argc
+  - "$*" => "$1 $2 ..."
+  - "$@" => "$1" "$2" ...
+- shell meta
+  - space, tab => seperator
+  - enter => commit command
+  - > < | => redirection
+  - ; => command seperator
+  - & => background
+  - $ => variable
+  - ` => command, available meta: \` \\
+  - * [] ? => file
+  - \ => escape
+  - () {} => command set
+  - " => available meta: \" \$ \` \\
+  - ' => avaliable meta: \ (no \')
+- condition in shell
+  - $? => return code
+  - cmd1 && cmd2 (2 if 1 return 0)
+  - cmd1 || cmd2 (2 if 1 return !0)
+  - true => return 0
+  - false => return !0
+  - [, test
+    - test -r readable
+    - test -w writable
+    - test -x executable
+    - [ -f file ]
+    - [ -d dir ]
+	- [ -s size_greater_than_0 ]
+    - test -n str_len_greater_than_0
+	- test str1 = str2
+	- test str1 != str2
+	- test num1 -eq num2
+	- test num1 -ne num2
+	- test num1 -gt num2
+	- test num1 -ge num2
+	- test num1 -lt num2
+	- test num1 -le num2
+	- test ! cond
+	- test cond1 -o cond2
+	- test cond1 -a cond2
+  - if then elif then else fi
+  - case word in
+    pattern1) list1;;
+    pattern2) list2;;
+	esac
+  - while cond; do list; done
+  - for i in word1 word2; do list; done
+  - for i [$1 $2]; do list; done
+- command set in shell
+  - (list) => not change dir
+  - {list;} => change dir
+- expr
+  - + - \* / % \( \)
+  - expr string : pattern => length
+- eval
+- seq
+  - seq BEG END
+- inner options
+  - set -x, set +x
+  - set -u, set +u
