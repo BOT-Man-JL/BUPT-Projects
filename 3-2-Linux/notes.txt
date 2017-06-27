@@ -333,3 +333,50 @@
 - inner options
   - set -x, set +x
   - set -u, set +u
+
+## Chap 6. Process
+
+- Segment
+  - Text
+  - Data
+  - Stack
+- PCB
+  - user (runtime)
+  - proc (static)
+- ps
+  - e => list all
+  - f => full format
+  - l => long format
+- fork
+  - return PID => this process
+  - return 0 => subprocess
+  - return -1 => failed
+- exec
+  - l => list mode (ending NULL)
+  - v => vector mode (ending NULL)
+  - e => set envp
+  - p => use PATH to find
+- wait
+  - pid = wait (&status)
+- system
+- dup2
+  - dup2 (src, dst)
+- pipe
+  - pipe (pfd[2])
+- close
+- kill
+  - kill [-signal] PIDS
+- signal
+  - signal (SIGINT, [SIG_DFL|SIG_IGN])
+- pause
+- alarm (secs)
+  - SIGALRM
+- ...
+
+## Chap 7. Socket
+
+- select (maxfd_plus_1, rfds, wfds, efds, timeout)
+- FD_ZERO
+- FD_SET
+- FD_CLR
+- FD_ISSET
