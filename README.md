@@ -67,6 +67,8 @@ together with [**buptczq**](https://github.com/buptczq/RE_Bupt_Computer_Network_
   - SimpleScalar Installation
   - Mibench Automotive Benchmark
   - Cluster System Reading Report
+- Assembly 2
+  - Keyboard and LED with 8086 CPU
 
 ## Misc
 
