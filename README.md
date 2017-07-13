@@ -1,4 +1,5 @@
 # BUPT-Projects
+
 A collection of Code by **BOT Man** during the College Life in BUPT :smile:
 
 ## Year 1
@@ -19,8 +20,7 @@ A collection of Code by **BOT Man** during the College Life in BUPT :smile:
 - C++ Programming
   - Separated assignments
 - Data Structure
-  - ~~Separated assignments~~ (missing)
-  - Revision Notes
+  - Notes
   - Project - Travel Management
 - Algorithm
   - Separated assignments
@@ -50,7 +50,7 @@ together with [**buptczq**](https://github.com/buptczq/RE_Bupt_Computer_Network_
   - Memory Allocation Tracking
 - Network Storage
   - [12306 Analysis](https://bot-man-jl.github.io/articles/?post=2016/12306-Architecture)
-  - [Online Exam System Desing](https://bot-man-jl.github.io/articles/?post=2016/Exam-System-Design)
+  - [Online Exam System Design](https://bot-man-jl.github.io/articles/?post=2016/Exam-System-Design)
 - Computer Network Pratice
   - [DNS Relay](/3-2-Computer-Network/DNS-Relay)
   - [Hacking DNS Relay](/3-2-Computer-Network/Hack-DNS-Relay)
@@ -60,6 +60,7 @@ together with [**buptczq**](https://github.com/buptczq/RE_Bupt_Computer_Network_
   - PM 2.5 Crawler Script
   - Naive `ls` Implementation
   - A practice of `pipe`, `dup`, `fork` and `exec`
+  - Notes
 - Programming Language Principles and Pratice
   - Chapter 5 Solution
   - [C++ Metaprogramming](https://bot-man-jl.github.io/articles/?post=2017/Cpp-Metaprogramming)
