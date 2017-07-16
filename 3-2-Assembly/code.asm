@@ -7,6 +7,10 @@
 ; in the 8086 model properties to 0x10000
 ;====================================================================
 
+; Only use even-addressed memory,
+; hence just care about AD[0..7] address
+; (avoid using AD[8..15])
+
 PORT82530   EQU 00H
 PORT8253T   EQU 06H
 
@@ -23,7 +27,6 @@ CODE    SEGMENT PUBLIC 'CODE'
 
 ; In: none
 ; Out: none
-
 DELAY   PROC NEAR
         PUSH CX
         MOV  CX,50H 
@@ -35,7 +38,6 @@ DELAY   ENDP
 
 ; In: CX (position in BUFFER / SCANTABLE)
 ; Out: none
-
 DISPLAY PROC NEAR
         PUSH AX
         PUSH BX
@@ -76,43 +78,42 @@ DISPLAY PROC NEAR
 DISPLAY ENDP
 
 ; Main Function
-
 START:
         MOV  AX, DATA
         MOV  DS, AX
         
         ; Init 8253
         MOV  DX, PORT8253T
-        MOV  AL, 16H              ; 计数器 0 低八位, 方式 3, 二进制计数 (00010110)
+        MOV  AL, 00010110B        ; Timer-0 (00), Lower-Byte (01), Way3-SquareWave (011), Binary (0)
         OUT  DX, AL
 
         MOV  DX, PORT82530
-        MOV  AL, 52               ; 时钟 1M, 波特率 1200baud, 波特率因子16 (52)
+        MOV  AL, 52               ; 时钟 1MHz, 波特率 1200baud, 波特率因子 16 (52)
         OUT  DX, AL
 
         ; Init 8251
         MOV  DX, PORT8251T
 
-        XOR  AL, AL               ; Init 3 times
+        XOR  AL, AL               ; Init to 0 for 3 times
         OUT  DX, AL
         OUT  DX, AL
         OUT  DX, AL
 
-        MOV  AL, 40H              ; Reset (01000000)
+        MOV  AL, 01000000B        ; Work Command: Reset
         OUT  DX, AL
         NOP
 
-        MOV  AL, 4EH              ; 方式命令字: 一个停止位, 无校验, 8 个数据位, 波特率因子 16, 异步 (01001110)
+        MOV  AL, 01001110B        ; Way Command: 1-bit-Stop (01), No-Parity (00), 8-bit-Data (11), async-with-baud-factor-16 (10)
         OUT  DX, AL
         NOP
 
-        MOV  AL, 27H              ; 工作命令字: 允许发送接收 (00100111)
+        MOV  AL, 00100111B        ; Work Command: RTS, DTR, RxEn, TxEn (1)
         OUT  DX, AL
         NOP
         
         ; Init 8255
         MOV  DX, PORT8255T
-        MOV  AL, 081H             ; 方式控制字: C 口低四位输入, B 口输出 (方式 0), A 口输出 (方式 0)
+        MOV  AL, 10000001B        ; Way Command: (1), A-Way0 (00), A-Out (0), C-Higher-Out (0), B-Way0 (0), B-Out (0), C-Lower-In (1)
         OUT  DX, AL
 
         ; Clear READY flag
