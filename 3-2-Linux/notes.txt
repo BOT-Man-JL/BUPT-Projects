@@ -212,7 +212,7 @@
   - ln src dst (hard, file only)
   - ln -s src dst (soft)
     - ln -s dir/target dir/link
-	- => dir/link -> dir/dir/target
+    - => dir/link -> dir/dir/target
 - errno
   - strerror (errno)
   - perror (string)
@@ -266,7 +266,7 @@
 - file in shell
   - * => any chars
     - starting . and / must be explicit
-	- */.*
+    - */.*
   - ? => any char
   - [] => set
 - arguments in script
@@ -300,26 +300,30 @@
     - test -x executable
     - [ -f file ]
     - [ -d dir ]
-	- [ -s size_greater_than_0 ]
+    - [ -s size_greater_than_0 ]
     - test -n str_len_greater_than_0
-	- test str1 = str2
-	- test str1 != str2
-	- test num1 -eq num2
-	- test num1 -ne num2
-	- test num1 -gt num2
-	- test num1 -ge num2
-	- test num1 -lt num2
-	- test num1 -le num2
-	- test ! cond
-	- test cond1 -o cond2
-	- test cond1 -a cond2
+    - test str1 = str2
+    - test str1 != str2
+    - test num1 -eq num2
+    - test num1 -ne num2
+    - test num1 -gt num2
+    - test num1 -ge num2
+    - test num1 -lt num2
+    - test num1 -le num2
+    - test ! cond
+    - test cond1 -o cond2
+    - test cond1 -a cond2
   - if then elif then else fi
   - [[ cond ]] && case_true || case_false
   - case word in
     pattern1) list1;;
     pattern2) list2;;
-	esac
+    esac
+  - while cond
+    do list
+	done
   - while cond; do list; done
+    - find -name '*.c' | while read name; do gcc $name && ./a.out; done
   - for i in word1 word2; do list; done
   - for i [$1 $2]; do list; done
 - command set in shell
