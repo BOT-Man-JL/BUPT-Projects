@@ -20,6 +20,8 @@
 - ftp
 - scp
 - iconv -f [from] -t [to]
+  - find src -type d -exec mkdir -p dst/{} \;
+  - find src -type f | while read name; do test `file -i $name | cut -f 2 -d =` = iso-8859-1 && iconv -f gb2312 -t utf-8 $name -o "dst/$name"; done
 - cal
 - bc
 - VNC
