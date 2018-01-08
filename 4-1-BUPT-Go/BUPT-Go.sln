@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2010
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9092AA53-FB77-4645-B42D-1CCCA6BD08BD}") = "backend", "backend\backend.njsproj", "{C3775206-FD9B-4190-B0E0-6BD2BB5D881A}"
+EndProject
+Project("{9092AA53-FB77-4645-B42D-1CCCA6BD08BD}") = "frontend", "frontend\frontend.njsproj", "{C1A09B88-CBCF-4D52-BB42-0FA04AB0488C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "common", "common", "{08F682DA-04B1-496C-8536-6EE3E3E978F3}"
+	ProjectSection(SolutionItems) = preProject
+		common\article-common.json = common\article-common.json
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C3775206-FD9B-4190-B0E0-6BD2BB5D881A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C3775206-FD9B-4190-B0E0-6BD2BB5D881A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C3775206-FD9B-4190-B0E0-6BD2BB5D881A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C3775206-FD9B-4190-B0E0-6BD2BB5D881A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C1A09B88-CBCF-4D52-BB42-0FA04AB0488C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C1A09B88-CBCF-4D52-BB42-0FA04AB0488C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C1A09B88-CBCF-4D52-BB42-0FA04AB0488C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C1A09B88-CBCF-4D52-BB42-0FA04AB0488C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {29A97DB6-C7A1-4C0D-AD69-2C96D3AFDAD3}
+	EndGlobalSection
+EndGlobal
