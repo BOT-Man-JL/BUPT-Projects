@@ -4,7 +4,9 @@
       <el-row type="flex" align="middle" justify="space-around">
         <el-col :span="4">
           <router-link :to="{ name:'userPage' }">
-            <i class="el-icon-menu"></i>
+            <img v-if="userAvatar" :src="userAvatar"
+                 style="width: 24px; height: 24px; border-radius: 12px" />
+            <i v-else class="el-icon-menu"></i>
           </router-link>
         </el-col>
         <el-col :span="16">
@@ -32,13 +34,16 @@
 <script>
   import axios from 'axios'
   import articleRichItemComponent from './components/article-rich-item-component'
+  import getCookies from './helpers/cookie-helper'
   export default {
     name: 'homePage',
     components: {
       articleRichItemComponent
     },
     data() {
+      var cookies = getCookies();
       return {
+        userAvatar: decodeURIComponent(cookies['userAvatar']),
         items: []
       };
     },
