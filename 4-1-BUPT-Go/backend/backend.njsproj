@@ -37,14 +37,12 @@
     <Compile Include="routes\user-api.js" />
     <Content Include="package.json" />
     <Content Include="public\test\index.html" />
-    <Content Include="views\error.ejs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="model\" />
     <Folder Include="public\" />
     <Folder Include="public\test\" />
     <Folder Include="routes\" />
-    <Folder Include="views\" />
   </ItemGroup>
   <!-- Do not delete the following Import Project.  While this appears to do nothing it is a marker for setting TypeScript properties before our import that depends on them. -->
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\TypeScript\Microsoft.TypeScript.targets" Condition="False" />
