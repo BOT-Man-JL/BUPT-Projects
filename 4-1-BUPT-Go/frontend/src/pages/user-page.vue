@@ -199,7 +199,7 @@
         const data = new FormData();
         data.append('name', this.name);
         data.append('pass', this.pass);
-        data.append('image', this.file);
+        data.append('avatar', this.file);
 
         const loading = this.$loading({ lock: true });
         axios.post(url, data).then((res) => {

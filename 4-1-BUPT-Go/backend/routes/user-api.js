@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 
+const multer = require('multer');
 const User = require('../model/user').model;
 
 const errInvalidUserNamePass = '无效的用户名或密码';
@@ -48,7 +49,10 @@ router.post('/login', function (req, res) {
     });
 });
 
-router.post('/signup', function (req, res) {
+const avatarPath = 'avatar/';
+const uploadAvatar = multer({ dest: 'public/' + avatarPath }).single('avatar');
+
+router.post('/signup', uploadAvatar, function (req, res) {
     const userName = req.signedCookies['userNameSigned'];
     if (userName) {
         return res.status(400).send({ err: errAlreadyLogin });
@@ -64,7 +68,7 @@ router.post('/signup', function (req, res) {
         return res.status(400).send({ err: errInvalidAvatar });
     }
 
-    const avatar = '/upload/' + req.file.filename;
+    const avatar = '/' + avatarPath + req.file.filename;
     new User({ name, pass, avatar }).save().then(function (doc) {
         if (!doc) {
             return res.status(400).send({ err: errBadModelSave });

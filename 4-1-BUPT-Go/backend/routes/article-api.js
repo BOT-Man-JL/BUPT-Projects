@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 
+const multer = require('multer');
 const ObjectId = require('mongoose').Types.ObjectId;
 const Article = require('../model/article').model;
 const User = require('../model/user').model;
@@ -118,7 +119,10 @@ router.get('/', function (req, res) {
     });
 });
 
-router.post('/submit', function (req, res) {
+const imagePath = 'image/';
+const uploadImage = multer({ dest: 'public/' + imagePath }).single('image');
+
+router.post('/submit', uploadImage, function (req, res) {
     const userName = req.signedCookies['userNameSigned'];
     if (!userName) {
         return res.status(401).send({ err: errNoLogin });
@@ -159,7 +163,7 @@ router.post('/submit', function (req, res) {
             delete article.img;
         }
         else {
-            article.img = '/upload/' + article.img;
+            article.img = '/' + imagePath + article.img;
         }
 
         const query = { _id: id, author: userName };
@@ -181,7 +185,7 @@ router.post('/submit', function (req, res) {
         if (!article.img) {
             return res.status(400).send({ err: errInvalidArticleImage });
         }
-        article.img = '/upload/' + article.img;
+        article.img = '/' + imagePath + article.img;
 
         new Article(article).save().then(function (doc) {
             if (!doc) {
