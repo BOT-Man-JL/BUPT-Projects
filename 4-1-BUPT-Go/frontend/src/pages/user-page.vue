@@ -175,9 +175,7 @@
       },
       onLogin() {
         const url = '/user/login';
-        const data = new FormData();
-        data.append('name', this.name);
-        data.append('pass', this.pass);
+        const data = { name: this.name, pass: this.pass };
 
         const loading = this.$loading({ lock: true });
         axios.post(url, data).then((res) => {

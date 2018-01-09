@@ -192,8 +192,7 @@
       },
       onDelete() {
         const url = '/article/delete';
-        const data = new FormData();
-        data.append('id', this.id);
+        const data = { id: this.id };
 
         const loading = this.$loading({ lock: true });
         axios.post(url, data).then((res) => {
