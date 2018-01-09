@@ -6,13 +6,17 @@
 
 ## Backend
 
-- Node & Express
-- MongoDB & Mongoose
+> developed by BOT Man
+
+- [Node](https://github.com/nodejs/node) & [Express](https://github.com/expressjs/express)
+- [MongoDB](https://github.com/mongodb/mongo) & [Mongoose](https://github.com/Automattic/mongoose)
 
 ## Frontend
 
-- Vue & Webpack
-  - vue-loader
-  - vue-router
-- Element-UI
-- axios
+> developed by Aymdr & BOT Man
+
+- [Vue](https://github.com/vuejs/vue) & [Webpack](https://github.com/webpack/webpack)
+  - [vue-loader](https://github.com/vuejs/vue-loader)
+  - [vue-router](https://github.com/vuejs/vue-router)
+- [Element-UI](https://github.com/ElemeFE/element)
+- [axios](https://github.com/axios/axios)

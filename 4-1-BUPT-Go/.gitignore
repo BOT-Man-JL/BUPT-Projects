@@ -261,6 +261,7 @@ __pycache__/
 *.pyc
 
 # BUPT Go
-/backend/public/upload
+/backend/public/avatar
+/backend/public/image
 /backend/public/static
 /backend/public/index.html
