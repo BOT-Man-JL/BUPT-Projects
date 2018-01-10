@@ -106,7 +106,9 @@
 
 <script>
   import axios from 'axios'
+  import ajaxPrompt from './helpers/ajax-helper'
   import options from '../../../common/article-common.json'
+
   export default {
     name: 'editPage',
     props: ['id'],
@@ -138,27 +140,27 @@
       const url = '/article';
       const params = { id: this.id };
 
-      const loading = this.$loading({ lock: true });
-      axios.get(url, { params }).then((res) => {
-        this.category = res.data.category;
-        this.area = res.data.area;
-        this.location = res.data.location;
-        this.contact = res.data.contact;
-        this.cost = res.data.cost;
+      ajaxPrompt(this, axios.get(url, { params }), (res) => {
+        this.category = res.category;
+        this.area = res.area;
+        this.location = res.location;
+        this.contact = res.contact;
+        this.cost = res.cost;
 
-        this.title = res.data.title;
-        this.text = res.data.text;
-        this.previousImg = res.data.img;
-
-        loading.close();
-      }).catch((e) => {
-        loading.close();
-        this.$message.error({
-          message: e.response.data.err, showClose: true
-        });
+        this.title = res.title;
+        this.text = res.text;
+        this.previousImg = res.img;
       });
     },
     methods: {
+      postAction(url, data) {
+        ajaxPrompt(this, axios.post(url, data), (res) => {
+          this.$message({
+            message: res.msg, showClose: true
+          });
+          this.$router.push({ name: 'userPage' });
+        });
+      },
       onSubmit() {
         const url = '/article/submit';
         const data = new FormData();
@@ -175,39 +177,12 @@
         data.append('text', this.text);
         data.append('image', this.file);
 
-        const loading = this.$loading({ lock: true });
-        axios.post(url, data).then((res) => {
-          this.$message({
-            message: res.data.msg, showClose: true
-          });
-          this.$router.push({ name: 'userPage' });
-
-          loading.close();
-        }).catch((e) => {
-          loading.close();
-          this.$message.error({
-            message: e.response.data.err, showClose: true
-          });
-        });
+        this.postAction(url, data);
       },
       onDelete() {
         const url = '/article/delete';
         const data = { id: this.id };
-
-        const loading = this.$loading({ lock: true });
-        axios.post(url, data).then((res) => {
-          this.$message({
-            message: res.data.msg, showClose: true
-          });
-          this.$router.push({ name: 'userPage' });
-
-          loading.close();
-        }).catch((e) => {
-          loading.close();
-          this.$message.error({
-            message: e.response.data.err, showClose: true
-          });
-        });
+        this.postAction(url, data);
       },
       onSelectImage(file, fileList) {
         if (fileList && fileList[0])

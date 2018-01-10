@@ -60,7 +60,9 @@
 
 <script>
   import axios from 'axios'
+  import ajaxPrompt from './helpers/ajax-helper'
   import marked from 'marked'
+
   export default {
     name: 'articlePage',
     props: ['id', 'title', 'img', 'author'],
@@ -80,29 +82,21 @@
       const url = '/article';
       const params = { id: this.id };
 
-      const loading = this.$loading({ lock: true });
-      axios.get(url, { params }).then((res) => {
-        this.author = res.data.author;
-        this.authorAvatar = res.data.authorAvatar;
-        this.timestamp = new Date(res.data.timestamp).toLocaleString();
-        this.img = res.data.img;
-        this.title = res.data.title;
-        this.category = res.data.category;
-        this.area = res.data.area;
-        this.location = res.data.location;
-        this.contact = res.data.contact;
-        this.cost = res.data.cost;
+      ajaxPrompt(this, axios.get(url, { params }), (res) => {
+        this.author = res.author;
+        this.authorAvatar = res.authorAvatar;
+        this.timestamp = new Date(res.timestamp).toLocaleString();
+        this.img = res.img;
+        this.title = res.title;
+        this.category = res.category;
+        this.area = res.area;
+        this.location = res.location;
+        this.contact = res.contact;
+        this.cost = res.cost;
 
         document.getElementById('content').innerHTML =
-          marked(res.data.text, { sanitize: true });
+          marked(res.text, { sanitize: true });
         document.title = this.title + ' | BUPT Go';
-
-        loading.close();
-      }).catch((e) => {
-        loading.close();
-        this.$message.error({
-          message: e.response.data.err, showClose: true
-        });
       });
     }
   }

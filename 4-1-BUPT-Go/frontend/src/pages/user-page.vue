@@ -101,8 +101,10 @@
 
 <script>
   import axios from 'axios'
-  import articleThinItemComponent from './components/article-thin-item-component'
+  import ajaxPrompt from './helpers/ajax-helper'
   import getCookies from './helpers/cookie-helper'
+  import articleThinItemComponent from './components/article-thin-item-component'
+
   export default {
     name: 'userPage',
     components: {
@@ -135,7 +137,7 @@
           this.isLogin = false;
           this.name = '';
           this.pass = '';
-          this.file = '';
+          this.file = null;
           return;
         }
 
@@ -145,43 +147,29 @@
 
         const url = '/article/user';
 
-        const loading = this.$loading({ lock: true });
-        axios.get(url).then((res) => {
+        ajaxPrompt(this, axios.get(url), (res) => {
           this.items = [];
-          for (const item of res.data) {
+          for (const item of res) {
             this.items.push({
               id: item._id,
               timestamp: new Date(item.timestamp).toLocaleString(),
               title: item.title
             });
           }
-
-          loading.close();
-        }).catch((e) => {
-          loading.close();
-          this.$message.error({
-            message: e.response.data.err, showClose: true
+        });
+      },
+      postAction(url, data) {
+        ajaxPrompt(this, axios.post(url, data), (res) => {
+          this.$message({
+            message: res.msg, showClose: true
           });
+          this.checkLogin();
         });
       },
       onLogin() {
         const url = '/user/login';
         const data = { name: this.name, pass: this.pass };
-
-        const loading = this.$loading({ lock: true });
-        axios.post(url, data).then((res) => {
-          this.$message({
-            message: res.data.msg, showClose: true
-          });
-          this.checkLogin();
-
-          loading.close();
-        }).catch((e) => {
-          loading.close();
-          this.$message.error({
-            message: e.response.data.err, showClose: true
-          });
-        });
+        this.postAction(url, data);
       },
       onSignup() {
         const url = '/user/signup';
@@ -189,39 +177,11 @@
         data.append('name', this.name);
         data.append('pass', this.pass);
         data.append('avatar', this.file);
-
-        const loading = this.$loading({ lock: true });
-        axios.post(url, data).then((res) => {
-          this.$message({
-            message: res.data.msg, showClose: true
-          });
-          this.checkLogin();
-
-          loading.close();
-        }).catch((e) => {
-          loading.close();
-          this.$message.error({
-            message: e.response.data.err, showClose: true
-          });
-        });
+        this.postAction(url, data);
       },
       onLogout() {
         const url = '/user/logout';
-
-        const loading = this.$loading({ lock: true });
-        axios.post(url).then((res) => {
-          this.$message({
-            message: res.data.msg, showClose: true
-          });
-          this.checkLogin();
-
-          loading.close();
-        }).catch((e) => {
-          loading.close();
-          this.$message.error({
-            message: e.response.data.err, showClose: true
-          });
-        });
+        this.postAction(url, null);
       },
       onSelectImage(file, fileList) {
         if (fileList && fileList[0])

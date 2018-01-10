@@ -21,6 +21,8 @@
 
 <script>
   import axios from 'axios'
+  import ajaxPrompt from '../helpers/ajax-helper'
+
   export default {
     name: 'articleThinItemComponent',
     props: ['id', 'title', 'timestamp'],
@@ -29,19 +31,11 @@
         const url = '/article/delete';
         const data = { id: this.id };
 
-        const loading = this.$loading({ lock: true });
-        axios.post(url, data).then((res) => {
+        ajaxPrompt(this, axios.post(url, data), (res) => {
           this.$message({
-            message: res.data.msg, showClose: true
+            message: res.msg, showClose: true
           });
           this.$emit('remove-item');
-
-          loading.close();
-        }).catch((e) => {
-          loading.close();
-          this.$message.error({
-            message: e.response.data.err, showClose: true
-          });
         });
       }
     }

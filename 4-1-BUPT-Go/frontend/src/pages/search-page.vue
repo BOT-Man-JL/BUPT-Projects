@@ -53,15 +53,17 @@
 
 <script>
   import axios from 'axios'
+  import ajaxPrompt from './helpers/ajax-helper'
   import articleRichItemComponent from './components/article-rich-item-component'
   import options from '../../../common/article-common.json'
+
   export default {
     name: 'searchPage',
     components: {
       articleRichItemComponent
     },
     data() {
-      // Ensure only once
+      // Do unshift only once
       if (options.categoryOptions[0])
         options.categoryOptions.unshift('');
       if (options.areaOptions[0])
@@ -95,8 +97,9 @@
           area: this.area
         };
 
-        axios.get(url, { params }).then((res) => {
-          for (const item of res.data) {
+        ajaxPrompt(this, axios.get(url, { params }), (res) => {
+          // this.items already clear previously
+          for (const item of res) {
             this.items.push({
               id: item._id,
               author: item.author,
@@ -107,11 +110,6 @@
               area: item.area
             });
           }
-
-        }).catch((e) => {
-          this.$message.error({
-            message: e.response.data.err, showClose: true
-          });
         });
       }
     }

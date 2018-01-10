@@ -33,8 +33,10 @@
 
 <script>
   import axios from 'axios'
-  import articleRichItemComponent from './components/article-rich-item-component'
+  import ajaxPrompt from './helpers/ajax-helper'
   import getCookies from './helpers/cookie-helper'
+  import articleRichItemComponent from './components/article-rich-item-component'
+
   export default {
     name: 'homePage',
     components: {
@@ -43,7 +45,7 @@
     data() {
       var cookies = getCookies();
       return {
-        userAvatar: decodeURIComponent(cookies['userAvatar']),
+        userAvatar: cookies['userAvatar'] ? decodeURIComponent(cookies['userAvatar']) : null,
         items: []
       };
     },
@@ -51,10 +53,9 @@
       document.title = '主页 | BUPT Go';
       const url = '/article/recent';
 
-      const loading = this.$loading({ lock: true });
-      axios.get(url).then((res) => {
+      ajaxPrompt(this, axios.get(url), (res) => {
         this.items = [];
-        for (const item of res.data) {
+        for (const item of res) {
           this.items.push({
             id: item._id,
             author: item.author,
@@ -65,13 +66,6 @@
             area: item.area
           });
         }
-
-        loading.close();
-      }).catch((e) => {
-        loading.close();
-        this.$message.error({
-          message: e.response.data.err, showClose: true
-        });
       });
     }
   }
