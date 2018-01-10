@@ -73,17 +73,8 @@
         </el-row>
       </div>
       <div v-else>
-        <el-row class="input-row">
-          <el-upload action="/placeholder"
-                     list-type="picture"
-                     :multiple="false"
-                     :on-change="onSelectImage"
-                     :auto-upload="false">
-            <el-tag>
-              上传头像
-              <i class="el-icon-plus"></i>
-            </el-tag>
-          </el-upload>
+        <el-row class="input-row" style="margin: 10px 20%" justify="center">
+          <upload-component text="上传头像" v-model="file" />
         </el-row>
         <el-row class="input-row">
           <el-button type="primary" style="width:80%" @click="onSignup">
@@ -104,11 +95,13 @@
   import ajaxPrompt from './helpers/ajax-helper'
   import getCookies from './helpers/cookie-helper'
   import articleThinItemComponent from './components/article-thin-item-component'
+  import uploadComponent from './components/upload-component'
 
   export default {
     name: 'userPage',
     components: {
-      articleThinItemComponent
+      articleThinItemComponent,
+      uploadComponent
     },
     data() {
       var cookies = getCookies();
@@ -182,12 +175,6 @@
       onLogout() {
         const url = '/user/logout';
         this.postAction(url, null);
-      },
-      onSelectImage(file, fileList) {
-        if (fileList && fileList[0])
-          this.file = fileList[0].raw;
-        else
-          this.file = null;
       },
       onRemoveItem() {
         this.checkLogin();

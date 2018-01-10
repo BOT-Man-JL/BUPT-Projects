@@ -8,7 +8,8 @@
           </router-link>
         </el-col>
         <el-col :span="16">
-          <h1>编辑文章</h1>
+          <h1 v-if="id">编辑文章</h1>
+          <h1 v-else>创建文章</h1>
         </el-col>
         <el-col :span="4">
           <router-link :to="{ name:'searchPage' }">
@@ -68,21 +69,9 @@
       <el-row class="input-row" v-if="previousImg">
         <img :src="previousImg" style="width: 80%" />
       </el-row>
-      <el-row class="input-row">
-        <el-upload action="/placeholder"
-                   list-type="picture"
-                   :multiple="false"
-                   :on-change="onSelectImage"
-                   :auto-upload="false">
-          <el-tag v-if="id">
-            更新图片
-            <i class="el-icon-plus"></i>
-          </el-tag>
-          <el-tag v-else>
-            上传图片
-            <i class="el-icon-plus"></i>
-          </el-tag>
-        </el-upload>
+      <el-row class="input-row" style="margin: 10px 20%" justify="center">
+        <upload-component v-if="id" text="更新图片" v-model="file" />
+        <upload-component v-else text="上传图片" v-model="file" />
       </el-row>
       <el-row class="input-row" type="flex" align="middle" justify="space-around" v-if="id">
         <el-button @click="onSubmit" style="width: 40%" type="primary">
@@ -108,9 +97,13 @@
   import axios from 'axios'
   import ajaxPrompt from './helpers/ajax-helper'
   import options from '../../../common/article-common.json'
+  import uploadComponent from './components/upload-component'
 
   export default {
     name: 'editPage',
+    components: {
+      uploadComponent
+    },
     props: ['id'],
     data() {
       return {
@@ -130,13 +123,14 @@
       };
     },
     mounted() {
-      document.title = '编辑文章 | BUPT Go';
       if (!this.id) {
         // Create Mode
+        document.title = '创建文章 | BUPT Go';
         return;
       }
 
       // Edit Mode
+      document.title = '编辑文章 | BUPT Go';
       const url = '/article';
       const params = { id: this.id };
 
@@ -183,12 +177,6 @@
         const url = '/article/delete';
         const data = { id: this.id };
         this.postAction(url, data);
-      },
-      onSelectImage(file, fileList) {
-        if (fileList && fileList[0])
-          this.file = fileList[0].raw;
-        else
-          this.file = null;
       }
     }
   }
