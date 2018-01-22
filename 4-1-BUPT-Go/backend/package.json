@@ -3,7 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "node app"
+    "start": "node app",
+    "dev": "node ./node_modules/nodemon/bin/nodemon"
   },
   "description": "BUPT-Go",
   "author": {
@@ -18,5 +19,8 @@
     "morgan": "^1.7.0",
     "multer": "^1.3.0",
     "serve-favicon": "^2.3.0"
+  },
+  "devDependencies": {
+    "nodemon": "^1.14.11"
   }
 }
