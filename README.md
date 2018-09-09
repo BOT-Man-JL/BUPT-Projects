@@ -77,6 +77,9 @@ together with [**buptczq**](https://github.com/buptczq/RE_Bupt_Computer_Network_
   - Project - [BUPT Go](/4-1-BUPT-Go)
 - Communication Software
   - https://github.com/Thesharing/school-projects/tree/master/Homework/Design%20and%20Implementation%20of%20Communication%20Software%20System
+- [Traffic Redirection Driver](https://github.com/BOT-Man-JL/WFP-Traffic-Redirection-Driver)
+  - used to redirect NIC traffic on network layer and framing layer
+  - based on Windows Filtering Platform (WFP)
 
 ## Misc
 
