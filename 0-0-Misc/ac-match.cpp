@@ -17,6 +17,7 @@
       1  2  she
       1  3  he
       1  3  hers
+      2  1  she
       2  2  he
 */
 
@@ -25,9 +26,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-// TODO: remove C++ header by implementing a simple queue
-#include <queue>
 
 // format: line column string
 #define OUTPUT_FORMAT "%5d %5d  %s\n"
@@ -216,6 +214,60 @@ void DeleteOutputString(const char *str) {
 }
 
 /*
+  Naive queue implementation (for InitFailLink)
+*/
+typedef struct _QueueNode {
+  ACNode* ac_node;  // reference of ACNode (not own)
+  struct _QueueNode* next;
+} QueueNode;
+
+// used to check memory leaks of node
+static size_t g_queue_node_count;
+
+QueueNode* CreateQueueNode(ACNode* value) {
+  QueueNode* node = (QueueNode*)malloc(sizeof(QueueNode));
+  assert(node);
+  if (!node)
+    return NULL;
+
+  ++g_queue_node_count;
+
+  memset(node, 0, sizeof(QueueNode));
+  node->ac_node = value;
+  return node;
+}
+
+void FreeQueueNode(QueueNode* node) {
+  if (!node)
+    return;
+
+  free((void*)node);
+  --g_queue_node_count;
+}
+
+void PushQueueNode(QueueNode* head, ACNode* value) {
+  if (!head || !value)
+    return;
+
+  QueueNode* tail = head;
+  for (; tail->next != NULL; tail = tail->next)
+    ;
+  tail->next = CreateQueueNode(value);
+}
+
+ACNode* PopQueueNode(QueueNode* head) {
+  if (!head || !head->next)
+    return NULL;
+
+  QueueNode* first = head->next;
+  ACNode* ret = first->ac_node;
+
+  head->next = first->next;
+  FreeQueueNode(first);
+  return ret;
+}
+
+/*
   AC step1: build tire tree by pattern strings.
 */
 ACNode *BuildTireTree(const char *pattern, ACNode *root) {
@@ -255,7 +307,7 @@ void InitFailLink(ACNode *root) {
   if (!root)
     return;
 
-  std::queue<ACNode *> queue;
+  QueueNode* queue = CreateQueueNode(NULL);
 
   // set layer1 (depth == 1) fail link to root
   ACNode *child = root->children;
@@ -264,16 +316,17 @@ void InitFailLink(ACNode *root) {
     child->fail_link = root;
 
     // push child to queue
-    queue.push(child);
+    PushQueueNode(queue, child);
 
     // move to next child
     child = child->sibling;
   }
 
   // set fail link by BFS
-  while (!queue.empty()) {
-    ACNode *node = queue.front();
-    queue.pop();
+  while (1) {
+    ACNode *node = PopQueueNode(queue);
+    if (!node)
+      break;
 
     ACNode *child = node->children;
     while (child) {
@@ -296,12 +349,14 @@ void InitFailLink(ACNode *root) {
       }
 
       // push child to queue
-      queue.push(child);
+      PushQueueNode(queue, child);
 
       // move to next child
       child = child->sibling;
     }
   }
+
+  FreeQueueNode(queue);
 }
 
 /*
@@ -435,5 +490,6 @@ int main(int argc, char *argv[]) {
 
   // ensure no memory leaks of node
   assert(g_node_count == 0);
+  assert(g_queue_node_count == 0);
   return 0;
 }
