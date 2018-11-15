@@ -44,15 +44,15 @@ typedef char NodeValue;
 typedef struct _ACNode {
   // for goto
   NodeValue value;
-  struct _ACNode *children; // head of link list
-  struct _ACNode *sibling;  // next of link list
+  struct _ACNode* children;  // head of link list
+  struct _ACNode* sibling;   // next of link list
 
   // for fail
-  struct _ACNode *fail_link;
+  struct _ACNode* fail_link;
 
   // for output
-  struct _ACNode *parent;
-  uint16_t depth; // used to allocation stack memory
+  struct _ACNode* parent;
+  uint16_t depth;  // used to allocation stack memory
 
   // is current node end of pattern string (this node is output node)
   uint8_t is_node_output;
@@ -67,8 +67,8 @@ static size_t g_node_count;
 /*
   Create new node with value.
 */
-ACNode *NewNode(NodeValue value) {
-  ACNode *node = (ACNode *)malloc(sizeof(ACNode));
+ACNode* NewNode(NodeValue value) {
+  ACNode* node = (ACNode*)malloc(sizeof(ACNode));
   assert(node);
   if (!node)
     return NULL;
@@ -83,14 +83,14 @@ ACNode *NewNode(NodeValue value) {
 /*
   Delete nodes on the tree.
 */
-void DeleteNode(ACNode *node) {
+void DeleteNode(ACNode* node) {
   if (!node)
     return;
 
   // delete children link list
-  ACNode *child = node->children;
+  ACNode* child = node->children;
   while (child) {
-    ACNode *next = child->sibling;
+    ACNode* next = child->sibling;
     DeleteNode(child);
     child = next;
   }
@@ -103,15 +103,15 @@ void DeleteNode(ACNode *node) {
 /*
   Add child to parent.
 */
-void AddChild(ACNode *parent, ACNode *child) {
+void AddChild(ACNode* parent, ACNode* child) {
   if (!parent || !child)
     return;
 
   // check if parent has children already
-  ACNode *children_list = parent->children;
+  ACNode* children_list = parent->children;
   if (children_list) {
     // find last child of children list
-    ACNode *last_child = children_list;
+    ACNode* last_child = children_list;
     while (last_child->sibling)
       last_child = last_child->sibling;
 
@@ -132,11 +132,11 @@ void AddChild(ACNode *parent, ACNode *child) {
 /*
   Find child of parent.
 */
-ACNode *FindChild(ACNode *parent, NodeValue expected_value) {
+ACNode* FindChild(ACNode* parent, NodeValue expected_value) {
   if (!parent)
     return NULL;
 
-  ACNode *child = parent->children;
+  ACNode* child = parent->children;
   while (child) {
     // found if child has expected value
     if (child->value == expected_value)
@@ -151,7 +151,7 @@ ACNode *FindChild(ACNode *parent, NodeValue expected_value) {
 /*
   Construct output string of output node.
 */
-const char *CreateOutputString(ACNode *node) {
+const char* CreateOutputString(ACNode* node) {
   if (!node || !node->is_node_output)
     return NULL;
 
@@ -169,19 +169,19 @@ const char *CreateOutputString(ACNode *node) {
   size_t stack_size = (size_t)(node->depth + 1);
   size_t memory_size = sizeof(NodeValue) * stack_size;
 
-  NodeValue *output_stack = (NodeValue *)malloc(memory_size);
+  NodeValue* output_stack = (NodeValue*)malloc(memory_size);
   assert(output_stack);
   if (!output_stack)
     return NULL;
 
   // point to the last element (bottom of stack)
-  NodeValue *top_of_stack = &output_stack[stack_size - 1];
+  NodeValue* top_of_stack = &output_stack[stack_size - 1];
 
   // set string ending 0 to output_stack
   *top_of_stack = 0;
 
   // trace back until current node is root (parent == NULL)
-  ACNode *current_node = node;
+  ACNode* current_node = node;
   while (current_node && current_node->parent) {
     // move top ptr
     --top_of_stack;
@@ -206,11 +206,11 @@ const char *CreateOutputString(ACNode *node) {
 /*
   Destruct output string.
 */
-void DeleteOutputString(const char *str) {
+void DeleteOutputString(const char* str) {
   if (!str)
     return;
 
-  free((void *)str);
+  free((void*)str);
 }
 
 /*
@@ -270,23 +270,23 @@ ACNode* PopQueueNode(QueueNode* head) {
 /*
   AC step1: build tire tree by pattern strings.
 */
-ACNode *BuildTireTree(const char *pattern, ACNode *root) {
+ACNode* BuildTireTree(const char* pattern, ACNode* root) {
   if (!pattern || !root)
     return NULL;
 
   // iterate over str
-  ACNode *leaf = root;
-  for (const char *ch = pattern; ch && *ch != '\n' && *ch != '\r'; ++ch) {
+  ACNode* leaf = root;
+  for (const char* ch = pattern; ch && *ch != '\n' && *ch != '\r'; ++ch) {
     NodeValue value = *ch;
 
     // find existing child first
-    ACNode *found_child = FindChild(leaf, value);
+    ACNode* found_child = FindChild(leaf, value);
     if (found_child) {
       // set leaf to found child
       leaf = found_child;
     } else {
       // add new node to leaf
-      ACNode *new_node = NewNode(value);
+      ACNode* new_node = NewNode(value);
       AddChild(leaf, new_node);
 
       // set leaf to new node
@@ -303,14 +303,14 @@ ACNode *BuildTireTree(const char *pattern, ACNode *root) {
 /*
   AC step2: construct fail link and output link of tree.
 */
-void InitFailLink(ACNode *root) {
+void InitFailLink(ACNode* root) {
   if (!root)
     return;
 
   QueueNode* queue = CreateQueueNode(NULL);
 
   // set layer1 (depth == 1) fail link to root
-  ACNode *child = root->children;
+  ACNode* child = root->children;
   while (child) {
     // set fail link to root
     child->fail_link = root;
@@ -324,14 +324,14 @@ void InitFailLink(ACNode *root) {
 
   // set fail link by BFS
   while (1) {
-    ACNode *node = PopQueueNode(queue);
+    ACNode* node = PopQueueNode(queue);
     if (!node)
       break;
 
-    ACNode *child = node->children;
+    ACNode* child = node->children;
     while (child) {
       // find a state along the fail links with valid goto
-      ACNode *state = node->fail_link;
+      ACNode* state = node->fail_link;
       while (state && !FindChild(state, child->value))
         state = state->fail_link;
 
@@ -362,14 +362,16 @@ void InitFailLink(ACNode *root) {
 /*
   Try to print all outputs on matching a node.
 */
-void CheckOutputOnMatch(ACNode *node, uint32_t line_num, uint32_t column_num,
-                        FILE *output_file) {
+void CheckOutputOnMatch(ACNode* node,
+                        uint32_t line_num,
+                        uint32_t column_num,
+                        FILE* output_file) {
   if (!node || !output_file)
     return;
 
   // print current node
   if (node->is_node_output) {
-    const char *output_string = CreateOutputString(node);
+    const char* output_string = CreateOutputString(node);
     uint32_t offset = column_num - (uint32_t)strlen(output_string) + 1;
     fprintf(output_file, OUTPUT_FORMAT, line_num, offset, output_string);
     DeleteOutputString(output_string);
@@ -377,7 +379,7 @@ void CheckOutputOnMatch(ACNode *node, uint32_t line_num, uint32_t column_num,
 
   // print outputs along fail link
   if (node->is_fail_link_output) {
-    ACNode *next = node->fail_link;
+    ACNode* next = node->fail_link;
     while (next) {
       // check next node
       CheckOutputOnMatch(next, line_num, column_num, output_file);
@@ -391,18 +393,20 @@ void CheckOutputOnMatch(ACNode *node, uint32_t line_num, uint32_t column_num,
 /*
   AC step3: use tire tree with fail link to match a line.
 */
-void ACMatch(const char *line, uint32_t line_num, ACNode *root,
-             FILE *output_file) {
+void ACMatch(const char* line,
+             uint32_t line_num,
+             ACNode* root,
+             FILE* output_file) {
   if (!line || !root)
     return;
 
-  uint32_t column_num = 1; // start with 1
-  ACNode *current = root;
-  for (const char *ch = line; ch && *ch != '\n' && *ch != '\r';) {
+  uint32_t column_num = 1;  // start with 1
+  ACNode* current = root;
+  for (const char* ch = line; ch && *ch != '\n' && *ch != '\r';) {
     NodeValue value = *ch;
 
     // find goto by current value
-    ACNode *found_child = FindChild(current, value);
+    ACNode* found_child = FindChild(current, value);
     if (found_child) {
       // check output on current state
       CheckOutputOnMatch(found_child, line_num, column_num, output_file);
@@ -427,15 +431,15 @@ void ACMatch(const char *line, uint32_t line_num, ACNode *root,
   }
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   if (argc < 4) {
     fprintf(stderr, "usage: ./acmatch STRING PATTERN OUTPUT\n");
     return 1;
   }
 
-  FILE *string_file = fopen(argv[1], "r");
-  FILE *pattern_file = fopen(argv[2], "r");
-  FILE *output_file = fopen(argv[3], "w");
+  FILE* string_file = fopen(argv[1], "r");
+  FILE* pattern_file = fopen(argv[2], "r");
+  FILE* output_file = fopen(argv[3], "w");
 
   if (!string_file || !pattern_file || !output_file) {
     if (string_file)
@@ -457,11 +461,11 @@ int main(int argc, char *argv[]) {
   }
 
   // create root node of tire tree
-  ACNode *root = NewNode(0);
+  ACNode* root = NewNode(0);
 
   // build tire tree by pattern line
   {
-    char *line = NULL;
+    char* line = NULL;
     size_t line_len = 0;
     while (-1 != getline(&line, &line_len, pattern_file))
       BuildTireTree(line, root);
@@ -472,9 +476,9 @@ int main(int argc, char *argv[]) {
 
   // use AC to match string line
   {
-    char *line = NULL;
+    char* line = NULL;
     size_t line_len = 0;
-    uint32_t line_num = 0; // start with 1
+    uint32_t line_num = 0;  // start with 1
     while (-1 != getline(&line, &line_len, string_file)) {
       ++line_num;
       ACMatch(line, line_num, root, output_file);
