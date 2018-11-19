@@ -276,7 +276,7 @@ ACNode* BuildTireTree(const char* pattern, ACNode* root) {
 
   // iterate over str
   ACNode* leaf = root;
-  for (const char* ch = pattern; ch && *ch != '\n' && *ch != '\r'; ++ch) {
+  for (const char* ch = pattern; *ch && *ch != '\n' && *ch != '\r'; ++ch) {
     NodeValue value = *ch;
 
     // find existing child first
@@ -402,7 +402,7 @@ void ACMatch(const char* line,
 
   uint32_t column_num = 1;  // start with 1
   ACNode* current = root;
-  for (const char* ch = line; ch && *ch != '\n' && *ch != '\r';) {
+  for (const char* ch = line; *ch && *ch != '\n' && *ch != '\r';) {
     NodeValue value = *ch;
 
     // find goto by current value
