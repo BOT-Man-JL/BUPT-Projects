@@ -151,7 +151,7 @@ ACNode* FindChild(ACNode* parent, NodeValue expected_value) {
 /*
   Construct output string of output node.
 */
-const char* CreateOutputString(ACNode* node) {
+char* CreateOutputString(const ACNode* node) {
   if (!node || !node->is_node_output)
     return NULL;
 
@@ -181,7 +181,7 @@ const char* CreateOutputString(ACNode* node) {
   *top_of_stack = 0;
 
   // trace back until current node is root (parent == NULL)
-  ACNode* current_node = node;
+  const ACNode* current_node = node;
   while (current_node && current_node->parent) {
     // move top ptr
     --top_of_stack;
@@ -206,7 +206,7 @@ const char* CreateOutputString(ACNode* node) {
 /*
   Destruct output string.
 */
-void DeleteOutputString(const char* str) {
+void DeleteOutputString(char* str) {
   if (!str)
     return;
 
@@ -362,7 +362,7 @@ void InitFailLink(ACNode* root) {
 /*
   Try to print all outputs on matching a node.
 */
-void CheckOutputOnMatch(ACNode* node,
+void CheckOutputOnMatch(const ACNode* node,
                         uint32_t line_num,
                         uint32_t column_num,
                         FILE* output_file) {
@@ -371,7 +371,7 @@ void CheckOutputOnMatch(ACNode* node,
 
   // print current node
   if (node->is_node_output) {
-    const char* output_string = CreateOutputString(node);
+    char* output_string = CreateOutputString(node);
     uint32_t offset = column_num - (uint32_t)strlen(output_string) + 1;
     fprintf(output_file, OUTPUT_FORMAT, line_num, offset, output_string);
     DeleteOutputString(output_string);
@@ -379,7 +379,7 @@ void CheckOutputOnMatch(ACNode* node,
 
   // print outputs along fail link
   if (node->is_fail_link_output) {
-    ACNode* next = node->fail_link;
+    const ACNode* next = node->fail_link;
     while (next) {
       // check next node
       CheckOutputOnMatch(next, line_num, column_num, output_file);
@@ -395,18 +395,18 @@ void CheckOutputOnMatch(ACNode* node,
 */
 void ACMatch(const char* line,
              uint32_t line_num,
-             ACNode* root,
+             const ACNode* root,
              FILE* output_file) {
   if (!line || !root)
     return;
 
   uint32_t column_num = 1;  // start with 1
-  ACNode* current = root;
+  const ACNode* current = root;
   for (const char* ch = line; *ch && *ch != '\n' && *ch != '\r';) {
     NodeValue value = *ch;
 
     // find goto by current value
-    ACNode* found_child = FindChild(current, value);
+    const ACNode* found_child = FindChild((ACNode*)current, value);
     if (found_child) {
       // check output on current state
       CheckOutputOnMatch(found_child, line_num, column_num, output_file);
