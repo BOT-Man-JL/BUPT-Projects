@@ -92,24 +92,32 @@ Ranks InitRanks(const IndexSet& index_set) {
       });
 }
 
+// Ranks -> || Ranks ||
+Rank GetNorm(const Ranks& ranks) {
+  return std::accumulate(
+      std::begin(ranks), std::end(ranks), static_cast<Rank>(0),
+      [](Rank vector_norm, const Ranks::value_type& pair) -> Rank {
+        return vector_norm + pair.second;
+      });
+}
+
+// Ranks = Ranks / || Ranks ||
+void NormalizeRanks(Ranks& ranks) {
+  std::for_each(
+      std::begin(ranks), std::end(ranks),
+      [vector_norm = GetNorm(ranks)](Ranks::value_type& pair) -> void {
+        pair.second = pair.second / vector_norm;
+      });
+}
+
 // inplace update |next_ranks|
 void StepPageRank(const Matrix& matrix,
                   const Matrix& transposed,
                   const size_t number_of_pages,
                   const Ranks& ranks,
                   Ranks& next_ranks) {
-  // validate: size
   assert(number_of_pages == ranks.size());
   assert(number_of_pages == next_ranks.size());
-
-  // validate: || ranks || == 1
-  // sigma {rank \in ranks} (rank) < e
-  assert(fabs(static_cast<Rank>(1) -
-              std::accumulate(
-                  std::begin(ranks), std::end(ranks), static_cast<Rank>(0),
-                  [](Rank rank_sum, const Ranks::value_type& pair) -> Rank {
-                    return rank_sum + pair.second;
-                  })) < kDeviationLimit);
 
   // ranks[index]
   auto rank = [&ranks](Index index) -> Rank { return ranks.at(index); };
@@ -172,6 +180,7 @@ Ranks& IteratePageRank(const Matrix& matrix,
                        Ranks& ranks,
                        Ranks& next_ranks) {
   StepPageRank(matrix, transposed, number_of_pages, ranks, next_ranks);
+  NormalizeRanks(next_ranks);
 
 #ifdef DEBUG
   std::cout << "pre: ";
@@ -241,12 +250,15 @@ InputRet Input(std::istream& istr) {
       });
 }
 
-// (Rank x Url) sorted by greater<Rank>
-using OutputMap = std::map<Rank, Url, std::greater<Rank>>;
+// ((Rank x Url)) sorted by greater<Rank>
+using OutputMap = std::multimap<Rank, Url, std::greater<Rank>>;
 
-// (Index x Rank) x (Index x Url) -> (Rank x Url)
+// (Index x Rank) x (Index x Url) -> ((Rank x Url))
 OutputMap NormalizeOutput(const UrlIndexMap& url_index_map,
                           const Ranks& ranks) {
+  assert(url_index_map.size() == ranks.size());
+  assert(fabs(GetNorm(ranks) - static_cast<Rank>(1)) < kDeviationLimit);
+
   // ranks[index]
   auto rank = [&ranks](Index index) -> Rank { return ranks.at(index); };
 
