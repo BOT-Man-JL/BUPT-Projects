@@ -83,6 +83,8 @@ IndexSet GetIndexSet(const Matrix& matrix) {
 
 // IndexSet -> Ranks { 1/N }
 Ranks InitRanks(const IndexSet& index_set) {
+  assert(!index_set.empty());
+
   return std::accumulate(
       std::begin(index_set), std::end(index_set), Ranks{},
       [init = static_cast<Rank>(1) / static_cast<Rank>(index_set.size())](
@@ -101,23 +103,24 @@ Rank GetNorm(const Ranks& ranks) {
       });
 }
 
-// Ranks = Ranks / || Ranks ||
-void NormalizeRanks(Ranks& ranks) {
+// Ranks -> Ranks / || Ranks ||
+Ranks NormalizeRanks(Ranks&& ranks) {
   std::for_each(
       std::begin(ranks), std::end(ranks),
       [vector_norm = GetNorm(ranks)](Ranks::value_type& pair) -> void {
         pair.second = pair.second / vector_norm;
       });
+  return ranks;
 }
 
-// inplace update |next_ranks|
-void StepPageRank(const Matrix& matrix,
-                  const Matrix& transposed,
-                  const size_t number_of_pages,
-                  const Ranks& ranks,
-                  Ranks& next_ranks) {
+// Ranks -> next Ranks (override |temp_ranks|)
+Ranks StepPageRank(const Matrix& matrix,
+                   const Matrix& transposed,
+                   const size_t number_of_pages,
+                   const Ranks& ranks,
+                   Ranks&& temp_ranks) {
   assert(number_of_pages == ranks.size());
-  assert(number_of_pages == next_ranks.size());
+  assert(number_of_pages == temp_ranks.size());
 
   // ranks[index]
   auto rank = [&ranks](Index index) -> Rank { return ranks.at(index); };
@@ -145,14 +148,14 @@ void StepPageRank(const Matrix& matrix,
            kDampingFactor * incoming_rank(index);
   };
 
-  // output to each in |next_ranks| by |new_rank|
-  std::for_each(std::begin(next_ranks), std::end(next_ranks),
+  std::for_each(std::begin(temp_ranks), std::end(temp_ranks),
                 [&new_rank](Ranks::value_type& pair) -> void {
                   pair.second = new_rank(pair.first);
                 });
+  return NormalizeRanks(std::move(temp_ranks));
 }
 
-// || ranks - next_ranks || == 0
+// || Ranks - next Ranks || == 0
 bool IsConvergent(const Ranks& ranks, const Ranks& next_ranks) {
   assert(ranks.size() == next_ranks.size());
 
@@ -173,47 +176,47 @@ bool IsConvergent(const Ranks& ranks, const Ranks& next_ranks) {
              }) < kConvergenceEpsilon;
 }
 
-// convergent ? ranks : iterate(ranks)
-Ranks& IteratePageRank(const Matrix& matrix,
-                       const Matrix& transposed,
-                       const size_t number_of_pages,
-                       Ranks& ranks,
-                       Ranks& next_ranks) {
-  StepPageRank(matrix, transposed, number_of_pages, ranks, next_ranks);
-  NormalizeRanks(next_ranks);
+// -> next_ranks = step(ranks) (override |temp_ranks|)
+// -> convergent(ranks, next_ranks) ? next_ranks : iterate(next_ranks)
+Ranks IteratePageRank(const Matrix& matrix,
+                      const Matrix& transposed,
+                      const size_t N,
+                      Ranks&& ranks,
+                      Ranks&& temp_ranks) {
+  // Use double buffer to avoid unnecessary copy for optimization
+  return [&matrix, &transposed, N, &ranks](Ranks&& next_ranks) -> Ranks {
 
 #ifdef DEBUG
-  std::cout << "pre: ";
-  for (const auto& pair : ranks) {
-    std::cout << pair.second << " ";
-  }
-  std::cout << "\nnxt: ";
-  for (const auto& pair : next_ranks) {
-    std::cout << pair.second << " ";
-  }
-  std::cout << "\n\n";
+    std::cout << "pre: ";
+    for (const auto& pair : ranks) {
+      std::cout << pair.second << " ";
+    }
+    std::cout << "\nnxt: ";
+    for (const auto& pair : next_ranks) {
+      std::cout << pair.second << " ";
+    }
+    std::cout << "\n\n";
 #endif  // DEBUG
 
-  return IsConvergent(ranks, next_ranks)
-             ? next_ranks
-             : IteratePageRank(matrix, transposed, number_of_pages, next_ranks,
-                               ranks);
+    return IsConvergent(ranks, next_ranks)
+               ? next_ranks
+               : IteratePageRank(matrix, transposed, N, std::move(next_ranks),
+                                 std::move(ranks));
+  }(StepPageRank(matrix, transposed, N, ranks, std::move(temp_ranks)));
 }
 
 // Matrix -> Ranks
 Ranks DoPageRank(const Matrix& matrix) {
   return [&matrix](const IndexSet& index_set) -> Ranks {
-    // Non-functional:
-    // Use double buffer to avoid unnecessary copy for optimization
-    Ranks ranks1 = InitRanks(index_set);
-    Ranks ranks2 = InitRanks(index_set);
-    return IteratePageRank(matrix, Transpose(matrix), index_set.size(), ranks1,
-                           ranks2);
+    return IteratePageRank(matrix, Transpose(matrix), index_set.size(),
+                           InitRanks(index_set), InitRanks(index_set));
   }(GetIndexSet(matrix));
 }
 
 struct Line {
   std::string line;
+
+  operator bool() const { return !line.empty(); }
   operator std::string() const { return line; }
 };
 
@@ -222,40 +225,52 @@ std::istream& operator>>(std::istream& istr, Line& data) {
 }
 
 // (Index x Url) & ((Index x Index))
-using InputRet = std::pair<UrlIndexMap, Matrix>;
+struct InputRet {
+  UrlIndexMap url_index_map;
+  Matrix matrix;
+
+  bool read_empty_line = false;
+};
 
 // istr => (Index x Url) & ((Index x Index))
 InputRet Input(std::istream& istr) {
-  return std::accumulate(
-      std::istream_iterator<Line>(istr), std::istream_iterator<Line>(),
-      InputRet{},
-      [meet_empty_line = false](InputRet& ret,
-                                const Line& line) mutable -> InputRet& {
-        if (line.line.empty()) {
-          meet_empty_line = true;
-          return ret;
-        }
-        if (!meet_empty_line) {
-          Index index;
-          Url url;
-          std::istringstream(line) >> index >> url;
-          ret.first.emplace(index, url);
-        } else {
-          Index index1;
-          Index index2;
-          std::istringstream(line) >> index1 >> index2;
-          ret.second.emplace(index1, index2);
-        }
-        return ret;
-      });
+  auto read_sec1 = [](InputRet& ret, const std::string& line) -> InputRet& {
+    Index index;
+    Url url;
+    std::istringstream(line) >> index >> url;
+    ret.url_index_map.emplace(index, url);
+    return ret;
+  };
+
+  auto read_sec2 = [](InputRet& ret, const std::string& line) -> InputRet& {
+    Index index1;
+    Index index2;
+    std::istringstream(line) >> index1 >> index2;
+    ret.matrix.emplace(index1, index2);
+    return ret;
+  };
+
+  auto set_read_empty_line = [](InputRet& ret) -> InputRet& {
+    ret.read_empty_line = true;
+    return ret;
+  };
+
+  return std::accumulate(std::istream_iterator<Line>(istr),
+                         std::istream_iterator<Line>(), InputRet{},
+                         [&read_sec1, &read_sec2, &set_read_empty_line](
+                             InputRet& ret, const Line& line) -> InputRet& {
+                           return line ? (!ret.read_empty_line
+                                              ? read_sec1(ret, line)
+                                              : read_sec2(ret, line))
+                                       : set_read_empty_line(ret);
+                         });
 }
 
 // ((Rank x Url)) sorted by greater<Rank>
 using OutputMap = std::multimap<Rank, Url, std::greater<Rank>>;
 
 // (Index x Rank) x (Index x Url) -> ((Rank x Url))
-OutputMap NormalizeOutput(const UrlIndexMap& url_index_map,
-                          const Ranks& ranks) {
+OutputMap GetUrlRankMap(const UrlIndexMap& url_index_map, const Ranks& ranks) {
   assert(url_index_map.size() == ranks.size());
   assert(fabs(GetNorm(ranks) - static_cast<Rank>(1)) < kDeviationLimit);
 
@@ -290,16 +305,12 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  auto ifs = std::ifstream(argv[1]);
-  auto ofs = argc >= 3 ? std::ofstream(argv[2]) : std::ofstream();
-  if (!ifs.is_open()) {
-    std::cerr << "failed to open " << argv[1] << "\n";
-    return 1;
-  }
-
-  [&ofs](const InputRet& input) -> void {
-    Output(ofs.is_open() ? ofs : std::cout,
-           NormalizeOutput(input.first, DoPageRank(input.second)));
-  }(Input(ifs));
+  [](std::ifstream&& ifs, std::ofstream&& ofs) -> void {
+    [](const InputRet& input, std::ostream& ostr) -> void {
+      Output(ostr,
+             GetUrlRankMap(input.url_index_map, DoPageRank(input.matrix)));
+    }(Input(ifs), ofs.is_open() ? ofs : std::cout);
+  }(std::ifstream(argv[1]), argc >= 3 ? std::ofstream(argv[2])
+                                      : std::ofstream());
   return 0;
 }
