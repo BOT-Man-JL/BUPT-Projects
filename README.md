@@ -91,5 +91,7 @@ together with [**buptczq**](https://github.com/buptczq/RE_Bupt_Computer_Network_
 - UWP Game: [**Hit the Mole**](https://github.com/ZhangYuef/Hit-the-Mole) (built together with [**ZhangYuef**](https://github.com/ZhangYuef))
 - Other Code:
   - GDI Monkey
-  - Calculator in `C`
-  - Aho-Corasick automation
+  - Calculator in C
+  - Aho-Corasick automation in C
+  - High-Performance crawlwer in C
+  - PageRank in functional modern C++
