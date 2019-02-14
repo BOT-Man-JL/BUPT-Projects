@@ -326,6 +326,7 @@
 	done
   - while cond; do list; done
     - find -name '*.c' | while read name; do gcc $name && ./a.out; done
+    - find -name '*.svg' | while read name; do inkscape -z -e `echo $name | sed s/svg/png/g` $name; done
   - for i in word1 word2; do list; done
   - for i [$1 $2]; do list; done
 - command set in shell
