@@ -79,7 +79,7 @@
 - h => left
 - j => down
 - k => up
-- i => right
+- l => right
 - Ctrl f => page down
 - Ctrl b => page up
 - w => next word
@@ -192,7 +192,7 @@
     - -exec rm {} \;
   - -ok COMMAND ;
 - xargs
-  - xargs rm
+  - echo "FILE1\nFILE2\n..." | xargs rm
 - tar
   - c => create
   - t => table (list)
