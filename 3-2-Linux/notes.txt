@@ -339,8 +339,8 @@
 - seq
   - seq BEG END
 - inner options
-  - set -x, set +x
-  - set -u, set +u
+  - set -x, set +x => show/hide command lines
+  - set -e, set +e => quit on error (return != 0)
 
 ## Chap 6. Process
 
